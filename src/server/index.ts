@@ -73,3 +73,19 @@ app.onError((err, c) => {
 })
 
 export default app
+
+// ─── ASYNC LAYER ARMING SEAM (DORMANT — uncomment to activate; see docs/async-layer.md) ───
+// To activate the Cron -> Queue -> Resend layer, replace `export default app` above with the
+// handler object below and uncomment the import. With NO `triggers.crons` / `queues.consumers`
+// declared in wrangler.jsonc, the platform never invokes scheduled()/queue() — so leaving this
+// commented keeps a fresh fork inert (ASYNC-02). The import MUST stay inside this comment: a live
+// top-level `import { scheduled, queue }` is unused while dormant and trips noUnusedLocals +
+// eslint no-unused-vars, breaking CI (Pitfall 4). `app.fetch` is passed unwrapped (Pitfall 7/A1).
+//
+// import { scheduled, queue } from './async/handlers'
+//
+// export default {
+//   fetch: app.fetch,   // existing Hono API + SPA assets — unchanged
+//   scheduled,          // Cron Trigger entry (enqueues a digest message)
+//   queue,              // Queue consumer entry (drains batch -> Resend)
+// } satisfies ExportedHandler<Env>

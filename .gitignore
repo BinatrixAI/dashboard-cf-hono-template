@@ -35,6 +35,9 @@ dist-ssr
 .claude/skills/
 skills-lock.json
 
+# Local-only operator notes / setup guides (never shipped in the template)
+.local-setup/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

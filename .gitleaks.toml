@@ -12,8 +12,14 @@ title = "dashboard-cf-hono-template"
 useDefault = true                       # inherit gitleaks' built-in provider rules
 
 # v8.25.0+ uses the plural [[allowlists]] table (NOT singular [allowlist]).
+# condition = "AND" (the gitleaks v8.30.1 key — NOT the silently-no-op camelCase
+# alternate, which viper lowercases to an unmapped field and leaves the default
+# OR logic) so a finding is suppressed ONLY when a listed
+# `paths` regex AND the publishable `pk_` `regexes` BOTH match; an injected
+# `sk_`-shape under .planning/ or docs/ still FAILs gitleaks (D-05).
 [[allowlists]]
 description = "Publishable Clerk keys are non-secret and intentionally committed in examples/tests"
+condition = "AND"
 regexes = ['''pk_(test|live)_[A-Za-z0-9._-]+''']
 paths = [
   '''\.dev\.vars\.example''',           # ships with EMPTY assignments; future-proofed

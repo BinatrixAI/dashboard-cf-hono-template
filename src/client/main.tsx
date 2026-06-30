@@ -176,8 +176,11 @@ function MissingClerkPubKey() {
             Clerk Dashboard
           </a>{' '}
           (API keys), then add it to your{' '}
-          <code className={codeBlock}>.env</code> /{' '}
-          <code className={codeBlock}>.dev.vars</code>:
+          <code className={codeBlock}>.env.local</code> (the file{' '}
+          <code className={codeBlock}>setup.mjs</code> writes — Vite inlines{' '}
+          <code className={codeBlock}>VITE_*</code> from{' '}
+          <code className={codeBlock}>.env*</code>, not{' '}
+          <code className={codeBlock}>.dev.vars</code>):
         </p>
         <pre className='overflow-auto rounded bg-slate-950 px-3 py-2 text-xs text-slate-200'>
           <code>VITE_CLERK_PUBLISHABLE_KEY=pk_test_...</code>

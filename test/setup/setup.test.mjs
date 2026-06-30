@@ -348,6 +348,60 @@ describe('setup.mjs .dev.vars generation (SETUP-02)', () => {
   })
 })
 
+describe('setup.mjs .env.local generation (AUTH-04 / SETUP-02, Item 1)', () => {
+  it('generateEnvLocal() writes ONLY the VITE publishable key — never a secret (T-08-01)', async () => {
+    const dir = makeTmpCopy()
+    // Clean slate so this asserts a fresh generation, not a re-fill.
+    rmSync(path.join(dir, '.env.local'), { force: true })
+
+    const { generateEnvLocal } = await import('../../setup.mjs')
+    generateEnvLocal(dir, { clerkPk: PK })
+
+    const el = read(dir, '.env.local')
+    expect(el).toMatch(new RegExp(`^VITE_CLERK_PUBLISHABLE_KEY=${PK}$`, 'm'))
+    // Only the client publishable key — no secret line, no sk_ value ever (D-02).
+    expect(el).not.toMatch(/CLERK_SECRET_KEY/)
+    expect(el).not.toMatch(/sk_/)
+  })
+
+  it('generateEnvLocal() with an empty key still writes the hint line (D-03)', async () => {
+    const dir = makeTmpCopy()
+    rmSync(path.join(dir, '.env.local'), { force: true })
+
+    const { generateEnvLocal } = await import('../../setup.mjs')
+    generateEnvLocal(dir, { clerkPk: '' })
+
+    // Empty assignment so a forker sees the var name to fill.
+    expect(read(dir, '.env.local')).toMatch(/^VITE_CLERK_PUBLISHABLE_KEY=$/m)
+  })
+
+  it('backs an existing .env.local up to .env.local.bak and never clobbers it (T-08-02)', async () => {
+    const dir = makeTmpCopy()
+    const OLD = 'VITE_CLERK_PUBLISHABLE_KEY=pk_test_PREEXISTING_DO_NOT_LOSE\n'
+    writeFileSync(path.join(dir, '.env.local'), OLD)
+
+    const { generateEnvLocal } = await import('../../setup.mjs')
+    generateEnvLocal(dir, { clerkPk: PK })
+
+    // The prior contents survive verbatim in the backup.
+    expect(read(dir, '.env.local.bak')).toBe(OLD)
+    // The live file holds the freshly-generated value.
+    expect(read(dir, '.env.local')).toMatch(new RegExp(`^VITE_CLERK_PUBLISHABLE_KEY=${PK}$`, 'm'))
+  })
+
+  it('reports .env.local under --dry-run without creating it on disk', () => {
+    const dir = makeTmpCopy()
+    rmSync(path.join(dir, '.env.local'), { force: true })
+
+    const r = runSetup(dir, [...FLAGS, '--dry-run'])
+    expect(r.status, r.stderr).toBe(0)
+    // The dry-run report names the new client-env file...
+    expect(r.stdout).toMatch(/\.env\.local/)
+    // ...but never touches disk.
+    expect(existsSync(path.join(dir, '.env.local'))).toBe(false)
+  })
+})
+
 describe('setup.mjs per-account creation checklist (SETUP-02)', () => {
   it('prints copy-pasteable wrangler commands with the chosen names interpolated', () => {
     const dir = makeTmpCopy()
@@ -455,17 +509,26 @@ describe('setup.mjs module-toggle record (.setup-config.json, SETUP-03)', () => 
     })
   })
 
-  it('adds NO cron/queue/consumer config to wrangler.jsonc (records only — effect deferred to Phase 7)', () => {
+  it('adds NO ACTIVE cron/queue/consumer config to wrangler.jsonc (records only — async layer is dormant/commented)', () => {
     const dir = makeTmpCopy()
-    const before = read(dir, 'wrangler.jsonc')
+    // Phase 7 (07-02) ships the async layer DORMANT: wrangler.jsonc now carries
+    // COMMENTED `triggers`/`queues`/`consumers` blocks (every line behind a leading `//`),
+    // so the platform never arms them. The toggle records the choice only; setup.mjs must
+    // not UNCOMMENT or otherwise introduce ACTIVE async keys (D-12). Strip full-line `//`
+    // comments before asserting so we test the real invariant (no armed config), not the
+    // presence of the inert template comments themselves.
+    const stripComments = (s) =>
+      s
+        .split('\n')
+        .filter((line) => !/^\s*\/\//.test(line))
+        .join('\n')
+    const before = stripComments(read(dir, 'wrangler.jsonc'))
     expect(runSetup(dir, FLAGS).status).toBe(0)
-    const after = read(dir, 'wrangler.jsonc')
+    const after = stripComments(read(dir, 'wrangler.jsonc'))
 
-    // The pre-run template carries no async config; the toggle records the choice only,
-    // so the rewritten wrangler.jsonc must still introduce none of these keys (D-12).
     for (const key of ['triggers', 'crons', 'queues', 'consumers', 'producers']) {
-      expect(before, `template wrangler.jsonc unexpectedly has "${key}"`).not.toContain(`"${key}"`)
-      expect(after, `run added async key "${key}" to wrangler.jsonc`).not.toContain(`"${key}"`)
+      expect(before, `template wrangler.jsonc has ACTIVE "${key}"`).not.toContain(`"${key}"`)
+      expect(after, `run added ACTIVE async key "${key}" to wrangler.jsonc`).not.toContain(`"${key}"`)
     }
   })
 

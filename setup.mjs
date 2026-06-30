@@ -395,6 +395,39 @@ export function generateDevVars(rootDir, vals, { dryRun = false } = {}) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// .env.local generation (AUTH-04 / SETUP-02, Item 1 — audit WARNING-2). Vite
+// inlines `import.meta.env.VITE_*` ONLY from `.env*` files, NOT from `.dev.vars`
+// (a Worker file), so the publishable key written to `.dev.vars` never reaches the
+// SPA bundle — a fresh forker hits the MissingClerkPubKey screen. This writer emits
+// a gitignored `.env.local` whose ENTIRE content is the single client publishable
+// line so Vite inlines it and ClerkProvider renders. Unlike generateDevVars there is
+// NO `.env.local.example` template — the content is a literal single line (Pitfall 6).
+// ONLY the non-secret VITE_ publishable key goes here — never a CLERK_SECRET_KEY /
+// sk_ value (D-02, T-08-01). The file is written even when the key is empty (emits the
+// `VITE_CLERK_PUBLISHABLE_KEY=` hint line, D-03). An existing `.env.local` is backed up
+// to `.env.local.bak` first, never clobbered (D-03, T-08-02). Both `.env.local` and
+// `.env.local.bak` are gitignored via `.gitignore *.local`, so neither enters CI scans.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function generateEnvLocal(rootDir, vals, { dryRun = false } = {}) {
+  const pk = vals?.clerkPk ?? ''
+  const envLocalPath = path.join(rootDir, '.env.local')
+  const backupPath = `${envLocalPath}.bak`
+
+  // Build the content directly — a single client publishable-key line (D-02). No
+  // example-template read/regex-fill (there is no .env.local.example, Pitfall 6).
+  const content = `VITE_CLERK_PUBLISHABLE_KEY=${pk}\n`
+
+  const existed = existsSync(envLocalPath)
+  if (dryRun) return { written: false, backedUp: existed, path: envLocalPath }
+
+  // Back up an existing file BEFORE writing (never clobber a developer's real key).
+  if (existed) copyFileSync(envLocalPath, backupPath)
+  writeFileAtomic(envLocalPath, content)
+  return { written: true, backedUp: existed, path: envLocalPath }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Per-account creation checklist (SETUP-02). Prints copy-pasteable `wrangler`
 // commands with the project's chosen D1 / KV names interpolated. The names are
 // SANITIZED to a `[a-z0-9-]` token BEFORE interpolation (slugify) so a pasted
@@ -454,20 +487,32 @@ export function writeModuleConfig(rootDir, choices = {}, { dryRun = false } = {}
   return config
 }
 
-// Explain what the recorded choices do (and do NOT do) this phase: the async-layer effect
-// (uncommenting wrangler cron/queue config) lands in Phase 7; integration-API is reserved for v2.
+// Explain what the recorded choices do (and do NOT do): when async layer is enabled, point at
+// docs/async-layer.md with a brief activation checklist (this function PRINTS only — it does NOT
+// uncomment index.ts or wrangler.jsonc; D-05). integration-API is reserved for v2 (forced false).
 function printModuleNote(config) {
-  console.log(
-    [
-      '',
-      '── Module toggles (recorded to .setup-config.json) ─────────────────────────',
-      `  async layer   : ${config.asyncLayer ? 'enabled (choice recorded)' : 'disabled'}`,
-      '      → effect deferred: Phase 7 reads this flag to uncomment the (then-present)',
-      '        Cron → Queues → Resend wrangler config. Nothing is changed in wrangler.jsonc now.',
-      `  integration-API: ${config.integrationApi} (v2 — not yet available; always recorded false)`,
-      '',
-    ].join('\n'),
+  const lines = [
+    '',
+    '── Module toggles (recorded to .setup-config.json) ─────────────────────────',
+    `  async layer   : ${config.asyncLayer ? 'enabled (choice recorded)' : 'disabled'}`,
+  ]
+  if (config.asyncLayer) {
+    lines.push(
+      '      → the Cron → Queues → Resend layer ships DORMANT. To activate it, follow',
+      '        docs/async-layer.md:',
+      '          1. wrangler queues create <your-queue>   (+ <your-queue>-dlq dead-letter queue)',
+      '          2. uncomment the src/server/index.ts arming seam + the wrangler.jsonc',
+      '             cron/queue blocks, then run `wrangler types`',
+      '          3. wrangler secret put RESEND_API_KEY',
+      '          4. pnpm deploy',
+      '        Nothing is uncommented for you — this is a pointer, not a file edit.',
+    )
+  }
+  lines.push(
+    `  integration-API: ${config.integrationApi} (v2 — not yet available; always recorded false)`,
+    '',
   )
+  console.log(lines.join('\n'))
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -682,6 +727,10 @@ async function main() {
   // the final scan so a --dry-run reports it too.
   const devVars = generateDevVars(rootDir, vals, { dryRun: values['dry-run'] })
 
+  // Generate the gitignored .env.local so Vite inlines the publishable key into the SPA
+  // bundle (AUTH-04, audit WARNING-2). Same backup-on-exists + dry-run contract as above.
+  const envLocal = generateEnvLocal(rootDir, vals, { dryRun: values['dry-run'] })
+
   // Theme swap (SETUP-04): resolve the chosen preset (keep-default / local path / https
   // tweakcn URL, with offline fallback + SSRF + traversal guards), regenerate theme.css
   // byte-faithfully, and — only when a non-default source was actually provided — persist the
@@ -699,6 +748,10 @@ async function main() {
     console.log(
       `[dry-run] would write ${path.basename(devVars.path)}` +
         (devVars.backedUp ? ' (backing up existing → .dev.vars.bak)' : ''),
+    )
+    console.log(
+      `[dry-run] would write ${path.basename(envLocal.path)}` +
+        (envLocal.backedUp ? ' (backing up existing → .env.local.bak)' : ''),
     )
     console.log(
       `[dry-run] would regenerate ${THEME_CSS_REL}` +

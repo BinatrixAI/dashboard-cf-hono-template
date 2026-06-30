@@ -4,6 +4,10 @@
 # ─── Client (Vite-exposed) ──────────────────────────────────────────────────
 # Only VITE_-prefixed vars are bundled into the public client build, so ONLY
 # publishable (non-secret) values may use this prefix.
+# NOTE: Vite inlines `import.meta.env.VITE_*` from `.env*` files (e.g. `.env.local`),
+# NOT from this `.dev.vars` file (a Worker-only file). `setup.mjs` therefore writes the
+# client publishable key into the gitignored `.env.local` so the SPA bundle picks it up;
+# this line stays for documentation of the Worker-visible name only.
 # Clerk publishable key — wired in Phase 3:
 VITE_CLERK_PUBLISHABLE_KEY=
 
@@ -23,3 +27,10 @@ CLERK_SECRET_KEY=
 # Worker and never enters the client bundle. Non-secret; mirrored as a `vars` sentinel
 # in wrangler.jsonc. Leave empty here.
 CLERK_PUBLISHABLE_KEY=
+#
+# Resend API key for the DORMANT async layer (Phase 7, ASYNC-03). Mirrors
+# CLERK_SECRET_KEY: a server-only secret, NEVER VITE_-prefixed, NEVER committed with a
+# value. Set it ONLY at async-layer activation via `wrangler secret put RESEND_API_KEY`
+# (see docs/async-layer.md). The async layer ships dormant, so this stays empty unless
+# you activate. Leave empty here.
+RESEND_API_KEY=

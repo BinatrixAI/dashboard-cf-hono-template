@@ -47,4 +47,30 @@
   // fills the per-project `pk_…`. The matching CLERK_SECRET_KEY is a wrangler SECRET
   // (`wrangler secret put CLERK_SECRET_KEY`), NEVER committed here (D-16).
   "vars": { "CLERK_PUBLISHABLE_KEY": "" }
+
+  // ─── ASYNC LAYER (DORMANT — uncomment to activate; see docs/async-layer.md) ──────────────
+  // Cron -> Queues -> Resend background-email layer. Binding NAMES use the __NAME__ sentinel
+  // convention (__QUEUE_BINDING__ matches AsyncEnv in src/server/async/messages.ts;
+  // __DLQ_BINDING__ is the dead-letter queue). Nothing here is active while commented, so a
+  // fresh fork deploys clean and the platform never invokes scheduled()/queue() (ASYNC-02).
+  // At activation: add a leading comma after the "vars" line above, uncomment the blocks below,
+  // `wrangler queues create` the two queues, then `wrangler types`. Create the DLQ BEFORE arming.
+  //
+  // "triggers": {
+  //   "crons": ["0 9 * * *"]            // daily 09:00 UTC — adjust to your job
+  // },
+  // "queues": {
+  //   "producers": [
+  //     { "binding": "__QUEUE_BINDING__", "queue": "__QUEUE_BINDING__" }
+  //   ],
+  //   "consumers": [
+  //     {
+  //       "queue": "__QUEUE_BINDING__",
+  //       "max_batch_size": 10,
+  //       "max_batch_timeout": 30,
+  //       "max_retries": 3,
+  //       "dead_letter_queue": "__DLQ_BINDING__"   // failed messages land here after max_retries
+  //     }
+  //   ]
+  // }
 }

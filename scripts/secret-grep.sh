@@ -15,9 +15,26 @@ cd "$(dirname "$0")/.."
 # Publishable pk_ keys are non-secret by design and are NOT matched here.
 PATTERNS='sk_(test|live)_[A-Za-z0-9]{20,}|CLERK_SECRET_KEY=[A-Za-z0-9_-]{8,}|re_[A-Za-z0-9]{20,}'
 
-# Scan the tracked tree, excluding narrative paths (planning docs / docs prose).
-if git grep -nE "$PATTERNS" -- . ':!.planning' ':!docs' ; then
+# Scan the FULL tracked tree — no path exclusions. The ':!.planning'/':!docs'
+# pathspecs were removed (D-05) so a real sk_/re_/populated-CLERK_SECRET_KEY=
+# shape committed under planning docs or docs/ also FAILs the gate; the two known
+# placeholders there are neutralized in prose (D-06), never excluded.
+#
+# Fail closed on a git-grep error (D-09): exit 0 = matches → FAIL, 1 = no matches
+# → clean, ≥2 = error → FAIL. The set +e/set -e toggle lets the legitimate exit 1
+# (no matches) through without aborting under the line-11 `set -euo pipefail`.
+set +e
+git grep -nE "$PATTERNS" -- .
+status=$?
+set -e
+
+if [ "$status" -eq 0 ]; then
   echo "SECRET-GREP FAIL: a real-looking secret was found above." >&2
   exit 1
+elif [ "$status" -eq 1 ]; then
+  echo "secret-grep: clean"
+  exit 0
+else
+  echo "secret-grep: git grep exited $status (treated as failure)" >&2
+  exit "$status"
 fi
-echo "secret-grep: clean"

@@ -104,8 +104,10 @@ host:
 - **Clerk at the edge.** `@hono/clerk-auth` verifies the Clerk session in the Worker;
   the SPA uses `@clerk/react`. The publishable key is a plaintext `var`; the secret
   is a `wrangler secret`.
-- **Dormant async layer.** A Cron → Queues → Resend path is reserved for **Phase 7**
-  — recorded by the setup toggle, not yet wired into `wrangler.jsonc`.
+- **Dormant async layer.** A Cron → Queues → Resend path ships in `src/server/async/`
+  (live + unit-tested); the platform wiring stays commented so a fresh fork deploys
+  inert. Activate or remove it by following
+  [`docs/async-layer.md`](docs/async-layer.md).
 
 Theming is a per-project swap (tweakcn → Tailwind v4 oklch tokens), documented in
 [`docs/THEMING.md`](docs/THEMING.md).
@@ -117,7 +119,7 @@ records the choice only — it does **not** edit `wrangler.jsonc` this phase:
 
 | Toggle              | Effect                                                                                  |
 | ------------------- | --------------------------------------------------------------------------------------- |
-| **Async layer**     | Recorded now; **Phase 7** reads the flag to uncomment the Cron → Queues → Resend config |
+| **Async layer**     | Recorded now; activate the shipped dormant Cron → Queues → Resend layer via [`docs/async-layer.md`](docs/async-layer.md) |
 | **Integration API** | **v2 no-op stub** — always recorded `false`; reserved for a future second Worker        |
 
 ## Documentation
@@ -127,6 +129,9 @@ records the choice only — it does **not** edit `wrangler.jsonc` this phase:
   inherit the theme.
 - **[`docs/data-layer.md`](docs/data-layer.md)** — D1 + KV: the schema → migration
   workflow (Drizzle + wrangler), `--local` vs `--remote`, and the KV settings store.
+- **[`docs/async-layer.md`](docs/async-layer.md)** — the dormant Cron → Queues → Resend
+  layer: activation (create queue + DLQ → uncomment wiring → `wrangler secret put
+  RESEND_API_KEY` → deploy) and the removal note.
 
 ## CI/CD + deploy
 
