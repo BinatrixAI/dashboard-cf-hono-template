@@ -1,0 +1,43 @@
+# sentinel-check.yml — SHIPPED downstream gate (CICD-04b, D-04b).
+#
+# DORMANT on the un-setup template (it still legitimately carries ~20 sentinels)
+# and ACTIVE in any generated project where setup.mjs has stripped them. The guard
+# step self-disables by detecting the un-setup template, so this file never fails
+# the template's own CI yet protects every forked project.
+#
+# Reuses the SAME scripts/ci-sentinel-scan.mjs as ci.yml — single source of truth,
+# no second regex. Third-party Actions are pinned to commit SHAs (supply-chain
+# mitigation, Security Domain V14); update the trailing version comment on bump.
+name: Sentinel Check
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  sentinel-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Detect un-setup template (skip if so)
+        id: tmpl
+        run: |
+          if grep -q '"name": "dashboard-cf-hono-template"' wrangler.jsonc \
+             || grep -q '__PKG_NAME__' package.json; then
+            echo "is_template=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Template not yet parameterized by setup.mjs — sentinel-check skipped."
+          fi
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        if: steps.tmpl.outputs.is_template != 'true'
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        if: steps.tmpl.outputs.is_template != 'true'
+        with:
+          node-version-file: .nvmrc
+
+      - name: Sentinel scan (generated projects only)
+        if: steps.tmpl.outputs.is_template != 'true'
+        run: node scripts/ci-sentinel-scan.mjs .

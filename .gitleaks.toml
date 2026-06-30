@@ -1,0 +1,24 @@
+# .gitleaks.toml — Plan 06-02 / CICD-05 (decision D-05 "both": gitleaks + grep).
+# Consumed by the 06-03 secret-scan job:
+#   gitleaks dir . --config .gitleaks.toml --redact --exit-code 1 -v
+#
+# Strategy: inherit gitleaks' maintained provider ruleset (do NOT hand-roll entropy
+# heuristics), then allowlist ONLY publishable Clerk `pk_` keys — which are non-secret
+# by design and intentionally committed in examples/tests. Secret `sk_` shapes are
+# never allowlisted, so a real Clerk/Resend key still fails the scan.
+title = "dashboard-cf-hono-template"
+
+[extend]
+useDefault = true                       # inherit gitleaks' built-in provider rules
+
+# v8.25.0+ uses the plural [[allowlists]] table (NOT singular [allowlist]).
+[[allowlists]]
+description = "Publishable Clerk keys are non-secret and intentionally committed in examples/tests"
+regexes = ['''pk_(test|live)_[A-Za-z0-9._-]+''']
+paths = [
+  '''\.dev\.vars\.example''',           # ships with EMPTY assignments; future-proofed
+  '''vitest\.config\.ts''',             # contains a structurally-valid pk_test_ dummy (line 51)
+  '''test/setup/.*''',                  # setup tests embed pk_test_ fixtures
+  '''docs/.*''',
+  '''\.planning/.*''',
+]

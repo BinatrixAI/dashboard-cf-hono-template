@@ -1,0 +1,25 @@
+# Copy this file to `.dev.vars` (gitignored) and fill in real values locally.
+# NO real secrets are committed to this template — only documented variable names.
+#
+# ─── Client (Vite-exposed) ──────────────────────────────────────────────────
+# Only VITE_-prefixed vars are bundled into the public client build, so ONLY
+# publishable (non-secret) values may use this prefix.
+# Clerk publishable key — wired in Phase 3:
+VITE_CLERK_PUBLISHABLE_KEY=
+
+# ─── Server (never VITE_-prefixed) ──────────────────────────────────────────
+# Server-side secrets must NOT be VITE_-prefixed and must NOT be imported into
+# src/client. In production set them with `wrangler secret put <NAME>`, not here.
+#
+# Clerk SECRET key (Phase 3, AUTH-04/D-16) — the edge session-verification secret.
+# In production set it ONLY via `wrangler secret put CLERK_SECRET_KEY` (never commit
+# a real value, never add it to wrangler.jsonc). Leave empty here.
+CLERK_SECRET_KEY=
+#
+# Clerk PUBLISHABLE key for the WORKER (Phase 3, RESEARCH Pitfall 4). The edge
+# `authenticateRequest()` needs the publishable key too (to derive the FAPI URL and
+# dev/prod mode) — NOT just the secret. This is the SAME `pk_…` value as
+# VITE_CLERK_PUBLISHABLE_KEY above, but WITHOUT the `VITE_` prefix so it stays on the
+# Worker and never enters the client bundle. Non-secret; mirrored as a `vars` sentinel
+# in wrangler.jsonc. Leave empty here.
+CLERK_PUBLISHABLE_KEY=

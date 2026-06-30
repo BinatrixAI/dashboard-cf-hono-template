@@ -1,0 +1,97 @@
+# ci.yml — push/PR quality + scanning gate (CICD-01, CICD-02, and the CI
+# wiring of CICD-04 + CICD-05).
+#
+# Three parallel jobs, none of which deploy:
+#   quality-gate   — typecheck + lint + format:check + Vitest (workers pool,
+#                    real D1/KV binding mocks). Runs GREEN on the un-setup
+#                    template as-is (D-11); sentinels are not scanned here.
+#   secret-scan    — MIT gitleaks BINARY (not the org-license-gated Action,
+#                    Pitfall 1) + the auditable scripts/secret-grep.sh.
+#   sentinel-scan  — scaffolds a setup.mjs --yes copy of the tree into a temp
+#                    dir, then runs scripts/ci-sentinel-scan.mjs against it
+#                    (never the template tree directly, Pitfall 2).
+#
+# The gate holds NO Cloudflare token and never deploys — CICD-03 is a separate
+# Workers Builds path (documented in the README, not wired here, T-06-07).
+# Every third-party Action is pinned to a commit SHA (supply-chain, T-06-06);
+# update the trailing version comment on bump.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-gate: # CICD-01 / CICD-02
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      # pnpm BEFORE setup-node so `cache: pnpm` can resolve the binary (Pitfall 4).
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm cf-typegen # keep Env types in sync with the bindings
+      - run: pnpm typecheck # tsc -b, no full Vite bundle
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm test # workers pool exercises the API vs real D1/KV mocks (CICD-02)
+
+  secret-scan: # CICD-05
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # MIT gitleaks v8 — verified latest tag + asset name at exec (RESEARCH A1).
+      GITLEAKS_VERSION: 8.30.1
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Install gitleaks (MIT binary, not the org-licensed Action)
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
+
+      - name: gitleaks breadth scan
+        run: gitleaks dir . --config .gitleaks.toml --redact --exit-code 1 -v
+
+      - name: Targeted in-repo secret grep
+        run: bash scripts/secret-grep.sh
+
+  sentinel-scan: # CICD-04 (scaffold a generated copy, then scan it)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Scaffold a setup.mjs --yes copy and scan it
+        run: |
+          TMP="$(mktemp -d)"
+          rsync -a \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='.wrangler' \
+            --exclude='dist' \
+            ./ "$TMP/"
+          ( cd "$TMP" && node setup.mjs --yes \
+              --name ci-test-proj \
+              --app-name "CI Test" \
+              --clerk-pk pk_test_Y2ktdGVzdC5jbGVyay5hY2NvdW50cy5kZXYk )
+          node scripts/ci-sentinel-scan.mjs "$TMP"

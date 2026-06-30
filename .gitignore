@@ -1,0 +1,47 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+.env
+
+# Cloudflare / Wrangler
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.wrangler/
+
+# setup.mjs project-local state (NOT template artifacts — research A3).
+# .setup-complete is the idempotency marker written on a successful `node setup.mjs`
+# run; .setup-config.json is the module-toggle record written by plan 05-04.
+# (.dev.vars.bak is already covered by the `.dev.vars.*` rule above.)
+.setup-complete
+.setup-config.json
+
+# Agent skills installed locally via `npx skills add` (e.g. Clerk skills).
+# Kept on disk for the coding agent (discovered via .claude/skills symlinks),
+# but NOT shipped in this brand-neutral template. Forkers can run the add
+# command themselves, or we can later commit a curated subset deliberately.
+.agents/
+.claude/skills/
+skills-lock.json
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

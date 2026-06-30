@@ -1,0 +1,50 @@
+{
+  // Single-Worker config: serves the React SPA as Static Assets and routes /api/* to Hono.
+  // NAMES generally use the __NAME__ sentinel convention (D-01/D-09): __PKG_NAME__ in
+  // package.json, __APP_NAME__ in index.html. Real Cloudflare resource IDs arriving in
+  // Phase 2 (D1/KV) use the DISTINCT REPLACE_WITH_YOUR_* convention (D-02) —
+  // e.g. "database_id": "REPLACE_WITH_YOUR_D1_ID". No real account id or secret belongs here.
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // __WORKER_NAME__ carve-out (Rule-2 deviation vs locked D-01, user-approved Option A):
+  // wrangler rejects the __NAME__ sentinel here (name must be lowercase-alphanumeric-with-
+  // dashes, no underscores/uppercase), so the worker name ships as this valid default
+  // placeholder instead. Phase 5 setup.mjs replaces "dashboard-cf-hono-template"; Phase 6
+  // CI sentinel-grep must EXEMPT this one field. See 01-01-SUMMARY.md (Deviations).
+  "name": "dashboard-cf-hono-template",
+  "main": "./src/server/index.ts",
+  "compatibility_date": "2026-06-01",
+  // With a >= 2024-09-23 compat date, "nodejs_compat" applies v2 behavior automatically;
+  // the literal "nodejs_compat_v2" is deprecated. Kept for Phase 2+ libs (Hono needs none now).
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "binding": "ASSETS",
+    // Unmatched, non-asset requests rewrite to /index.html (HTTP 200) for SPA client routing.
+    "not_found_handling": "single-page-application",
+    // Force /api/* to the Worker (Hono) BEFORE the static-asset fallback (ROUT-02).
+    "run_worker_first": ["/api/*"]
+    // NOTE: do NOT set assets.directory — @cloudflare/vite-plugin auto-populates it from
+    // the client build output. Setting it manually causes drift.
+  },
+  // Two-tier sentinel model (D-02): binding NAMES are __NAME__ sentinels (valid JS
+  // identifiers — wrangler types emits them into Env, so c.env.__D1_BINDING__ compiles
+  // and runs as-is); resource IDs use the DISTINCT REPLACE_WITH_YOUR_* convention.
+  // Phase 5 setup.mjs renames the binding names + substitutes the real IDs; Phase 6 CI
+  // sentinel-grep keys off both forms. NEVER commit a real account/database/namespace id.
+  "d1_databases": [
+    {
+      "binding": "__D1_BINDING__",
+      "database_name": "__D1_BINDING__",
+      "database_id": "REPLACE_WITH_YOUR_D1_ID",
+      // migrations_dir MUST equal drizzle.config `out` so `wrangler d1 migrations apply`
+      // reads the generated SQL. --local ignores database_id; only --remote needs the real id.
+      "migrations_dir": "migrations"
+    }
+  ],
+  "kv_namespaces": [{ "binding": "__KV_BINDING__", "id": "REPLACE_WITH_YOUR_KV_ID" }],
+  // Non-secret plaintext vars (Phase 3, AUTH-04/D-16). CLERK_PUBLISHABLE_KEY is a
+  // publishable (non-secret) Clerk key the edge `authenticateRequest()` needs alongside
+  // the secret (RESEARCH Pitfall 4). It ships EMPTY as a sentinel — Phase 5 setup.mjs
+  // fills the per-project `pk_…`. The matching CLERK_SECRET_KEY is a wrangler SECRET
+  // (`wrangler secret put CLERK_SECRET_KEY`), NEVER committed here (D-16).
+  "vars": { "CLERK_PUBLISHABLE_KEY": "" }
+}
