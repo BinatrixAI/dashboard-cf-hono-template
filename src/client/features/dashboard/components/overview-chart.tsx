@@ -31,7 +31,11 @@ export function OverviewChart() {
             tickMargin={8}
           />
           <ChartTooltip content={<ChartTooltipContent />} />
-          <Bar dataKey='total' fill='var(--color-total)' radius={[4, 4, 0, 0]} />
+          <Bar
+            dataKey='total'
+            fill='var(--color-total)'
+            radius={[4, 4, 0, 0]}
+          />
         </BarChart>
       </ChartContainer>
     </div>

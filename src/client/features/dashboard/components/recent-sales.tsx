@@ -28,7 +28,7 @@ export function RecentSales() {
           </Avatar>
           <div className='space-y-1'>
             <p className='text-sm'>{sale.name}</p>
-            <p className='text-xs text-muted-foreground'>{sale.email}</p>
+            <p className='text-muted-foreground text-xs'>{sale.email}</p>
           </div>
           <div className='ms-auto text-sm'>{sale.amount}</div>
         </div>

@@ -73,7 +73,9 @@ function makeApp(opts: {
   })
   app.use('/api/*', requireAuth)
   app.route('/api/users', users)
-  app.all('/api/*', (c) => c.json({ error: 'Not Found', path: c.req.path }, 404))
+  app.all('/api/*', (c) =>
+    c.json({ error: 'Not Found', path: c.req.path }, 404)
+  )
   return {
     fetch: (input: string, init?: RequestInit) => app.request(input, init, env),
   }

@@ -21,7 +21,9 @@ export interface InitialsUserLike {
  *  - no name → uppercased first char of the primary email (e.g. "dima@…" → "D")
  *  - nothing usable (null/undefined user, no name, no email) → "U"
  */
-export function initialsFromUser(user: InitialsUserLike | null | undefined): string {
+export function initialsFromUser(
+  user: InitialsUserLike | null | undefined
+): string {
   const first = user?.firstName?.trim() ?? ''
   const last = user?.lastName?.trim() ?? ''
 

@@ -2,11 +2,6 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
-import { type AppSettings } from '../../../../shared/settings'
-import {
-  useSettings,
-  useUpdateSettings,
-} from '@/features/settings/data/use-settings'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -20,6 +15,11 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  useSettings,
+  useUpdateSettings,
+} from '@/features/settings/data/use-settings'
+import { type AppSettings } from '../../../../shared/settings'
 
 const items = [
   {

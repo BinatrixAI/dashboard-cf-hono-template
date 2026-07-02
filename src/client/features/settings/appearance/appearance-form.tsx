@@ -2,16 +2,11 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { ChevronDownIcon } from '@radix-ui/react-icons'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { toast } from 'sonner'
-import { type AppSettings } from '../../../../shared/settings'
 import { fonts } from '@/config/fonts'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useFont } from '@/context/font-provider'
 import { useTheme } from '@/context/theme-provider'
-import {
-  useSettings,
-  useUpdateSettings,
-} from '@/features/settings/data/use-settings'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button, buttonVariants } from '@/components/ui/button'
 import {
@@ -25,6 +20,11 @@ import {
 } from '@/components/ui/form'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  useSettings,
+  useUpdateSettings,
+} from '@/features/settings/data/use-settings'
+import { type AppSettings } from '../../../../shared/settings'
 
 const appearanceFormSchema = z.object({
   theme: z.enum(['light', 'dark', 'system']),

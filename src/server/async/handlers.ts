@@ -22,7 +22,7 @@ import type { AsyncEnv, DigestMessage } from './messages'
 export async function scheduled(
   controller: ScheduledController,
   env: Env,
-  _ctx: ExecutionContext,
+  _ctx: ExecutionContext
 ): Promise<void> {
   const msg: DigestMessage = {
     to: 'ops@example.com', // swap for your real recipient / a list resolved at send time
@@ -40,7 +40,7 @@ export async function scheduled(
 export async function queue(
   batch: MessageBatch<DigestMessage>,
   env: Env,
-  _ctx: ExecutionContext,
+  _ctx: ExecutionContext
 ): Promise<void> {
   for (const message of batch.messages) {
     try {

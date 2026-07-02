@@ -14,9 +14,11 @@ and **removal** (delete the layer entirely).
 
 > The binding **names** are `__QUEUE_BINDING__` / `__DLQ_BINDING__` sentinels — the
 > same two-tier convention as the D1/KV bindings (see
-> [`docs/data-layer.md`](data-layer.md)). Phase 5 `setup.mjs` renames the binding
-> names for a forked project; the dormant blocks below carry the sentinels inside
-> JSONC comment tails so the sentinel scan stays clean until you activate.
+> [`docs/data-layer.md`](data-layer.md)). **Unlike** the D1/KV bindings, `setup.mjs`
+> does **not** rename these async sentinels — they live outside its substitution
+> fileset and inside the dormant JSONC comment tails, so the sentinel scan stays clean
+> while the layer is dormant. You rename them **by hand** when you activate the layer —
+> see [step 3 below](#3-rename-the-queue-binding-sentinels).
 
 ## How it ships dormant
 
@@ -34,8 +36,10 @@ and **removal** (delete the layer entirely).
 
 ## Activation (ASYNC-03)
 
-Follow these steps **in order**. Steps 1–2 must happen before deploy, or an armed
-consumer would reference a queue that does not exist.
+Follow these steps **in order**. Steps 1–4 must all complete before the final Deploy
+step (step 5), or an armed consumer would reference a queue that does not exist — and in
+particular the **rename in step 3 must precede deploy**, or the shipped
+`__QUEUE_BINDING__` queue name is invalid and `wrangler deploy` fails.
 
 ### 1. Create the queue + dead-letter queue
 
@@ -90,13 +94,63 @@ wrangler queues create <your-queue>-dlq   # matches __DLQ_BINDING__ (dead-letter
   }
   ```
 
-- **Regenerate the binding types** so `Env` picks up the new producer binding:
+### 3. Rename the queue-binding sentinels
 
-  ```bash
-  wrangler types
-  ```
+`setup.mjs` never touched these sentinels, so you rename them **by hand** now — in
+**three places** — before regenerating types and deploying. The shipped sentinel wrongly
+uses **one** token (`__QUEUE_BINDING__`) for **both** the code-facing `binding` **and**
+the Cloudflare `queue` name; these are two different values and must be split when you
+rename:
 
-### 3. Set the Resend secret
+1. **`wrangler.jsonc`** — in the `queues.producers` / `queues.consumers` blocks you just
+   uncommented, set `"binding"` to a JS identifier (e.g. `DIGEST_QUEUE`) and set the
+   `"queue"` value plus the `"dead_letter_queue"` to the real **lowercase-with-dashes**
+   queue names you created in step 1:
+
+   ```jsonc
+   "queues": {
+     "producers": [
+       { "binding": "DIGEST_QUEUE", "queue": "your-queue" }
+     ],
+     "consumers": [
+       {
+         "queue": "your-queue",
+         "max_batch_size": 10,
+         "max_batch_timeout": 30,
+         "max_retries": 3,
+         "dead_letter_queue": "your-queue-dlq"
+       }
+     ]
+   }
+   ```
+
+2. **`src/server/async/messages.ts`** — rename the `AsyncEnv` augmentation property
+   `__QUEUE_BINDING__: Queue<DigestMessage>` (~line 19) to match the new `binding`
+   (e.g. `DIGEST_QUEUE: Queue<DigestMessage>`).
+
+3. **`src/server/async/handlers.ts`** — rename the matching property access
+   `(env as AsyncEnv).__QUEUE_BINDING__.send(msg)` (~line 33) to the same name
+   (e.g. `(env as AsyncEnv).DIGEST_QUEUE.send(msg)`).
+
+Then regenerate the binding types so `Env` picks up the **renamed** producer binding:
+
+```bash
+wrangler types
+```
+
+> **Skip this rename and the deploy breaks three ways:**
+>
+> 1. `"queue": "__QUEUE_BINDING__"` is not a valid Cloudflare queue name (names are
+>    lowercase-with-dashes) and does not match the queue you created in step 1, so
+>    `wrangler deploy` fails or arms a consumer pointed at a nonexistent queue.
+> 2. Once the blocks are uncommented, `wrangler.jsonc` **is** in the scanned fileset, so
+>    it now carries live identifier sentinels — the shipped downstream
+>    `.github/workflows/sentinel-check.yml` hard-fails the fork's CI once the project is
+>    parameterized.
+> 3. The wrangler `binding` and the code property must be renamed **together**, or
+>    `env.<binding>.send()` will not resolve.
+
+### 4. Set the Resend secret
 
 The Resend API key is a **server-only secret**. Set it via `wrangler secret put` —
 never commit a value, never `VITE_`-prefix it. This mirrors how `CLERK_SECRET_KEY`
@@ -110,10 +164,10 @@ wrangler secret put RESEND_API_KEY
 > `onboarding@resend.dev` placeholder `from:` address that works for testing — swap
 > in a verified domain in your Resend dashboard before sending real mail.
 
-### 4. Deploy
+### 5. Deploy
 
 ```bash
-pnpm deploy
+pnpm run deploy
 ```
 
 The Cron trigger now fires on the pinned schedule, enqueues a digest message, and the

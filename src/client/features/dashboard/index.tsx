@@ -57,14 +57,14 @@ export function Dashboard() {
                 return (
                   <Card key={card.title}>
                     <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                      <CardTitle className='text-xs font-normal text-muted-foreground'>
+                      <CardTitle className='text-muted-foreground text-xs font-normal'>
                         {card.title}
                       </CardTitle>
-                      <Icon className='size-4 text-muted-foreground' />
+                      <Icon className='text-muted-foreground size-4' />
                     </CardHeader>
                     <CardContent>
                       <div className='text-2xl font-semibold'>{card.value}</div>
-                      <p className='text-xs text-muted-foreground'>
+                      <p className='text-muted-foreground text-xs'>
                         {card.delta}
                       </p>
                     </CardContent>

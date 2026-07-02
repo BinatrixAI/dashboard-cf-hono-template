@@ -2,12 +2,12 @@
 import { env } from 'cloudflare:test'
 import { Hono } from 'hono'
 import { describe, expect, it } from 'vitest'
-import { requireAuth } from '../middleware/require-auth'
 import {
   settingsSchema,
   defaultSettings,
   type AppSettings,
 } from '../../shared/settings'
+import { requireAuth } from '../middleware/require-auth'
 import { settings } from './settings'
 
 /**
@@ -73,7 +73,9 @@ describe('/api/settings KV-backed config store (DATA-04, D-04, nested schema)', 
     const res = await api.fetch(`${BASE}/api/settings`)
     expect(res.status).toBe(200)
     const body = (await res.json()) as SettingsBody
-    expect(['light', 'dark', 'system']).toContain(body.settings.appearance.theme)
+    expect(['light', 'dark', 'system']).toContain(
+      body.settings.appearance.theme
+    )
     // All three sections are present objects (Pitfall 4 completeness at the route level).
     expect(typeof body.settings.appearance).toBe('object')
     expect(typeof body.settings.notifications).toBe('object')

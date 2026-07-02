@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { useUser } from '@clerk/react'
-import useDialogState from '@/hooks/use-dialog-state'
 import { initialsFromUser } from '@/lib/initials'
+import useDialogState from '@/hooks/use-dialog-state'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {

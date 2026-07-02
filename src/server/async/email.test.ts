@@ -29,7 +29,9 @@ function envWith(apiKey?: string): Env {
 
 describe('sendEmail() raw-fetch Resend helper (D-02)', () => {
   it('POSTs to the Resend endpoint with Bearer auth and a JSON body (from/to/subject/text)', async () => {
-    const fetchMock = vi.fn(async () => new Response('{"id":"abc"}', { status: 200 }))
+    const fetchMock = vi.fn(
+      async () => new Response('{"id":"abc"}', { status: 200 })
+    )
     vi.stubGlobal('fetch', fetchMock)
 
     await sendEmail(envWith(TEST_KEY), {
@@ -76,7 +78,11 @@ describe('sendEmail() raw-fetch Resend helper (D-02)', () => {
 
   it('throws when Resend returns a non-2xx response', async () => {
     const fetchMock = vi.fn(
-      async () => new Response('forbidden', { status: 422, statusText: 'Unprocessable Entity' }),
+      async () =>
+        new Response('forbidden', {
+          status: 422,
+          statusText: 'Unprocessable Entity',
+        })
     )
     vi.stubGlobal('fetch', fetchMock)
 
@@ -85,7 +91,7 @@ describe('sendEmail() raw-fetch Resend helper (D-02)', () => {
         to: 'rcpt@example.com',
         subject: 'Daily digest',
         text: 'hello',
-      }),
+      })
     ).rejects.toThrow()
   })
 })

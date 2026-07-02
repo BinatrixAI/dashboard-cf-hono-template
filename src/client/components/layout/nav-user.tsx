@@ -2,8 +2,8 @@ import { Link } from '@tanstack/react-router'
 import { useUser } from '@clerk/react'
 // CreditCard + Sparkles dropped with the removed Billing / Upgrade-to-Pro rows (D-07).
 import { BadgeCheck, Bell, ChevronsUpDown, LogOut } from 'lucide-react'
-import useDialogState from '@/hooks/use-dialog-state'
 import { initialsFromUser } from '@/lib/initials'
+import useDialogState from '@/hooks/use-dialog-state'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,

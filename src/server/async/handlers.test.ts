@@ -24,7 +24,9 @@ function fakeMessage(body: DigestMessage) {
   return { body, ack: vi.fn(), retry: vi.fn() }
 }
 
-function fakeBatch(messages: ReturnType<typeof fakeMessage>[]): MessageBatch<DigestMessage> {
+function fakeBatch(
+  messages: ReturnType<typeof fakeMessage>[]
+): MessageBatch<DigestMessage> {
   return { messages } as unknown as MessageBatch<DigestMessage>
 }
 
@@ -50,7 +52,9 @@ describe('queue() consumer — per-message ack/retry', () => {
   })
 
   it('calls retry() once when the send throws (and never ack)', async () => {
-    vi.spyOn(email, 'sendEmail').mockRejectedValue(new Error('Resend send failed: 500'))
+    vi.spyOn(email, 'sendEmail').mockRejectedValue(
+      new Error('Resend send failed: 500')
+    )
     vi.spyOn(console, 'error').mockImplementation(() => {})
     const msg = fakeMessage(sampleBody)
 

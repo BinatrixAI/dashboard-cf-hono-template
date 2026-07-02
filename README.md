@@ -84,7 +84,7 @@ pnpm db:migrate:remote   # the real D1 — requires the real database_id first
 
 ```bash
 pnpm dev                 # SPA HMR + the Hono Worker in workerd (@cloudflare/vite-plugin)
-pnpm deploy              # pnpm build && wrangler deploy → *.workers.dev URL
+pnpm run deploy          # pnpm build && wrangler deploy → *.workers.dev URL
 ```
 
 ## Architecture overview
@@ -117,10 +117,10 @@ Theming is a per-project swap (tweakcn → Tailwind v4 oklch tokens), documented
 `setup.mjs` records your module intent to `.setup-config.json` (gitignored). It
 records the choice only — it does **not** edit `wrangler.jsonc` this phase:
 
-| Toggle              | Effect                                                                                  |
-| ------------------- | --------------------------------------------------------------------------------------- |
+| Toggle              | Effect                                                                                                                   |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | **Async layer**     | Recorded now; activate the shipped dormant Cron → Queues → Resend layer via [`docs/async-layer.md`](docs/async-layer.md) |
-| **Integration API** | **v2 no-op stub** — always recorded `false`; reserved for a future second Worker        |
+| **Integration API** | **v2 no-op stub** — always recorded `false`; reserved for a future second Worker                                         |
 
 ## Documentation
 
@@ -131,7 +131,7 @@ records the choice only — it does **not** edit `wrangler.jsonc` this phase:
   workflow (Drizzle + wrangler), `--local` vs `--remote`, and the KV settings store.
 - **[`docs/async-layer.md`](docs/async-layer.md)** — the dormant Cron → Queues → Resend
   layer: activation (create queue + DLQ → uncomment wiring → `wrangler secret put
-  RESEND_API_KEY` → deploy) and the removal note.
+RESEND_API_KEY` → deploy) and the removal note.
 
 ## CI/CD + deploy
 
@@ -172,7 +172,7 @@ You can always deploy by hand — this is also how the template's Definition of 
 proven:
 
 ```bash
-pnpm deploy              # pnpm build && wrangler deploy → *.workers.dev URL
+pnpm run deploy          # pnpm build && wrangler deploy → *.workers.dev URL
 ```
 
 Deploy order matters for the Clerk secret: `wrangler deploy` (creates the Worker) →

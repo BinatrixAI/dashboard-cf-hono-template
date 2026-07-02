@@ -3,11 +3,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { type AppSettings } from '../../../../shared/settings'
-import {
-  useSettings,
-  useUpdateSettings,
-} from '@/features/settings/data/use-settings'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -23,6 +18,11 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
+import {
+  useSettings,
+  useUpdateSettings,
+} from '@/features/settings/data/use-settings'
+import { type AppSettings } from '../../../../shared/settings'
 
 // Section shape reconciled to the server `AppSettings['notifications']` (D-03):
 // the email booleans are non-optional `z.boolean()` (was `.default(false).optional()`),

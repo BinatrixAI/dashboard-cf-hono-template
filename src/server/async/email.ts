@@ -29,7 +29,9 @@ export async function sendEmail(env: Env, mail: OutboundEmail): Promise<void> {
   const apiKey = (env as Env & { RESEND_API_KEY?: string }).RESEND_API_KEY
   if (!apiKey) {
     // eslint-disable-next-line no-console
-    console.warn('RESEND_API_KEY unset — skipping email send (async layer armed but unconfigured).')
+    console.warn(
+      'RESEND_API_KEY unset — skipping email send (async layer armed but unconfigured).'
+    )
     return
   }
 
