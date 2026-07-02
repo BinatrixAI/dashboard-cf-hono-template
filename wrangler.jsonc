@@ -48,6 +48,12 @@
   // (`wrangler secret put CLERK_SECRET_KEY`), NEVER committed here (D-16).
   "vars": { "CLERK_PUBLISHABLE_KEY": "" }
 
+  // ─── CUSTOM DOMAIN (DORMANT — `setup.mjs --custom-domain <host>` uncomments + fills) ──────
+  // A fresh fork deploys to *.workers.dev. Run `setup.mjs --custom-domain app.example.com` to
+  // activate a custom-domain route (it also adds the comma after the "vars" line above). The
+  // full-line `//` keeps this invisible to the sentinel scan, so a clean fork stays scan-clean.
+  // "routes": [{ "pattern": "REPLACE_WITH_YOUR_CUSTOM_DOMAIN", "custom_domain": true }]
+
   // ─── ASYNC LAYER (DORMANT — uncomment to activate; see docs/async-layer.md) ──────────────
   // Cron -> Queues -> Resend background-email layer. Binding NAMES use the __NAME__ sentinel
   // convention (__QUEUE_BINDING__ matches AsyncEnv in src/server/async/messages.ts;

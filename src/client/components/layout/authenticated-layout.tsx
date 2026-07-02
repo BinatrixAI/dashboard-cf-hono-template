@@ -6,6 +6,7 @@ import { SearchProvider } from '@/context/search-provider'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import { SkipToMain } from '@/components/skip-to-main'
+import { useSettingsThemeSync } from '@/features/settings/data/use-settings'
 
 type AuthenticatedLayoutProps = {
   children?: React.ReactNode
@@ -13,6 +14,10 @@ type AuthenticatedLayoutProps = {
 
 export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
   const defaultOpen = getCookie('sidebar_state') !== 'false'
+  // KV→theme sync (D-08): mounted here (not in the appearance form) so the stored
+  // appearance.theme/font applies on every authenticated page — authoritative
+  // across reloads and devices even when the user never opens Settings.
+  useSettingsThemeSync()
   return (
     <SearchProvider>
       <LayoutProvider>

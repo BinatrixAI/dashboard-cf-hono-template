@@ -2,11 +2,17 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { ChevronDownIcon } from '@radix-ui/react-icons'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { toast } from 'sonner'
+import { type AppSettings } from '../../../../shared/settings'
 import { fonts } from '@/config/fonts'
-import { showSubmittedData } from '@/lib/show-submitted-data'
 import { cn } from '@/lib/utils'
 import { useFont } from '@/context/font-provider'
 import { useTheme } from '@/context/theme-provider'
+import {
+  useSettings,
+  useUpdateSettings,
+} from '@/features/settings/data/use-settings'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button, buttonVariants } from '@/components/ui/button'
 import {
   Form,
@@ -18,34 +24,53 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const appearanceFormSchema = z.object({
-  theme: z.enum(['light', 'dark']),
+  theme: z.enum(['light', 'dark', 'system']),
   font: z.enum(fonts),
 })
 
 type AppearanceFormValues = z.infer<typeof appearanceFormSchema>
 
+// Load gate (D-06 / Pitfall 2): never render or save hardcoded defaults before
+// the stored KV blob resolves. Mirrors the `items/index.tsx` isPending/isError
+// idiom — only the resolved-data branch mounts the editable form.
 export function AppearanceForm() {
-  const { font, setFont } = useFont()
-  const { theme, setTheme } = useTheme()
+  const { data, isPending, isError, refetch } = useSettings()
 
-  // This can come from your database or API.
-  const defaultValues: Partial<AppearanceFormValues> = {
-    theme: theme as 'light' | 'dark',
-    font,
-  }
+  if (isPending) return <AppearanceFormSkeleton />
+  if (isError) return <AppearanceFormError onRetry={() => refetch()} />
 
+  return <AppearanceFormFields data={data} />
+}
+
+function AppearanceFormFields({ data }: { data: AppSettings }) {
+  const { setFont } = useFont()
+  const { setTheme } = useTheme()
+  const update = useUpdateSettings()
+
+  // Hydrate defaults from the stored KV appearance section (D-06) — this component
+  // only mounts once `data` is present, so the form never flashes a pre-GET value.
   const form = useForm<AppearanceFormValues>({
     resolver: zodResolver(appearanceFormSchema),
-    defaultValues,
+    defaultValues: {
+      theme: data.appearance.theme,
+      font: data.appearance.font,
+    },
   })
 
-  function onSubmit(data: AppearanceFormValues) {
-    if (data.font != font) setFont(data.font)
-    if (data.theme != theme) setTheme(data.theme)
+  function onSubmit(values: AppearanceFormValues) {
+    // Instant apply via cookie write-through (D-09, no FOUC) — only when changed.
+    if (values.font !== data.appearance.font) setFont(values.font)
+    if (values.theme !== data.appearance.theme) setTheme(values.theme)
 
-    showSubmittedData(data)
+    // Merge only the appearance section into the full cached blob and PUT the
+    // whole document (D-05, Pitfall 1) — never a partial that drops siblings.
+    const next: AppSettings = { ...data, appearance: values }
+    update.mutate(next, {
+      onSuccess: () => toast.success('Preferences updated'),
+    })
   }
 
   return (
@@ -96,7 +121,7 @@ export function AppearanceForm() {
               <RadioGroup
                 onValueChange={field.onChange}
                 defaultValue={field.value}
-                className='grid max-w-md grid-cols-2 gap-8 pt-2'
+                className='grid max-w-2xl grid-cols-1 gap-6 pt-2 sm:grid-cols-3'
               >
                 <FormItem>
                   <FormLabel className='[&:has([data-state=checked])>div]:border-primary'>
@@ -150,6 +175,42 @@ export function AppearanceForm() {
                     </span>
                   </FormLabel>
                 </FormItem>
+                <FormItem>
+                  <FormLabel className='[&:has([data-state=checked])>div]:border-primary'>
+                    <FormControl>
+                      <RadioGroupItem value='system' className='sr-only' />
+                    </FormControl>
+                    <div className='border-muted hover:border-accent items-center rounded-md border-2 p-1'>
+                      <div className='grid grid-cols-2 overflow-hidden rounded-sm'>
+                        {/* Light half — mirrors the Light card idiom */}
+                        <div className='space-y-2 bg-[#ecedef] p-2'>
+                          <div className='space-y-2 rounded-md bg-white p-2 shadow-xs'>
+                            <div className='h-2 w-full rounded-lg bg-[#ecedef]' />
+                            <div className='h-2 w-full rounded-lg bg-[#ecedef]' />
+                          </div>
+                          <div className='flex items-center space-x-2 rounded-md bg-white p-2 shadow-xs'>
+                            <div className='h-4 w-4 rounded-full bg-[#ecedef]' />
+                            <div className='h-2 w-full rounded-lg bg-[#ecedef]' />
+                          </div>
+                        </div>
+                        {/* Dark half — mirrors the Dark card idiom */}
+                        <div className='space-y-2 bg-slate-950 p-2'>
+                          <div className='space-y-2 rounded-md bg-slate-800 p-2 shadow-xs'>
+                            <div className='h-2 w-full rounded-lg bg-slate-400' />
+                            <div className='h-2 w-full rounded-lg bg-slate-400' />
+                          </div>
+                          <div className='flex items-center space-x-2 rounded-md bg-slate-800 p-2 shadow-xs'>
+                            <div className='h-4 w-4 rounded-full bg-slate-400' />
+                            <div className='h-2 w-full rounded-lg bg-slate-400' />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <span className='block w-full p-2 text-center font-normal'>
+                      System
+                    </span>
+                  </FormLabel>
+                </FormItem>
               </RadioGroup>
             </FormItem>
           )}
@@ -158,5 +219,41 @@ export function AppearanceForm() {
         <Button type='submit'>Update preferences</Button>
       </form>
     </Form>
+  )
+}
+
+function AppearanceFormSkeleton() {
+  return (
+    <div className='space-y-8'>
+      <div className='space-y-2'>
+        <Skeleton className='h-4 w-16' />
+        <Skeleton className='h-9 w-[200px]' />
+      </div>
+      <div className='space-y-2'>
+        <Skeleton className='h-4 w-16' />
+        <div className='grid max-w-2xl grid-cols-1 gap-6 pt-2 sm:grid-cols-3'>
+          <Skeleton className='h-[148px] w-full' />
+          <Skeleton className='h-[148px] w-full' />
+          <Skeleton className='h-[148px] w-full' />
+        </div>
+      </div>
+      <Skeleton className='h-9 w-40' />
+    </div>
+  )
+}
+
+function AppearanceFormError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className='space-y-3'>
+      <Alert variant='destructive'>
+        <AlertTitle>Could not load appearance settings</AlertTitle>
+        <AlertDescription>
+          Check your connection and try again.
+        </AlertDescription>
+      </Alert>
+      <Button variant='outline' size='sm' onClick={onRetry}>
+        Retry
+      </Button>
+    </div>
   )
 }

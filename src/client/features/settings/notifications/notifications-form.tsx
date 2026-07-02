@@ -2,7 +2,13 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from '@tanstack/react-router'
-import { showSubmittedData } from '@/lib/show-submitted-data'
+import { toast } from 'sonner'
+import { type AppSettings } from '../../../../shared/settings'
+import {
+  useSettings,
+  useUpdateSettings,
+} from '@/features/settings/data/use-settings'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -15,8 +21,16 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 
+// Section shape reconciled to the server `AppSettings['notifications']` (D-03):
+// the email booleans are non-optional `z.boolean()` (was `.default(false).optional()`),
+// so `NotificationsFormValues` is structurally assignable to the schema section and
+// the merge needs no transform. Plain `z.boolean()` (no `.default()`) keeps the schema
+// input and output types identical, which `zodResolver`'s generics require; the actual
+// initial values come from the KV-hydrated `defaultValues` below, so per-field `.default`s
+// are redundant here.
 const notificationsFormSchema = z.object({
   type: z.enum(['all', 'mentions', 'none'], {
     error: (iss) =>
@@ -24,35 +38,57 @@ const notificationsFormSchema = z.object({
         ? 'Please select a notification type.'
         : undefined,
   }),
-  mobile: z.boolean().default(false).optional(),
-  communication_emails: z.boolean().default(false).optional(),
-  social_emails: z.boolean().default(false).optional(),
-  marketing_emails: z.boolean().default(false).optional(),
+  mobile: z.boolean(),
+  communication_emails: z.boolean(),
+  social_emails: z.boolean(),
+  marketing_emails: z.boolean(),
   security_emails: z.boolean(),
 })
 
 type NotificationsFormValues = z.infer<typeof notificationsFormSchema>
 
-// This can come from your database or API.
-const defaultValues: Partial<NotificationsFormValues> = {
-  communication_emails: false,
-  marketing_emails: false,
-  social_emails: true,
-  security_emails: true,
+// Load gate (D-06 / Pitfall 2): never render or save hardcoded defaults before
+// the stored KV blob resolves. Mirrors the `items/index.tsx` isPending/isError
+// idiom — only the resolved-data branch mounts the editable form.
+export function NotificationsForm() {
+  const { data, isPending, isError, refetch } = useSettings()
+
+  if (isPending) return <NotificationsFormSkeleton />
+  if (isError) return <NotificationsFormError onRetry={() => refetch()} />
+
+  return <NotificationsFormFields data={data} />
 }
 
-export function NotificationsForm() {
+function NotificationsFormFields({ data }: { data: AppSettings }) {
+  const update = useUpdateSettings()
+
+  // Hydrate defaults from the stored KV notifications section (D-06) — this
+  // component only mounts once `data` is present, so the form never flashes a
+  // pre-GET hardcoded value.
   const form = useForm<NotificationsFormValues>({
     resolver: zodResolver(notificationsFormSchema),
-    defaultValues,
+    defaultValues: {
+      type: data.notifications.type,
+      mobile: data.notifications.mobile,
+      communication_emails: data.notifications.communication_emails,
+      social_emails: data.notifications.social_emails,
+      marketing_emails: data.notifications.marketing_emails,
+      security_emails: data.notifications.security_emails,
+    },
   })
+
+  function onSubmit(values: NotificationsFormValues) {
+    // Merge only the notifications section into the full cached blob and PUT the
+    // whole document (D-05, Pitfall 1) — never a partial that drops siblings.
+    const next: AppSettings = { ...data, notifications: values }
+    update.mutate(next, {
+      onSuccess: () => toast.success('Preferences updated'),
+    })
+  }
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit((data) => showSubmittedData(data))}
-        className='space-y-8'
-      >
+      <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-8'>
         <FormField
           control={form.control}
           name='type'
@@ -216,5 +252,42 @@ export function NotificationsForm() {
         <Button type='submit'>Update notifications</Button>
       </form>
     </Form>
+  )
+}
+
+function NotificationsFormSkeleton() {
+  return (
+    <div className='space-y-8'>
+      <div className='space-y-3'>
+        <Skeleton className='h-4 w-32' />
+        <Skeleton className='h-5 w-40' />
+        <Skeleton className='h-5 w-56' />
+        <Skeleton className='h-5 w-24' />
+      </div>
+      <div className='space-y-4'>
+        <Skeleton className='h-4 w-40' />
+        <Skeleton className='h-20 w-full' />
+        <Skeleton className='h-20 w-full' />
+        <Skeleton className='h-20 w-full' />
+        <Skeleton className='h-20 w-full' />
+      </div>
+      <Skeleton className='h-9 w-44' />
+    </div>
+  )
+}
+
+function NotificationsFormError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className='space-y-3'>
+      <Alert variant='destructive'>
+        <AlertTitle>Could not load notification settings</AlertTitle>
+        <AlertDescription>
+          Check your connection and try again.
+        </AlertDescription>
+      </Alert>
+      <Button variant='outline' size='sm' onClick={onRetry}>
+        Retry
+      </Button>
+    </div>
   )
 }

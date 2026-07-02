@@ -30,6 +30,9 @@ import {
   scanForSentinels,
   SUBSTITUTION_FILESET,
   HARD_FAIL_RE,
+  isValidCustomDomain,
+  computeSlugRewrites,
+  substitute,
 } from '../../setup.mjs'
 
 const templateRoot = fileURLToPath(new URL('../../', import.meta.url))
@@ -132,6 +135,56 @@ describe('scanForSentinels (pure)', () => {
     const res = scanForSentinels(dir, ['scanfix/url.html'])
     expect(res.hardFails.length).toBeGreaterThan(0)
     expect(res.hardFails[0]).toContain('scanfix/url.html')
+  })
+})
+
+describe('isValidCustomDomain (D-09)', () => {
+  it('accepts multi-label FQDNs', () => {
+    expect(isValidCustomDomain('app.example.com')).toBe(true)
+    expect(isValidCustomDomain('sub.app.example.co.uk')).toBe(true)
+  })
+
+  it('rejects scheme, path, and wildcard forms', () => {
+    expect(isValidCustomDomain('https://app.example.com')).toBe(false)
+    expect(isValidCustomDomain('app.example.com/path')).toBe(false)
+    expect(isValidCustomDomain('*.example.com')).toBe(false)
+  })
+
+  it('rejects a single bare label (requires ≥1 dot)', () => {
+    expect(isValidCustomDomain('app')).toBe(false)
+  })
+
+  it('rejects injection chars (quote / whitespace / newline)', () => {
+    expect(isValidCustomDomain('a"b.com')).toBe(false)
+    expect(isValidCustomDomain('a b.com')).toBe(false)
+    expect(isValidCustomDomain('app.example.com\nEVIL')).toBe(false)
+  })
+
+  it('rejects a leading hyphen, empty string, and non-strings', () => {
+    expect(isValidCustomDomain('-app.example.com')).toBe(false)
+    expect(isValidCustomDomain('')).toBe(false)
+    expect(isValidCustomDomain(null)).toBe(false)
+    expect(isValidCustomDomain(undefined)).toBe(false)
+  })
+})
+
+describe('computeSlugRewrites (D-11)', () => {
+  it('emits a rewrite where slugify(raw) differs from raw', () => {
+    expect(
+      computeSlugRewrites({ 'worker slug': 'test_dashboard', 'd1 name': null, 'kv title': null }),
+    ).toEqual([{ label: 'worker slug', from: 'test_dashboard', to: 'test-dashboard' }])
+  })
+
+  it('returns [] when every value is already a clean slug', () => {
+    expect(
+      computeSlugRewrites({ 'worker slug': 'acme-dash', 'd1 name': 'acme-db', 'kv title': 'acme-cache' }),
+    ).toEqual([])
+  })
+
+  it('skips null/undefined entries (default-sourced fields do not echo)', () => {
+    expect(
+      computeSlugRewrites({ 'worker slug': undefined, 'd1 name': null, 'kv title': 'Cache Store' }),
+    ).toEqual([{ label: 'kv title', from: 'Cache Store', to: 'cache-store' }])
   })
 })
 
@@ -416,6 +469,24 @@ describe('setup.mjs per-account creation checklist (SETUP-02)', () => {
     expect(r.stdout).toMatch(/REPLACE_WITH_YOUR_/)
   })
 
+  // IN-02: a --dry-run preview must surface the outstanding REPLACE_WITH_YOUR_* placeholders
+  // (the one thing a dry-run is meant to preview), matching a real run. Pre-fix the dry-run
+  // branch called printChecklist(vals) with no { outstanding } and omitted this block.
+  it('--dry-run surfaces the outstanding REPLACE_WITH_YOUR_* placeholders + writes nothing (IN-02)', () => {
+    const dir = makeTmpCopy()
+    const r = runSetup(dir, [...FLAGS, '--dry-run'])
+    expect(r.status, r.stderr).toBe(0)
+
+    // The outstanding-placeholders section (only emitted when { outstanding } is non-empty) appears.
+    expect(r.stdout).toContain('Outstanding REPLACE_WITH_YOUR_* placeholders')
+    expect(r.stdout).toMatch(/REPLACE_WITH_YOUR_D1_ID/)
+    expect(r.stdout).toMatch(/REPLACE_WITH_YOUR_KV_ID/)
+
+    // Dry-run is read-only: no completion marker, and the template sentinels remain on disk.
+    expect(existsSync(path.join(dir, '.setup-complete'))).toBe(false)
+    expect(read(dir, 'wrangler.jsonc')).toContain('REPLACE_WITH_YOUR_D1_ID')
+  })
+
   it('sanitizes a D1 name carrying shell metacharacters to a [a-z0-9-] token', () => {
     const dir = makeTmpCopy()
     // A value loaded with shell metacharacters; must never survive into a pasteable command.
@@ -557,5 +628,126 @@ describe('setup.mjs headless (non-TTY) safety', () => {
     for (const f of ['.setup-complete', '.setup-config.json']) {
       expect(existsSync(path.join(templateRoot, f)), `${f} leaked into repo root`).toBe(false)
     }
+  })
+})
+
+describe('setup.mjs --require-theme (SETUP-06)', () => {
+  // A blocked-host URL fails the SSRF allow-list BEFORE any fetch (Pitfall 5) — so every
+  // case here is offline-deterministic: no network is ever touched. host-not-allowed →
+  // outcome 'fallback' → the loud block + (under --require-theme) a non-zero exit.
+  const BLOCKED = '--theme=https://evil.example.com/x.json'
+
+  it('exits non-zero when a --theme fallback is combined with --require-theme (D-03)', () => {
+    const dir = makeTmpCopy()
+    const r = runSetup(dir, [...FLAGS, BLOCKED, '--require-theme'])
+    expect(r.status).not.toBe(0)
+  })
+
+  it('exits 0 but prints the loud block on a --theme fallback WITHOUT --require-theme (D-02)', () => {
+    const dir = makeTmpCopy()
+    const r = runSetup(dir, [...FLAGS, BLOCKED])
+    expect(r.status).toBe(0)
+    expect(r.stderr).toContain('THEME NOT APPLIED')
+  })
+
+  it('is a no-op with --require-theme but no --theme: exits 0, no theme warning (D-03)', () => {
+    const dir = makeTmpCopy()
+    const r = runSetup(dir, [...FLAGS, '--require-theme'])
+    expect(r.status).toBe(0)
+    expect(r.stderr).not.toContain('THEME NOT APPLIED')
+  })
+})
+
+describe('setup.mjs --custom-domain (SETUP-08)', () => {
+  // Strip full-line `//` comments so we assert against code-bearing lines only (mirrors the
+  // async-block test): a commented routes line must NOT count as an active "routes" key.
+  const codeLines = (s) => s.split('\n').filter((line) => !/^\s*\/\//.test(line)).join('\n')
+
+  it('--custom-domain=app.example.com writes an ACTIVE routes line + a comma after "vars" (D-07)', () => {
+    const dir = makeTmpCopy()
+    const r = runSetup(dir, [...FLAGS, '--custom-domain=app.example.com'])
+    expect(r.status, r.stderr).toBe(0)
+
+    const wj = read(dir, 'wrangler.jsonc')
+    // routes is ACTIVE (not behind a //) with the given host + custom_domain: true.
+    expect(codeLines(wj)).toMatch(
+      /"routes":\s*\[\{\s*"pattern":\s*"app\.example\.com"\s*,\s*"custom_domain":\s*true\s*\}\]/,
+    )
+    // the "vars" line now ends with a trailing comma.
+    expect(wj).toMatch(/"vars":\s*\{\s*"CLERK_PUBLISHABLE_KEY":\s*"[^"\n]*"\s*\},/)
+    // routes[] only — never workers_dev (D-08).
+    expect(wj).not.toContain('workers_dev')
+  })
+
+  it('no --custom-domain: routes line stays commented, scan clean, workers_dev absent (D-07/D-08)', () => {
+    const dir = makeTmpCopy()
+    const r = runSetup(dir, FLAGS)
+    expect(r.status, r.stderr).toBe(0)
+
+    const wj = read(dir, 'wrangler.jsonc')
+    // the routes placeholder appears ONLY behind a leading `//` comment.
+    expect(wj).toMatch(/^\s*\/\/\s*"routes":/m)
+    expect(codeLines(wj)).not.toMatch(/"routes"/)
+    expect(wj).not.toContain('workers_dev')
+
+    // the dormant placeholder is invisible to the sentinel scan (neither hard-fail nor outstanding).
+    const { hardFails, outstanding } = scanForSentinels(dir)
+    expect(hardFails).toEqual([])
+    expect(outstanding.join('\n')).not.toContain('REPLACE_WITH_YOUR_CUSTOM_DOMAIN')
+  })
+
+  // IN-01: main() rejects an empty --custom-domain before substitute() is ever called, but
+  // substitute() is exported. A direct caller passing customDomain: '' must be treated as
+  // "no domain" (truthiness guard), NOT emit a meaningless active `"pattern": ""` route.
+  it('substitute() treats an empty-string customDomain as "no domain" (IN-01)', () => {
+    const dir = makeTmpCopy()
+    const vals = { ...deriveNames('Acme Dash'), clerkPk: PK, d1Name: 'acme-db' }
+
+    substitute(dir, vals, { customDomain: '' })
+    const empty = read(dir, 'wrangler.jsonc')
+    // No active routes line; the placeholder stays behind a leading `//` comment.
+    expect(codeLines(empty)).not.toMatch(/"routes"/)
+    expect(empty).toMatch(/^\s*\/\/\s*"routes":/m)
+    // Crucially, no empty active pattern was emitted.
+    expect(empty).not.toMatch(/"pattern":\s*""/)
+
+    // Contrast: a real host DOES wire an active route (guard still passes truthy values).
+    const dir2 = makeTmpCopy()
+    substitute(dir2, vals, { customDomain: 'app.example.com' })
+    expect(codeLines(read(dir2, 'wrangler.jsonc'))).toMatch(
+      /"routes":\s*\[\{\s*"pattern":\s*"app\.example\.com"/,
+    )
+  })
+
+  it('an invalid --custom-domain host exits non-zero with NO write (D-09)', () => {
+    // scheme, path, wildcard, and single-label forms each on a fresh copy.
+    for (const host of ['https://x.com', 'a/b.com', '*.example.com', 'app']) {
+      const dir = makeTmpCopy()
+      const r = runSetup(dir, [...FLAGS, `--custom-domain=${host}`])
+      expect(r.status, `host "${host}" should be rejected`).not.toBe(0)
+      const wj = read(dir, 'wrangler.jsonc')
+      // routes line stays commented — no write happened before the exit.
+      expect(codeLines(wj)).not.toMatch(/"routes"/)
+      expect(wj).toMatch(/^\s*\/\/\s*"routes":/m)
+    }
+  })
+
+  it('echoes a slug rewrite prominently; a clean run does not (D-11/D-12)', () => {
+    // printLoudBlock emits via console.warn (stderr) — assert against the combined stream.
+    const r = runSetup(makeTmpCopy(), [
+      '--yes',
+      '--name=test_dashboard',
+      '--app-name=Test Dashboard',
+      `--clerk-pk=${PK}`,
+      '--d1-name=acme-db',
+      '--kv-title=acme-cache',
+    ])
+    expect(r.status, r.stderr).toBe(0)
+    expect(`${r.stdout}${r.stderr}`).toContain('test_dashboard → test-dashboard')
+
+    // A clean input (--name=acme-dash slugifies to itself) prints no slug-rewrite arrow.
+    const clean = runSetup(makeTmpCopy(), FLAGS)
+    expect(clean.status, clean.stderr).toBe(0)
+    expect(`${clean.stdout}${clean.stderr}`).not.toMatch(/→/)
   })
 })

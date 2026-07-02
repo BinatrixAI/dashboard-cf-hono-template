@@ -1,7 +1,13 @@
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { showSubmittedData } from '@/lib/show-submitted-data'
+import { toast } from 'sonner'
+import { type AppSettings } from '../../../../shared/settings'
+import {
+  useSettings,
+  useUpdateSettings,
+} from '@/features/settings/data/use-settings'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -13,6 +19,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const items = [
   {
@@ -41,6 +48,10 @@ const items = [
   },
 ] as const
 
+// The `.refine(non-empty)` is a FORM-level UX validation ("select at least one
+// item"); the server section is a plain `z.array(z.string())`. A non-empty array
+// validates against both, so `DisplayFormValues` ({ items: string[] }) is assignable
+// to `AppSettings['display']` with no transform (D-03).
 const displayFormSchema = z.object({
   items: z.array(z.string()).refine((value) => value.some((item) => item), {
     message: 'You have to select at least one item.',
@@ -49,23 +60,43 @@ const displayFormSchema = z.object({
 
 type DisplayFormValues = z.infer<typeof displayFormSchema>
 
-// This can come from your database or API.
-const defaultValues: Partial<DisplayFormValues> = {
-  items: ['recents', 'home'],
+// Load gate (D-06 / Pitfall 2): never render or save hardcoded defaults before
+// the stored KV blob resolves. Mirrors the `items/index.tsx` isPending/isError
+// idiom — only the resolved-data branch mounts the editable form.
+export function DisplayForm() {
+  const { data, isPending, isError, refetch } = useSettings()
+
+  if (isPending) return <DisplayFormSkeleton />
+  if (isError) return <DisplayFormError onRetry={() => refetch()} />
+
+  return <DisplayFormFields data={data} />
 }
 
-export function DisplayForm() {
+function DisplayFormFields({ data }: { data: AppSettings }) {
+  const update = useUpdateSettings()
+
+  // Hydrate the item selection from the stored KV display section (D-06) — this
+  // component only mounts once `data` is present, so the checkboxes never flash a
+  // pre-GET hardcoded selection.
   const form = useForm<DisplayFormValues>({
     resolver: zodResolver(displayFormSchema),
-    defaultValues,
+    defaultValues: {
+      items: data.display.items,
+    },
   })
+
+  function onSubmit(values: DisplayFormValues) {
+    // Merge only the display section into the full cached blob and PUT the whole
+    // document (D-05, Pitfall 1) — never a partial that drops siblings.
+    const next: AppSettings = { ...data, display: values }
+    update.mutate(next, {
+      onSuccess: () => toast.success('Display updated'),
+    })
+  }
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit((data) => showSubmittedData(data))}
-        className='space-y-8'
-      >
+      <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-8'>
         <FormField
           control={form.control}
           name='items'
@@ -117,5 +148,41 @@ export function DisplayForm() {
         <Button type='submit'>Update display</Button>
       </form>
     </Form>
+  )
+}
+
+function DisplayFormSkeleton() {
+  return (
+    <div className='space-y-8'>
+      <div className='space-y-2'>
+        <Skeleton className='h-4 w-16' />
+        <Skeleton className='h-4 w-72' />
+      </div>
+      <div className='space-y-3'>
+        <Skeleton className='h-5 w-28' />
+        <Skeleton className='h-5 w-28' />
+        <Skeleton className='h-5 w-28' />
+        <Skeleton className='h-5 w-28' />
+        <Skeleton className='h-5 w-28' />
+        <Skeleton className='h-5 w-28' />
+      </div>
+      <Skeleton className='h-9 w-36' />
+    </div>
+  )
+}
+
+function DisplayFormError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className='space-y-3'>
+      <Alert variant='destructive'>
+        <AlertTitle>Could not load display settings</AlertTitle>
+        <AlertDescription>
+          Check your connection and try again.
+        </AlertDescription>
+      </Alert>
+      <Button variant='outline' size='sm' onClick={onRetry}>
+        Retry
+      </Button>
+    </div>
   )
 }

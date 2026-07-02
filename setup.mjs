@@ -119,6 +119,16 @@ const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 // body to the base64url-ish charset Clerk keys actually use (no quotes/whitespace/newlines).
 const PK_RE = /^pk_(test|live)_[A-Za-z0-9._-]+$/
 
+// D-09: strict FQDN shape for `--custom-domain <host>`. A Cloudflare `custom_domain`
+// route is a SPECIFIC hostname (wildcards belong to zone `routes`, not here), so require
+// ≥1 dot and reject a bare single label. Same WR-03 rigor as PK_RE: the charset alone
+// (lowercase-alphanumeric + internal hyphen, no leading/trailing hyphen) rejects scheme
+// (`:`/`/`), path (`/`), wildcard (`*`), quotes, whitespace, and newline — none can reach
+// the wrangler.jsonc write. Total ≤253, each label ≤63.
+const HOSTNAME_RE =
+  /^(?=.{1,253}$)(?!-)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.(?!-)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/
+export const isValidCustomDomain = (h) => typeof h === 'string' && HOSTNAME_RE.test(h)
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Pure helpers (exported for direct unit testing).
 // ─────────────────────────────────────────────────────────────────────────────
@@ -128,6 +138,20 @@ export function slugify(input) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
+}
+
+// D-11/D-12: pure slug-echo diff. Given a { label → raw } map, return the fields whose
+// slug differs from the raw input as { label, from, to }. Null/undefined entries are
+// skipped (a default-sourced field never echoes). The caller supplies ONLY user-supplied
+// raw values (A4 lock) — this helper just diffs whatever it is given. No I/O.
+export function computeSlugRewrites(rawByLabel) {
+  const out = []
+  for (const [label, raw] of Object.entries(rawByLabel)) {
+    if (raw == null) continue
+    const to = slugify(raw)
+    if (to !== String(raw)) out.push({ label, from: String(raw), to })
+  }
+  return out
 }
 
 // Derive the kebab worker slug + package name from a project name, keeping the entered
@@ -277,10 +301,26 @@ export async function resolveModuleChoices({ interactive, rl }) {
 // Substitution engine.
 // ─────────────────────────────────────────────────────────────────────────────
 
+// D-07/D-08: uncomment + fill the dormant `routes` line in wrangler.jsonc (custom-domain).
+// TWO anchored `.replace` calls in substitute()'s style (NEVER JSON.parse): (1) add the
+// trailing comma after the last active `"vars"` field; (2) strip the leading `// ` and fill
+// the host into the placeholder in one shot. Applied ONLY when a host is set, so the no-flag
+// path is byte-stable (D-07). `host` is pre-validated by isValidCustomDomain (D-09), so it
+// cannot contain a `"` to break the JSON string. Writes ONLY routes[] — never workers_dev (D-08).
+export function wireCustomDomain(wj, host) {
+  return wj
+    .replace(/("vars":\s*\{[^\n}]*\})(\s*)$/m, '$1,$2')
+    .replace(
+      /\/\/\s*("routes":\s*\[\{\s*"pattern":\s*")REPLACE_WITH_YOUR_CUSTOM_DOMAIN("\s*,\s*"custom_domain":\s*true\s*\}\])/,
+      `$1${host}$2`,
+    )
+}
+
 // Rewrite every identifier sentinel across SUBSTITUTION_FILESET. Returns the list of changed
 // (relative) paths. `dryRun` computes the rewrite without writing. NEVER JSON.parse the config
 // files — wrangler.jsonc is JSONC (comments) and package.json round-tripping drifts formatting.
-export function substitute(rootDir, vals, { dryRun = false } = {}) {
+// `customDomain` (pre-validated host or null) gates the D-07 routes write on the wrangler.jsonc pass.
+export function substitute(rootDir, vals, { dryRun = false, customDomain = null } = {}) {
   const { workerSlug, pkgName, appName, clerkPk, d1Name } = vals
   const changed = []
 
@@ -300,14 +340,19 @@ export function substitute(rootDir, vals, { dryRun = false } = {}) {
   // empty Clerk pub-key var, and rename ONLY the worker-`name` value (leaving the
   // explanatory comments on lines 8–12 intact, Open Question 3). REPLACE_WITH_YOUR_* IDs
   // are deliberately untouched.
-  apply('wrangler.jsonc', (wj) =>
-    wj
+  apply('wrangler.jsonc', (wj) => {
+    let out = wj
       .replace(/("binding":\s*")__D1_BINDING__(")/, `$1${D1_BINDING}$2`)
       .replace(/("database_name":\s*")__D1_BINDING__(")/, `$1${d1Name}$2`)
       .replace(/("binding":\s*")__KV_BINDING__(")/, `$1${KV_BINDING}$2`)
       .replace(/("name":\s*")dashboard-cf-hono-template(")/, `$1${workerSlug}$2`)
-      .replace(/("CLERK_PUBLISHABLE_KEY":\s*")(")/, `$1${clerkPk ?? ''}$2`),
-  )
+      .replace(/("CLERK_PUBLISHABLE_KEY":\s*")(")/, `$1${clerkPk ?? ''}$2`)
+    // D-07: uncomment + fill the dormant routes line ONLY when a host is set (byte-stable no-flag path).
+    // IN-01: truthiness (not `!= null`) so a direct caller passing `customDomain: ''` is treated as
+    // "no domain" — an empty host would otherwise emit a meaningless active `"pattern": ""` route.
+    if (customDomain) out = wireCustomDomain(out, customDomain)
+    return out
+  })
 
   // Everywhere else the binding token maps uniformly to the code identifier → safe replaceAll.
   // __APP_NAME__ is the one free-form value, so it is context-escaped per target file (WR-04):
@@ -516,6 +561,19 @@ function printModuleNote(config) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Shared loud-banner helper (D-02). Generalises the line-array + rule idiom of
+// printChecklist()/printModuleNote() into a title-flanked block that is visually
+// distinct from ordinary log lines. Emits via console.warn (stderr): a fixed-width
+// rule above the title, another below it, each body line indented two spaces, a
+// closing rule, and a trailing blank line. Kept generic (title + body lines only)
+// so plan 10-03 can reuse it for the custom-domain slug echo banner.
+// ─────────────────────────────────────────────────────────────────────────────
+export function printLoudBlock(title, bodyLines) {
+  const rule = '━'.repeat(76)
+  console.warn(['', rule, `  ${title}`, rule, ...bodyLines.map((l) => `  ${l}`), rule, ''].join('\n'))
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Theme swap (SETUP-04). loadPreset() resolves the chosen tweakcn preset —
 // keep-default (no arg), a local JSON path, or an https tweakcn.com registry item —
 // and ALWAYS degrades to the shipped default rather than throwing (D-08 graceful
@@ -535,14 +593,73 @@ function assertPresetShape(preset) {
   if (!isObj(cv) || !isObj(cv.light) || !isObj(cv.dark)) {
     throw new Error('preset missing cssVars.light / cssVars.dark objects')
   }
+  // WR-02: regenerateTheme() emits `--radius: ${theme.radius};` unconditionally (from
+  // cssVars.theme), so a preset that has light+dark but omits cssVars.theme (or theme.radius)
+  // would write a literal `--radius: undefined;` — and theme.radius, absent, is never seen by
+  // the key/value injection guard. Require cssVars.theme with a string radius at the gate so
+  // such a preset fails the shape check and falls back to the shipped default instead of
+  // producing structurally-broken CSS.
+  if (!isObj(cv.theme) || typeof cv.theme.radius !== 'string') {
+    throw new Error('preset missing cssVars.theme.radius string')
+  }
 }
 
-export async function loadPreset(themeArg, rootDir = process.cwd()) {
+// normalizeThemeUrl() (D-04) is a pure URL→URL transform applied to a `--theme` URL AFTER
+// `new URL()` but BEFORE the host/scheme allow-list (D-06 ordering). It ONLY ever mutates the
+// pathname (host preserved), so the unchanged host guard still rejects non-tweakcn inputs
+// (Pitfall 2 — a rewrite that touched the host would be an SSRF hole). Two rules, in order:
+//   1. tweakcn page URL (`/themes/<id>`, optional trailing slash) → the registry item
+//      `/r/themes/<id>.json`, dropping any search/hash and yielding a SLASH-FREE URL (a
+//      trailing-slash registry URL 308s, Pitfall 3). Only the tweakcn host is translated —
+//      non-tweakcn hosts are deliberately left for the downstream allow-list to reject.
+//   2. else, if the LAST path segment is extensionless, append `.json` (literal fallback for
+//      an extensionless registry URL). A `/r/themes/<id>.json` URL already has an extension →
+//      returned unchanged. Bare theme-ids never reach here (they take the non-URL branch, D-04).
+export function normalizeThemeUrl(u) {
+  if (u.hostname === TWEAKCN_HOST) {
+    const m = u.pathname.match(/^\/themes\/([A-Za-z0-9._-]+)\/?$/)
+    if (m) return new URL(`https://${TWEAKCN_HOST}/r/themes/${m[1]}.json`)
+    // IN-03: an already-extensioned registry path with a stray trailing slash
+    // (`/r/themes/<id>.json/`) 308-redirects under redirect:'manual' → silent fallback
+    // to the shipped default (Pitfall 3). Strip trailing slash(es) so the extensioned URL
+    // is fetched directly. Runs AFTER the page-URL rule so a dotted theme-id page path
+    // (`/themes/my.theme/`) still translates to the registry .json path (no regression).
+    const trimmed = u.pathname.replace(/\/+$/, '')
+    if (/\.[a-z0-9]+$/i.test(trimmed) && trimmed !== u.pathname) {
+      const out = new URL(u)
+      out.pathname = trimmed
+      out.search = ''
+      out.hash = ''
+      return out
+    }
+  }
+  const last = u.pathname.split('/').pop() ?? ''
+  if (last && !last.includes('.')) {
+    const out = new URL(u)
+    out.pathname = u.pathname.replace(/\/?$/, '') + '.json'
+    return out
+  }
+  return u
+}
+
+// resolvePreset() is the outcome-signalling resolver (D-01). It runs the SAME resolution
+// body loadPreset() used to, but instead of near-silently `console.warn`-ing at each failure
+// site and returning the shipped default, it returns a classified result:
+//   { preset, outcome: 'keep-default' }        — no --theme arg (silent, no fetch)
+//   { preset, outcome: 'applied' }             — a local path or remote import succeeded
+//   { preset, outcome: 'fallback', reason }    — a --theme source was given but could not be
+//                                                 applied; preset is the shipped default and
+//                                                 `reason` is the message the old warn emitted
+// main() branches on 'fallback' to print a loud block (D-02) and, under --require-theme, exit
+// non-zero (D-03). EVERY existing guard is preserved verbatim (path-root confinement T-05-05,
+// https+host allow-list T-05-03, redirect:'manual' + resolved-host re-check WR-05, 8s timeout,
+// assertPresetShape) — this is a mechanical "warn → return reason" transform, nothing reordered.
+export async function resolvePreset(themeArg, rootDir = process.cwd()) {
   const shippedPath = path.join(rootDir, SHIPPED_PRESET_REL)
   const readShipped = () => JSON.parse(readFileSync(shippedPath, 'utf8'))
 
   // No arg → keep-default (no-op against the shipped stylesheet).
-  if (!themeArg) return readShipped()
+  if (!themeArg) return { preset: readShipped(), outcome: 'keep-default' }
 
   const isUrl = /^https?:\/\//i.test(themeArg)
 
@@ -553,37 +670,47 @@ export async function loadPreset(themeArg, rootDir = process.cwd()) {
     const rootResolved = path.resolve(rootDir)
     const resolved = path.resolve(rootDir, themeArg)
     if (resolved !== rootResolved && !resolved.startsWith(rootResolved + path.sep)) {
-      console.warn(`--theme path escapes the project root; keeping shipped default theme.`)
-      return readShipped()
+      return {
+        preset: readShipped(),
+        outcome: 'fallback',
+        reason: '--theme path escapes the project root',
+      }
     }
     if (existsSync(resolved)) {
       try {
         const preset = JSON.parse(readFileSync(resolved, 'utf8'))
         assertPresetShape(preset)
-        return preset
+        return { preset, outcome: 'applied' }
       } catch (err) {
-        console.warn(`local preset load failed (${err.message}); keeping shipped default theme.`)
-        return readShipped()
+        return {
+          preset: readShipped(),
+          outcome: 'fallback',
+          reason: `local preset load failed (${err.message})`,
+        }
       }
     }
   }
 
   // Remote import: an explicit https URL or a bare theme-id → the tweakcn registry URL.
-  // Restrict scheme=https + host=tweakcn.com (SSRF, T-05-03); any failure → fall back.
+  // For URL inputs, normalizeThemeUrl rewrites a tweakcn page path to the registry .json path
+  // (D-04) — it runs BEFORE the host/scheme allow-list below (D-06) and only mutates the
+  // pathname, so a non-tweakcn host is never rewritten and is still rejected by that guard
+  // (SSRF preserved, Pitfall 2). Restrict scheme=https + host=tweakcn.com (SSRF, T-05-03);
+  // any failure → fall back.
   let url
   try {
     url = isUrl
-      ? new URL(themeArg)
+      ? normalizeThemeUrl(new URL(themeArg))
       : new URL(`https://${TWEAKCN_HOST}/r/themes/${encodeURIComponent(themeArg)}.json`)
   } catch {
-    console.warn(`invalid --theme value; keeping shipped default theme.`)
-    return readShipped()
+    return { preset: readShipped(), outcome: 'fallback', reason: 'invalid --theme value' }
   }
   if (url.protocol !== 'https:' || url.hostname !== TWEAKCN_HOST) {
-    console.warn(
-      `--theme host not allowed (only https://${TWEAKCN_HOST}); keeping shipped default theme.`,
-    )
-    return readShipped()
+    return {
+      preset: readShipped(),
+      outcome: 'fallback',
+      reason: `--theme host not allowed (only https://${TWEAKCN_HOST})`,
+    }
   }
   try {
     // WR-05: the host/scheme allow-list above only validated the INITIAL url. With the default
@@ -602,11 +729,21 @@ export async function loadPreset(themeArg, rootDir = process.cwd()) {
     }
     const preset = await res.json()
     assertPresetShape(preset)
-    return preset
+    return { preset, outcome: 'applied' }
   } catch (err) {
-    console.warn(`tweakcn import failed (${err.message}); keeping shipped default theme.`)
-    return readShipped()
+    return {
+      preset: readShipped(),
+      outcome: 'fallback',
+      reason: `tweakcn import failed (${err.message})`,
+    }
   }
+}
+
+// Back-compat shim: loadPreset() keeps its original (preset-only) return shape by delegating to
+// resolvePreset() and unwrapping `.preset`. The 6 existing theme-regen loadPreset tests assert on
+// this shape and stay green unchanged.
+export async function loadPreset(themeArg, rootDir = process.cwd()) {
+  return (await resolvePreset(themeArg, rootDir)).preset
 }
 
 // Assemble theme.css from a preset, byte-faithfully. 2-space indent, trailing newline.
@@ -694,6 +831,8 @@ async function main() {
       'd1-name': { type: 'string' },
       'kv-title': { type: 'string' },
       theme: { type: 'string' },
+      'require-theme': { type: 'boolean', default: false },
+      'custom-domain': { type: 'string' },
     },
   })
 
@@ -721,7 +860,58 @@ async function main() {
     rl?.close()
   }
 
-  const changed = substitute(rootDir, vals, { dryRun: values['dry-run'] })
+  // D-09: validate --custom-domain BEFORE any file write, so an invalid host exits 1 with no
+  // partial write (mirrors how resolveInputs validates every field via ensureValid).
+  if (values['custom-domain'] != null) {
+    ensureValid(values['custom-domain'], isValidCustomDomain, 'custom-domain')
+  }
+
+  // D-11/D-12: echo every slug rewrite prominently NEAR THE TOP of the run (not folded into the
+  // end-of-run checklist). rawByLabel is built from USER-SUPPLIED inputs only (A4 lock): the
+  // worker slug's raw source is --name/SETUP_NAME, else --app-name/SETUP_APP_NAME, else none;
+  // default-sourced fields are null and never echo. A clean run prints nothing.
+  const rawByLabel = {
+    'worker slug':
+      values.name ?? process.env.SETUP_NAME ?? values['app-name'] ?? process.env.SETUP_APP_NAME ?? null,
+    'd1 name': values['d1-name'] ?? process.env.SETUP_D1_NAME ?? null,
+    'kv title': values['kv-title'] ?? process.env.SETUP_KV_TITLE ?? null,
+  }
+  const slugRewrites = computeSlugRewrites(rawByLabel)
+  if (slugRewrites.length) {
+    printLoudBlock(
+      'SLUG REWRITES',
+      slugRewrites.map((r) => `${r.from} → ${r.to}`),
+    )
+  }
+
+  // Theme swap (SETUP-04): resolve the chosen preset (keep-default / local path / https
+  // tweakcn URL, with offline fallback + SSRF + traversal guards) and enforce the
+  // --require-theme gate BEFORE any filesystem write, mirroring the custom-domain
+  // validate-before-write pattern (D-09). This keeps a failed run ATOMIC (CR-01): on a
+  // --require-theme fallback the process exits non-zero here, so substitute() /
+  // generateDevVars() / generateEnvLocal() never run, the tracked config, .dev.vars and
+  // .env.local are never mutated, and — critically — the single-slot .bak backups are never
+  // clobbered by a second no-marker re-run.
+  //
+  // A 'fallback' outcome means a --theme source was given but could not be applied — print a
+  // prominent block (D-02) and, under --require-theme, exit non-zero (D-03). A 'keep-default'
+  // outcome (no --theme) never prints and never exits. regenerateTheme() also runs here so a
+  // structurally-broken preset fails closed with no partial write.
+  const { preset, outcome, reason } = await resolvePreset(vals.theme, rootDir)
+  if (outcome === 'fallback') {
+    printLoudBlock('THEME NOT APPLIED', [
+      `--theme could not be loaded: ${reason}`,
+      'Shipped the neutral default theme instead.',
+    ])
+    if (values['require-theme']) process.exit(1) // exits before ANY write
+  }
+  const themeCss = regenerateTheme(preset)
+  const presetJson = `${JSON.stringify(preset, null, 2)}\n`
+
+  const changed = substitute(rootDir, vals, {
+    dryRun: values['dry-run'],
+    customDomain: values['custom-domain'] ?? null,
+  })
 
   // Generate the developer's local .dev.vars (backup-on-exists; secret stays empty) BEFORE
   // the final scan so a --dry-run reports it too.
@@ -730,16 +920,6 @@ async function main() {
   // Generate the gitignored .env.local so Vite inlines the publishable key into the SPA
   // bundle (AUTH-04, audit WARNING-2). Same backup-on-exists + dry-run contract as above.
   const envLocal = generateEnvLocal(rootDir, vals, { dryRun: values['dry-run'] })
-
-  // Theme swap (SETUP-04): resolve the chosen preset (keep-default / local path / https
-  // tweakcn URL, with offline fallback + SSRF + traversal guards), regenerate theme.css
-  // byte-faithfully, and — only when a non-default source was actually provided — persist the
-  // chosen preset to tweakcn-preset.json. The default path is a provable no-op (regenerating
-  // the shipped preset reproduces the committed stylesheet exactly).
-  const themeProvided = Boolean(vals.theme)
-  const preset = await loadPreset(vals.theme, rootDir)
-  const themeCss = regenerateTheme(preset)
-  const presetJson = `${JSON.stringify(preset, null, 2)}\n`
 
   if (values['dry-run']) {
     console.log(
@@ -755,18 +935,27 @@ async function main() {
     )
     console.log(
       `[dry-run] would regenerate ${THEME_CSS_REL}` +
-        (themeProvided ? ` and rewrite ${SHIPPED_PRESET_REL} from --theme` : ' (keep-default no-op)'),
+        (outcome === 'applied'
+          ? ` and rewrite ${SHIPPED_PRESET_REL} from --theme`
+          : ' (keep-default no-op)'),
     )
     const wouldConfig = writeModuleConfig(rootDir, moduleChoices, { dryRun: true })
     console.log(`[dry-run] would write ${MODULE_CONFIG}: ${JSON.stringify(wouldConfig)}`)
     printModuleNote(wouldConfig)
-    printChecklist(vals)
+    // IN-02: run the read-only sentinel scan so --dry-run previews the outstanding
+    // REPLACE_WITH_YOUR_* resource-ID placeholders a real run surfaces (parity with the
+    // write path's printChecklist(vals, { outstanding })). No files are written in dry-run,
+    // so this only reads current on-disk state — the whole point a dry-run is meant to preview.
+    const { outstanding } = scanForSentinels(rootDir)
+    printChecklist(vals, { outstanding })
     return
   }
 
-  // Write the regenerated stylesheet (identical bytes on the keep-default path). When a
-  // non-default --theme was provided, also persist the chosen preset as the new committed source.
-  if (themeProvided) writeFileAtomic(path.join(rootDir, SHIPPED_PRESET_REL), presetJson)
+  // Write the regenerated stylesheet (identical bytes on the keep-default path). Persist the
+  // chosen preset as the new committed source ONLY when a --theme was actually APPLIED (WR-01):
+  // gating on the outcome (not the coarse themeProvided) means a --theme that fell back never
+  // rewrites/reformats the committed tweakcn-preset.json.
+  if (outcome === 'applied') writeFileAtomic(path.join(rootDir, SHIPPED_PRESET_REL), presetJson)
   writeFileAtomic(path.join(rootDir, THEME_CSS_REL), themeCss)
 
   // Record the module-toggle choices (SETUP-03 / D-12). Records intent only — touches NO

@@ -1,14 +1,9 @@
 import { Link } from '@tanstack/react-router'
 import { useUser } from '@clerk/react'
-import {
-  BadgeCheck,
-  Bell,
-  ChevronsUpDown,
-  CreditCard,
-  LogOut,
-  Sparkles,
-} from 'lucide-react'
+// CreditCard + Sparkles dropped with the removed Billing / Upgrade-to-Pro rows (D-07).
+import { BadgeCheck, Bell, ChevronsUpDown, LogOut } from 'lucide-react'
 import useDialogState from '@/hooks/use-dialog-state'
+import { initialsFromUser } from '@/lib/initials'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -39,6 +34,8 @@ export function NavUser() {
     email: clerkUser?.primaryEmailAddress?.emailAddress ?? '',
     avatar: clerkUser?.imageUrl ?? '',
   }
+  // Derived from the current session identity, not a hardcoded placeholder (D-06a).
+  const initials = initialsFromUser(clerkUser)
 
   return (
     <>
@@ -52,7 +49,9 @@ export function NavUser() {
               >
                 <Avatar className='h-8 w-8 rounded-lg'>
                   <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className='rounded-lg'>SN</AvatarFallback>
+                  <AvatarFallback className='rounded-lg'>
+                    {initials}
+                  </AvatarFallback>
                 </Avatar>
                 <div className='grid flex-1 text-start text-sm leading-tight'>
                   <span className='truncate font-semibold'>{user.name}</span>
@@ -71,7 +70,9 @@ export function NavUser() {
                 <div className='flex items-center gap-2 px-1 py-1.5 text-start text-sm'>
                   <Avatar className='h-8 w-8 rounded-lg'>
                     <AvatarImage src={user.avatar} alt={user.name} />
-                    <AvatarFallback className='rounded-lg'>SN</AvatarFallback>
+                    <AvatarFallback className='rounded-lg'>
+                      {initials}
+                    </AvatarFallback>
                   </Avatar>
                   <div className='grid flex-1 text-start text-sm leading-tight'>
                     <span className='truncate font-semibold'>{user.name}</span>
@@ -80,6 +81,7 @@ export function NavUser() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
+              {/* TODO(forker): re-enable Upgrade to Pro once Billing/plans are wired (D-07).
               <DropdownMenuGroup>
                 <DropdownMenuItem>
                   <Sparkles />
@@ -87,19 +89,24 @@ export function NavUser() {
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
+              */}
               <DropdownMenuGroup>
+                {/* Single canonical entry into the Clerk user area (D-06): repointed
+                    from /settings/account to /settings. */}
                 <DropdownMenuItem asChild>
-                  <Link to='/settings/account'>
+                  <Link to='/settings'>
                     <BadgeCheck />
-                    Account
+                    Manage account
                   </Link>
                 </DropdownMenuItem>
+                {/* TODO(forker): re-enable Billing once a real billing route exists (D-07).
                 <DropdownMenuItem asChild>
                   <Link to='/settings'>
                     <CreditCard />
                     Billing
                   </Link>
                 </DropdownMenuItem>
+                */}
                 <DropdownMenuItem asChild>
                   <Link to='/settings/notifications'>
                     <Bell />

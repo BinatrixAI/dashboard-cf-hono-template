@@ -16,7 +16,7 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { regenerateTheme, loadPreset } from '../../setup.mjs'
+import { regenerateTheme, loadPreset, resolvePreset, normalizeThemeUrl } from '../../setup.mjs'
 
 const repoRoot = fileURLToPath(new URL('../../', import.meta.url))
 const fixtures = fileURLToPath(new URL('./fixtures/', import.meta.url))
@@ -164,6 +164,28 @@ describe('loadPreset (offline-safe, SSRF-guarded)', () => {
     expect(preset).toEqual(shippedPreset())
   })
 
+  it('does NOT fetch a non-tweakcn PAGE URL — not rewritten to tweakcn, rejected by the host guard (D-06)', async () => {
+    // Post-normalize SSRF regression: normalizeThemeUrl only translates the tweakcn host, so a
+    // non-tweakcn page URL keeps its host and is rejected by the unchanged allow-list BEFORE fetch.
+    const spy = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) })
+    vi.stubGlobal('fetch', spy)
+    const preset = await loadPreset('https://evil.example.com/themes/x', repoRoot)
+    expect(spy).not.toHaveBeenCalled()
+    expect(preset).toEqual(shippedPreset())
+  })
+
+  it('ACCEPTS a tweakcn PAGE URL past the host guard (rewritten to registry) and only falls back on fetch failure', async () => {
+    // A tweakcn page URL is rewritten to /r/themes/whatever.json, passes the host guard, and
+    // reaches fetch — proving the rewrite runs before the guard. With fetch stubbed to reject,
+    // it degrades to the shipped preset (fallback), not a host-not-allowed rejection.
+    const spy = vi.fn().mockRejectedValue(new Error('offline'))
+    vi.stubGlobal('fetch', spy)
+    const preset = await loadPreset('https://tweakcn.com/themes/whatever', repoRoot)
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(new URL(spy.mock.calls[0][0]).href).toBe('https://tweakcn.com/r/themes/whatever.json')
+    expect(preset).toEqual(shippedPreset())
+  })
+
   it('rejects a response that resolved to a non-tweakcn host (WR-05 defense-in-depth)', async () => {
     // Even if a redirect were somehow followed, a resolved res.url on a disallowed host is
     // rejected before the body is used.
@@ -176,5 +198,136 @@ describe('loadPreset (offline-safe, SSRF-guarded)', () => {
     vi.stubGlobal('fetch', spy)
     const preset = await loadPreset('https://tweakcn.com/r/themes/x.json', repoRoot)
     expect(preset).toEqual(shippedPreset())
+  })
+})
+
+describe('normalizeThemeUrl (page→registry, D-04)', () => {
+  const U = (s) => new URL(s)
+
+  it('rewrites a tweakcn page URL to the registry .json path', () => {
+    const out = normalizeThemeUrl(U('https://tweakcn.com/themes/modern-minimal'))
+    expect(out.href).toBe('https://tweakcn.com/r/themes/modern-minimal.json')
+    expect(out.pathname).toBe('/r/themes/modern-minimal.json')
+    expect(out.hostname).toBe('tweakcn.com')
+  })
+
+  it('drops a trailing slash + query on a page URL, yielding a slash-free registry URL', () => {
+    const out = normalizeThemeUrl(U('https://tweakcn.com/themes/modern-minimal/?foo=bar'))
+    expect(out.href).toBe('https://tweakcn.com/r/themes/modern-minimal.json')
+  })
+
+  it('leaves a full registry URL (already has an extension) unchanged', () => {
+    const out = normalizeThemeUrl(U('https://tweakcn.com/r/themes/modern-minimal.json'))
+    expect(out.href).toBe('https://tweakcn.com/r/themes/modern-minimal.json')
+  })
+
+  it('appends .json to an extensionless last segment (literal fallback)', () => {
+    const out = normalizeThemeUrl(U('https://tweakcn.com/r/themes/modern-minimal'))
+    expect(out.href).toBe('https://tweakcn.com/r/themes/modern-minimal.json')
+  })
+
+  it('does NOT rewrite the host of a non-tweakcn page URL (leaves it for the allow-list)', () => {
+    const out = normalizeThemeUrl(U('https://evil.example.com/themes/x'))
+    expect(out.hostname).toBe('evil.example.com')
+  })
+
+  // IN-03: an extensioned registry URL with a stray trailing slash 308-redirects under
+  // redirect:'manual' → silent fallback. Normalize the slash away so it's fetched directly.
+  it('strips a trailing slash on an already-extensioned registry URL (IN-03)', () => {
+    const out = normalizeThemeUrl(U('https://tweakcn.com/r/themes/modern-minimal.json/'))
+    expect(out.href).toBe('https://tweakcn.com/r/themes/modern-minimal.json')
+    expect(out.pathname).toBe('/r/themes/modern-minimal.json')
+  })
+
+  it('strips trailing slash + drops query/hash on an extensioned registry URL (IN-03)', () => {
+    const out = normalizeThemeUrl(U('https://tweakcn.com/r/themes/modern-minimal.json/?v=1#x'))
+    expect(out.href).toBe('https://tweakcn.com/r/themes/modern-minimal.json')
+  })
+
+  it('still translates a dotted-theme-id page URL to the registry path (no IN-03 regression)', () => {
+    const out = normalizeThemeUrl(U('https://tweakcn.com/themes/my.theme/'))
+    expect(out.href).toBe('https://tweakcn.com/r/themes/my.theme.json')
+  })
+
+  it('does NOT rewrite the host when trimming a trailing slash on a non-tweakcn URL', () => {
+    const out = normalizeThemeUrl(U('https://evil.example.com/r/themes/x.json/'))
+    expect(out.hostname).toBe('evil.example.com')
+  })
+
+  it('never mutates the hostname of its input', () => {
+    for (const s of [
+      'https://tweakcn.com/themes/foo',
+      'https://tweakcn.com/r/themes/foo.json',
+      'https://evil.example.com/themes/x',
+    ]) {
+      expect(normalizeThemeUrl(U(s)).hostname).toBe(U(s).hostname)
+    }
+  })
+})
+
+describe('resolvePreset (outcome signal, D-01)', () => {
+  it('returns outcome keep-default with the shipped preset when given no theme arg (no reason)', async () => {
+    const r = await resolvePreset(undefined, repoRoot)
+    expect(r.outcome).toBe('keep-default')
+    expect(r.reason).toBeUndefined()
+    expect(r.preset).toEqual(shippedPreset())
+  })
+
+  it('returns outcome applied with the parsed preset for a valid local path', async () => {
+    const r = await resolvePreset(path.join(fixtures, 'alt-preset.json'), repoRoot)
+    expect(r.outcome).toBe('applied')
+    expect(r.preset).toEqual(altPreset())
+  })
+
+  it('returns outcome fallback for a `..` path that escapes the project root (traversal guard, T-05-05)', async () => {
+    // The guard must reject BEFORE any read is attempted outside root. Spy on fetch to prove no
+    // network read either, and assert the escape-specific reason — which the resolver only
+    // returns after confining the resolved path to rootDir (short-circuiting before existsSync /
+    // readFileSync of the escaping path). Degrades to the shipped default (no throw).
+    const spy = vi.fn()
+    vi.stubGlobal('fetch', spy)
+    const r = await resolvePreset('../../../etc/passwd', repoRoot)
+    expect(r.outcome).toBe('fallback')
+    expect(r.reason).toMatch(/escapes the project root/)
+    expect(r.preset).toEqual(shippedPreset())
+    expect(spy).not.toHaveBeenCalled()
+  })
+
+  it('returns outcome fallback for an absolute path outside the project root (traversal guard, T-05-05)', async () => {
+    const r = await resolvePreset('/etc/passwd', repoRoot)
+    expect(r.outcome).toBe('fallback')
+    expect(r.reason).toMatch(/escapes the project root/)
+    expect(r.preset).toEqual(shippedPreset())
+  })
+
+  it('returns outcome fallback (host-not-allowed) WITHOUT fetching for a non-tweakcn host (SSRF guard)', async () => {
+    const spy = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) })
+    vi.stubGlobal('fetch', spy)
+    const r = await resolvePreset('https://evil.example.com/x.json', repoRoot)
+    expect(spy).not.toHaveBeenCalled()
+    expect(r.outcome).toBe('fallback')
+    expect(r.reason).toMatch(/host not allowed/)
+    expect(r.preset).toEqual(shippedPreset())
+  })
+
+  it('returns outcome fallback (with the error in reason) when the tweakcn fetch rejects', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')))
+    const r = await resolvePreset('https://tweakcn.com/r/themes/x.json', repoRoot)
+    expect(r.outcome).toBe('fallback')
+    expect(r.reason).toMatch(/offline/)
+    expect(r.preset).toEqual(shippedPreset())
+  })
+
+  it('returns outcome fallback when the fetched body fails the preset shape gate', async () => {
+    const spy = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      url: 'https://tweakcn.com/r/themes/x.json',
+      json: async () => ({ nope: true }),
+    })
+    vi.stubGlobal('fetch', spy)
+    const r = await resolvePreset('https://tweakcn.com/r/themes/x.json', repoRoot)
+    expect(r.outcome).toBe('fallback')
+    expect(r.preset).toEqual(shippedPreset())
   })
 })

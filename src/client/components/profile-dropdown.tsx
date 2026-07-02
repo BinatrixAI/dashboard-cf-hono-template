@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { useUser } from '@clerk/react'
 import useDialogState from '@/hooks/use-dialog-state'
+import { initialsFromUser } from '@/lib/initials'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -23,6 +24,8 @@ export function ProfileDropdown() {
   const name = user?.fullName ?? user?.firstName ?? 'Account'
   const email = user?.primaryEmailAddress?.emailAddress ?? ''
   const avatar = user?.imageUrl ?? ''
+  // Derived from the current session identity, not a hardcoded placeholder (D-06a).
+  const initials = initialsFromUser(user)
 
   return (
     <>
@@ -31,7 +34,7 @@ export function ProfileDropdown() {
           <Button variant='ghost' className='relative h-8 w-8 rounded-full'>
             <Avatar className='h-8 w-8'>
               <AvatarImage src={avatar} alt={name} />
-              <AvatarFallback>SN</AvatarFallback>
+              <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
@@ -46,25 +49,26 @@ export function ProfileDropdown() {
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
+            {/* Single canonical entry into the Clerk user area (D-06). Collapses the
+                former Profile + Settings pair that both dumped onto /settings
+                (RESEARCH Pitfall 4 — no two rows to the same route). */}
             <DropdownMenuItem asChild>
               <Link to='/settings'>
-                Profile
-                <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
+                Manage account
+                <DropdownMenuShortcut>⇧⌘S</DropdownMenuShortcut>
               </Link>
             </DropdownMenuItem>
+            {/* TODO(forker): re-enable Billing once a real billing route exists (D-07).
             <DropdownMenuItem asChild>
               <Link to='/settings'>
                 Billing
                 <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link to='/settings'>
-                Settings
-                <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
-              </Link>
-            </DropdownMenuItem>
+            */}
+            {/* TODO(forker): re-enable New Team once Organizations/Teams are wired (D-07).
             <DropdownMenuItem>New Team</DropdownMenuItem>
+            */}
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant='destructive' onClick={() => setOpen(true)}>

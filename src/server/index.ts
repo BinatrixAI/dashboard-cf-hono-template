@@ -4,6 +4,7 @@ import { requireAuth } from './middleware/require-auth'
 import { health } from './routes/health'
 import { items } from './routes/items'
 import { settings } from './routes/settings'
+import { users } from './routes/users'
 
 /**
  * Single-Worker Hono entry (referenced by wrangler.jsonc `main`).
@@ -52,6 +53,8 @@ app.use('/api/*', requireAuth)
 //    items: D-04 in-memory store -> Phase-2 D1 swap seam. settings: KV-as-config (D-04).
 app.route('/api/items', items)
 app.route('/api/settings', settings)
+// users: D-04 real Clerk instance-user list (read-only, minimal Row mapping, D-04b).
+app.route('/api/users', users)
 
 // 5) Terminal /api/* catch-all — JSON 404, never HTML (ROUT-03). MUST stay last.
 //    (An UNauthenticated unknown /api/* path is short-circuited to 401 by requireAuth

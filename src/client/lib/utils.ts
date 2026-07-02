@@ -10,6 +10,26 @@ export function sleep(ms: number = 1000) {
 }
 
 /**
+ * Returns 1–2 uppercase initials from a display-name string.
+ * Source: upstream shadcn-admin v2.2.1 src/lib/utils.ts (verbatim).
+ *
+ * Distinct from `src/client/lib/initials.ts` `initialsFromUser(user)`, which
+ * takes a Clerk user object — this is the string-arg variant the Chats module
+ * imports from `@/lib/utils`.
+ *  - 0 parts (empty/whitespace) → '?'
+ *  - 1 part → first two chars, uppercased
+ *  - 2+ parts → first char of first + first char of last, uppercased
+ */
+export function getDisplayNameInitials(displayName: string): string {
+  const parts = displayName.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  const first = parts[0][0] ?? ''
+  const last = parts[parts.length - 1]?.[0] ?? ''
+  return (first + last).toUpperCase()
+}
+
+/**
  * Generates page numbers for pagination with ellipsis
  * @param currentPage - Current page number (1-based)
  * @param totalPages - Total number of pages

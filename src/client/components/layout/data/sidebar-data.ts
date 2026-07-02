@@ -1,6 +1,10 @@
 import {
   LayoutDashboard,
   Package,
+  ListTodo,
+  LayoutGrid,
+  MessagesSquare,
+  Users,
   Bell,
   Monitor,
   Palette,
@@ -36,6 +40,29 @@ export const sidebarData: SidebarData = {
           title: 'Items',
           url: '/items',
           icon: Package,
+        },
+        {
+          title: 'Tasks',
+          url: '/tasks',
+          icon: ListTodo,
+        },
+        {
+          // LayoutGrid (not Package) — Items already uses Package; keep glyphs
+          // distinct (D-03a / Pitfall 6).
+          title: 'Apps',
+          url: '/apps',
+          icon: LayoutGrid,
+        },
+        {
+          title: 'Chats',
+          url: '/chats',
+          icon: MessagesSquare,
+          badge: '3',
+        },
+        {
+          title: 'Users',
+          url: '/users',
+          icon: Users,
         },
       ],
     },
