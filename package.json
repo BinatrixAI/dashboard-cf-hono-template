@@ -1,7 +1,7 @@
 {
   "name": "__PKG_NAME__",
   "private": false,
-  "version": "1.0.0",
+  "version": "1.1.2",
   "type": "module",
   "packageManager": "pnpm@10.25.0",
   "scripts": {
@@ -11,7 +11,7 @@
     "preview": "pnpm build && vite preview",
     "deploy": "pnpm build && wrangler deploy",
     "cf-typegen": "wrangler types",
-    "db:generate": "drizzle-kit generate --name init",
+    "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply __D1_BINDING__ --local",
     "db:migrate:remote": "wrangler d1 migrations apply __D1_BINDING__ --remote",
     "lint": "eslint .",

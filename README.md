@@ -9,6 +9,8 @@
 <picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/Stack-React-61DAFB.svg?logo=react&amp;variant=branded&amp;size=sm&amp;mode=dark"><img alt="React" src="https://www.shieldcn.dev/badge/Stack-React-61DAFB.svg?logo=react&amp;variant=branded&amp;size=sm&amp;mode=light"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/Stack-Tailwind_CSS-06B6D4.svg?logo=tailwindcss&amp;variant=branded&amp;size=sm&amp;mode=dark"><img alt="Tailwind CSS" src="https://www.shieldcn.dev/badge/Stack-Tailwind_CSS-06B6D4.svg?logo=tailwindcss&amp;variant=branded&amp;size=sm&amp;mode=light"></picture>
 
+**English** · [Русский](README.ru.md)
+
 A brand-neutral, reusable **Cloudflare dashboard template**. One Cloudflare Worker
 serves a **Vite + React SPA** (TanStack Router, shadcn/ui, Tailwind v4, RTL-ready)
 as Static Assets and routes `/api/*` to a **Hono** API on the same runtime, backed
@@ -121,6 +123,40 @@ host:
 Theming is a per-project swap (tweakcn → Tailwind v4 oklch tokens), documented in
 [`docs/THEMING.md`](docs/THEMING.md).
 
+## Directory structure
+
+Single-package layout — the SPA, the API, and their shared contracts live under
+one `src/`, built and deployed as one Worker:
+
+```
+├── src/
+│   ├── client/                 # Vite + React SPA (served as Static Assets)
+│   │   ├── routes/             # TanStack file-based routes
+│   │   │   ├── _authenticated/ #   Clerk-guarded pages (protected)
+│   │   │   └── (auth)/         #   sign-in / sign-up (public)
+│   │   ├── features/           # feature modules (items, dashboard, settings, …)
+│   │   ├── components/         # shared UI; components/ui/ = vendored shadcn
+│   │   ├── main.tsx            # ClerkProvider + router bootstrap
+│   │   └── routeTree.gen.ts    # AUTO-GENERATED — never hand-edit
+│   ├── server/                 # Hono API (owns /api/*)
+│   │   ├── index.ts            # router registration = the auth-order contract
+│   │   ├── routes/             # per-feature routers + colocated *.test.ts
+│   │   ├── middleware/         # requireAuth (the edge gate)
+│   │   ├── db/                 # Drizzle schema + queries
+│   │   └── async/              # dormant Cron → Queues → Resend layer
+│   └── shared/                 # Zod schemas + types imported by both tiers
+├── migrations/                 # Drizzle-generated D1 SQL (+ committed meta/)
+├── public/                     # static files copied verbatim into the build
+├── scripts/                    # CI hygiene helpers (secret-grep, sentinel scan, smoke)
+├── test/                       # Vitest workers-pool setup + migration helpers
+├── docs/                       # the guides linked below
+├── .claude/skills/dashboard-dev/  # Claude Code skill: extend-the-template recipes
+├── wrangler.jsonc              # bindings, assets, run_worker_first
+├── components.json             # shadcn config
+├── .mcp.json                   # shadcn MCP server (dev-time)
+└── setup.mjs                   # one-shot project parameterizer
+```
+
 ## Module toggles
 
 `setup.mjs` records your module intent to `.setup-config.json` (gitignored). It
@@ -131,8 +167,28 @@ records the choice only — it does **not** edit `wrangler.jsonc` this phase:
 | **Async layer**     | Recorded now; activate the shipped dormant Cron → Queues → Resend layer via [`docs/async-layer.md`](docs/async-layer.md) |
 | **Integration API** | **v2 no-op stub** — always recorded `false`; reserved for a future second Worker                                         |
 
+## Working with this template (Claude Code skill)
+
+This repo ships a **`dashboard-dev` Claude Code skill** at
+[`.claude/skills/dashboard-dev/`](.claude/skills/dashboard-dev/SKILL.md). If you use
+Claude Code (or any agent that reads `.claude/skills/`), it auto-activates when you ask
+to add a page/route, a DB table + migration, an API endpoint, a shadcn component, or work
+with secrets — and answers with the exact file paths + commands for **this** layout, then
+points at the deep-dive guides below. It's the fastest way to learn the structure without
+reading every doc. Not using an agent? The same recipes are in `docs/` (linked next).
+
 ## Documentation
 
+Deep-dive guides live in [`docs/`](docs/):
+
+- **[`docs/adding-pages.md`](docs/adding-pages.md)** — the core how-to: the
+  4-file page anatomy and copy-paste recipes for public/protected pages, a
+  data-backed page (full path), public API endpoints, KV data, and
+  removing/renaming demo pages.
+- **[`docs/ui-components.md`](docs/ui-components.md)** — the vendored shadcn/ui
+  model, adding components via `pnpm dlx shadcn@latest add`, and the shadcn MCP.
+- **[`docs/secrets.md`](docs/secrets.md)** — `.dev.vars` vs `wrangler secret put`
+  vs `wrangler.jsonc` `vars` vs `VITE_*`, with a worked add-a-secret example.
 - **[`docs/THEMING.md`](docs/THEMING.md)** — tweakcn + Tailwind v4 theming: the
   generate → export → commit workflow, light/dark mode, and how Clerk auth pages
   inherit the theme.

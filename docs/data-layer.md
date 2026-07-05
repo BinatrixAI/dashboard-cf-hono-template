@@ -49,7 +49,7 @@ row matches the `Item` contract in `src/shared/types.ts` with zero mapping.
 ### 2. Generate the migration
 
 ```bash
-pnpm db:generate   # drizzle-kit generate --name init  →  migrations/0000_init.sql
+pnpm db:generate --name <feature>   # drizzle-kit generate → migrations/000N_<feature>.sql
 ```
 
 `drizzle-kit generate` emits **DDL only** — it never emits data. The single seed

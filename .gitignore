@@ -31,8 +31,11 @@ dist-ssr
 # Kept on disk for the coding agent (discovered via .claude/skills symlinks),
 # but NOT shipped in this brand-neutral template. Forkers can run the add
 # command themselves, or we can later commit a curated subset deliberately.
+# Exception: dashboard-dev is the one curated skill we deliberately ship, so the
+# `/*` form ignores every skill EXCEPT the un-ignored dashboard-dev dir below.
 .agents/
-.claude/skills/
+.claude/skills/*
+!.claude/skills/dashboard-dev/
 skills-lock.json
 
 # Local-only operator notes / setup guides (never shipped in the template)
