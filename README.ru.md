@@ -119,6 +119,13 @@ pnpm run deploy          # pnpm build && wrangler deploy → URL *.workers.dev
   `src/server/async/` (рабочий и покрытый юнит-тестами); обвязка платформы остаётся
   закомментированной, так что свежий форк деплоится инертным. Активируйте или удалите
   его по инструкции [`docs/async-layer.md`](docs/async-layer.md).
+- **Опциональный CMS-Worker.** Второй, самодостаточный SonicJS-Worker живёт в `cms/`
+  (собственные D1/KV/R2, Better-Auth `/admin`, публично читаемая коллекция
+  `blog-posts`). Дашборд читает его REST API cross-origin через `VITE_CMS_API_URL`
+  (страница `/content` под авторизацией + ссылка на админку в сайдбаре), а
+  Clerk-независимые маршруты `/blog` отображают опубликованный контент. `setup.mjs`
+  параметризует его; задеплойте `cms/`, чтобы включить, или пропустите целиком.
+  См. [`docs/cms.md`](docs/cms.md).
 
 Тема — это замена на уровне проекта (tweakcn → oklch-токены Tailwind v4), описана в
 [`docs/THEMING.md`](docs/THEMING.md).
@@ -145,6 +152,7 @@ pnpm run deploy          # pnpm build && wrangler deploy → URL *.workers.dev
 │   │   ├── db/                 # схема и запросы Drizzle
 │   │   └── async/              # спящий слой Cron → Queues → Resend
 │   └── shared/                 # Zod-схемы + типы, импортируемые обоими слоями
+├── cms/                        # ОПЦИОНАЛЬНЫЙ SonicJS CMS-Worker — свои D1/KV/R2 + wrangler.jsonc (docs/cms.md)
 ├── migrations/                 # сгенерированный Drizzle SQL для D1 (+ закоммиченный meta/)
 ├── public/                     # статические файлы, копируемые в сборку как есть
 ├── scripts/                    # CI-помощники гигиены (secret-grep, sentinel scan, smoke)
@@ -198,6 +206,10 @@ pnpm run deploy          # pnpm build && wrangler deploy → URL *.workers.dev
 - **[`docs/async-layer.md`](docs/async-layer.md)** — спящий слой Cron → Queues → Resend:
   активация (создать очередь + DLQ → раскомментировать обвязку → `wrangler secret put
   RESEND_API_KEY` → деплой) и заметка об удалении.
+- **[`docs/cms.md`](docs/cms.md)** — опциональный SonicJS CMS-Worker (`cms/`):
+  последовательность деплоя без 500 (создать D1/R2/KV → задать `BETTER_AUTH_SECRET`/
+  `JWT_SECRET` → миграции → сид админа → деплой), первичная настройка + ротация админа,
+  усиление регистрации и связка контента дашборд/публичные страницы.
 
 ## CI/CD + деплой
 

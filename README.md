@@ -119,6 +119,12 @@ host:
   (live + unit-tested); the platform wiring stays commented so a fresh fork deploys
   inert. Activate or remove it by following
   [`docs/async-layer.md`](docs/async-layer.md).
+- **Optional CMS Worker.** A second, self-contained SonicJS Worker lives in `cms/`
+  (its own D1/KV/R2, a Better-Auth `/admin`, a public-read `blog-posts` collection).
+  The dashboard reads its REST API cross-origin via `VITE_CMS_API_URL` (a signed-in
+  `/content` page + sidebar admin link) and Clerk-free `/blog` routes render published
+  content. `setup.mjs` parameterizes it; deploy `cms/` to enable it, or skip it
+  entirely. See [`docs/cms.md`](docs/cms.md).
 
 Theming is a per-project swap (tweakcn → Tailwind v4 oklch tokens), documented in
 [`docs/THEMING.md`](docs/THEMING.md).
@@ -145,6 +151,7 @@ one `src/`, built and deployed as one Worker:
 │   │   ├── db/                 # Drizzle schema + queries
 │   │   └── async/              # dormant Cron → Queues → Resend layer
 │   └── shared/                 # Zod schemas + types imported by both tiers
+├── cms/                        # OPTIONAL SonicJS CMS Worker — own D1/KV/R2 + wrangler.jsonc (docs/cms.md)
 ├── migrations/                 # Drizzle-generated D1 SQL (+ committed meta/)
 ├── public/                     # static files copied verbatim into the build
 ├── scripts/                    # CI hygiene helpers (secret-grep, sentinel scan, smoke)
@@ -197,6 +204,10 @@ Deep-dive guides live in [`docs/`](docs/):
 - **[`docs/async-layer.md`](docs/async-layer.md)** — the dormant Cron → Queues → Resend
   layer: activation (create queue + DLQ → uncomment wiring → `wrangler secret put
 RESEND_API_KEY` → deploy) and the removal note.
+- **[`docs/cms.md`](docs/cms.md)** — the optional SonicJS CMS Worker (`cms/`): the
+  no-500 deploy sequence (create D1/R2/KV → set `BETTER_AUTH_SECRET`/`JWT_SECRET` →
+  migrate → seed admin → deploy), admin bootstrap + rotation, registration hardening,
+  and the dashboard/public content seam.
 
 ## CI/CD + deploy
 
