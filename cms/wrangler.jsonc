@@ -36,5 +36,12 @@
   // origin match, no wildcard). No account_id (wrangler reads it from auth). No send_email
   // binding / DEFAULT_FROM_EMAIL — email is optional and core falls back to a console
   // provider when absent, so the config boots without them.
-  "vars": { "ENVIRONMENT": "production", "CORS_ORIGINS": "" }
+  //
+  // BETTER_AUTH_URL — REQUIRED for /admin login to work. Core sets Better Auth's
+  // baseURL = BETTER_AUTH_URL || <derived request origin>. Left empty, the server-rendered
+  // /auth/login/form handler derives an http origin and sets a plain (non-__Secure-) session
+  // cookie that /admin ignores on https → "Please login" loop. Fill it with this Worker's
+  // deployed origin (https://<cms-worker>.workers.dev, or your CMS custom domain). setup.mjs
+  // fills it automatically from --cms-api-url. Empty is a byte-safe default (falsy → fallback).
+  "vars": { "ENVIRONMENT": "production", "CORS_ORIGINS": "", "BETTER_AUTH_URL": "" }
 }

@@ -39,13 +39,19 @@ async function main() {
   assert.ok(validateCreds('a@b.co', "pw'; DROP"), 'single-quote password must fail')
   assert.equal(validateCreds('admin@example.com', 'goodpw'), null, 'valid creds must pass')
 
-  // Emitted SQL: both better-auth rows, admin role, credential provider.
+  // Emitted SQL: the two better-auth rows (admin role + superadmin, credential provider)
+  // AND the document-backed RBAC grant that actually unlocks /admin.
   const sql = buildSeedSql('admin@example.com', hash)
   assert.match(sql, /INSERT INTO auth_user/)
   assert.match(sql, /INSERT INTO auth_account/)
   assert.match(sql, /'admin'/)
   assert.match(sql, /'credential'/)
   assert.match(sql, /pbkdf2:/)
+  // is_super_admin=1 (membership-gate bypass) + the rbac_user_roles role-admin grant.
+  assert.match(sql, /is_super_admin/, 'auth_user must set is_super_admin')
+  assert.match(sql, /INSERT INTO documents/, 'must emit the RBAC grant document')
+  assert.match(sql, /rbac_user_roles/, 'grant doc must be type rbac_user_roles')
+  assert.match(sql, /"roleIds":\["role-admin"\]/, 'grant must reference role-admin')
 
   console.log('seed-admin self-check: PASS')
 }

@@ -42,7 +42,21 @@ export async function pbkdf2Hash(password: string): Promise<string> {
   return `pbkdf2:${iterations}:${toHex(salt)}:${toHex(new Uint8Array(bits))}`
 }
 
-/** Emit the two-row better-auth admin INSERT (auth_user role='admin' + auth_account provider_id='credential'). */
+/**
+ * Emit the admin bootstrap INSERTs. Three rows, all the seeded admin needs to actually
+ * reach `/admin` on a fresh beta.24 deploy:
+ *   1. auth_user     — role='admin' AND is_super_admin=1 (the latter bypasses the
+ *                      multi-tenant membership gate: `enforceMembership = user &&
+ *                      pluginActive && !isSuperAdmin`; without it a non-member admin 403s).
+ *   2. auth_account  — provider_id='credential' with the pbkdf2 hash.
+ *   3. documents     — the `rbac_user_roles` grant (slug=userId, roleIds=['role-admin']).
+ *                      SonicJS authorizes via document-backed RBAC, NOT auth_user.role
+ *                      (that column is only a derived projection). Without this grant the
+ *                      admin has zero effective permissions → `/admin` 403 "Insufficient
+ *                      permissions". `role-admin` (grants portal:access + rbac:manage) is
+ *                      seeded idempotently by core's ensureSystemRbacSeed() on first /admin
+ *                      access, so referencing it by slug here is order-safe.
+ */
 export function buildSeedSql(email: string, passwordHash: string): string {
   const q = (v: string): string => {
     // Defense in depth — callers pass validateCreds-checked / hex values only.
@@ -50,29 +64,42 @@ export function buildSeedSql(email: string, passwordHash: string): string {
     return `'${v}'`
   }
   const now = Date.now()
+  // documents.created_at/updated_at default to unixepoch() (SECONDS) — do NOT reuse the
+  // millisecond `now` for the grant row or it lands ~53,000 years in the future.
+  const nowSec = Math.floor(now / 1000)
   const userId = crypto.randomUUID()
   const accountId = crypto.randomUUID()
+  const grantId = crypto.randomUUID()
   const firstName = email.split('@')[0] || 'Admin' // NOT-NULL columns need safe defaults
   const lastName = 'Admin'
   const name = `${firstName} ${lastName}`
 
   const userSql =
     `INSERT INTO auth_user ` +
-    `(id, email, email_verified, name, first_name, last_name, role, is_active, created_at, updated_at) VALUES ` +
-    `(${q(userId)}, ${q(email)}, 1, ${q(name)}, ${q(firstName)}, ${q(lastName)}, 'admin', 1, ${now}, ${now});`
+    `(id, email, email_verified, name, first_name, last_name, role, is_super_admin, is_active, created_at, updated_at) VALUES ` +
+    `(${q(userId)}, ${q(email)}, 1, ${q(name)}, ${q(firstName)}, ${q(lastName)}, 'admin', 1, 1, ${now}, ${now});`
 
   const accountSql =
     `INSERT INTO auth_account ` +
     `(id, user_id, account_id, provider_id, password, created_at, updated_at) VALUES ` +
     `(${q(accountId)}, ${q(userId)}, ${q(userId)}, 'credential', ${q(passwordHash)}, ${now}, ${now});`
 
-  return `${userSql} ${accountSql}`
+  // RBAC grant. Only id/root_id/type_id/slug/data/created_at/updated_at are set; every other
+  // documents column relies on its schema default (is_current_draft=1, is_published=0,
+  // status='draft', tenant_id/locale='default', parent_root_id='', visible=1, metadata='{}').
+  const grantSql =
+    `INSERT INTO documents ` +
+    `(id, root_id, type_id, slug, data, created_at, updated_at) VALUES ` +
+    `(${q(grantId)}, ${q(grantId)}, 'rbac_user_roles', ${q(userId)}, '{"roleIds":["role-admin"]}', ${nowSec}, ${nowSec});`
+
+  return `${userSql} ${accountSql} ${grantSql}`
 }
 
 function printRotateWarning(email: string): void {
   console.warn(
-    `\nSeeded admin ${email} (role=admin). ROTATE this password after the first /admin login — ` +
-      `it was supplied in your shell env and the hash self-upgrades to scrypt on that login.`,
+    `\nSeeded admin ${email} (role=admin, superadmin + role-admin RBAC grant — can reach /admin). ` +
+      `ROTATE this password after the first /admin login — it was supplied in your shell env and ` +
+      `the hash self-upgrades to scrypt on that login.`,
   )
 }
 

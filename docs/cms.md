@@ -80,9 +80,14 @@ Replace the sentinels with the real values from step 1:
 - `database_name` → `<your-cms-db>`, `database_id` → the printed D1 id
 - `bucket_name` → `<your-cms-media>`
 - KV `id` → the printed KV id
+- **`BETTER_AUTH_URL` → this Worker's deployed origin** (`https://<your-cms-worker>.workers.dev`,
+  or your CMS custom domain). **Required for `/admin` login.** Left empty, the server-rendered
+  login form derives an `http` origin and sets a non-`__Secure-` session cookie that `/admin`
+  rejects on https → an endless "Please login" loop. (`setup.mjs` fills this automatically from
+  `--cms-api-url`.)
 
 (The binding **names** `DB` / `MEDIA_BUCKET` / `CACHE_KV` stay literal — only the
-`REPLACE_WITH_YOUR_CMS_*` id fields change.)
+`REPLACE_WITH_YOUR_CMS_*` id fields and `BETTER_AUTH_URL` change.)
 
 ### 3. Set the runtime secrets
 
@@ -253,6 +258,16 @@ on a fresh DB, which is exactly why the [disable step](#disable-open-registratio
 above is required hardening rather than a default. For a public or sensitive
 fork, treat the built-in RBAC as necessary-but-not-sufficient and add the
 Cloudflare Access perimeter below as belt-and-suspenders.
+
+**How the seeded admin gets in.** SonicJS authorizes the portal via **document-backed
+RBAC** (`rbac_user_roles` docs), not the `auth_user.role` column (that column is only a
+derived projection). `pnpm seed` therefore writes three rows, not two: the `auth_user`
+(with `is_super_admin=1`, which bypasses the multi-tenant membership gate), the
+`auth_account` credential, **and** the `rbac_user_roles` grant assigning the built-in
+`role-admin` (`portal:access` + `rbac:manage`). Without that grant — or `BETTER_AUTH_URL`
+from the deploy steps above — a freshly seeded admin authenticates but `/admin` returns
+403 "Insufficient permissions" (or loops on login). To provision additional admins after
+setup, use the portal's Users → Roles UI rather than re-running the seed.
 
 ## Cloudflare Access recipe — gate `/admin` (strongly recommended for public forks)
 

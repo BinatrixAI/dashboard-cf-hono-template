@@ -802,6 +802,21 @@ describe('setup.mjs CMS Worker parameterization (SETUP-09)', () => {
     )
   })
 
+  it('leaves BETTER_AUTH_URL "" without --cms-api-url and fills it with the origin when supplied (login fix)', () => {
+    const without = makeTmpCopy()
+    expect(runSetup(without, FLAGS).status).toBe(0)
+    expect(read(without, 'cms/wrangler.jsonc')).toMatch(/"BETTER_AUTH_URL":\s*""/)
+
+    // Fills from the ORIGIN of --cms-api-url (a path/query is dropped — Better Auth wants the origin).
+    const withFlag = makeTmpCopy()
+    expect(
+      runSetup(withFlag, [...FLAGS, '--cms-api-url=https://acme-cms.example.com']).status,
+    ).toBe(0)
+    expect(read(withFlag, 'cms/wrangler.jsonc')).toMatch(
+      /"BETTER_AUTH_URL":\s*"https:\/\/acme-cms\.example\.com"/,
+    )
+  })
+
   it('prints the CMS resource checklist: R2 create, both CMS secrets, rotate-admin warning, post-deploy VITE_CMS_API_URL (D-04)', () => {
     const dir = makeTmpCopy()
     const r = runSetup(dir, FLAGS)

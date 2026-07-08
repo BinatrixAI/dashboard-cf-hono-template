@@ -432,8 +432,18 @@ export function wireCustomDomain(wj, host) {
 // `_D1_NAME`/`_R2_BUCKET` placeholders (gone after a real run) were reported as "outstanding",
 // misleading the user into hand-editing names setup.mjs actually derives.
 export function substitute(rootDir, vals, { dryRun = false, customDomain = null, collect = null } = {}) {
-  const { workerSlug, pkgName, appName, clerkPk, d1Name, cmsName, cmsD1Name, cmsR2Bucket, cmsCorsOrigin } =
-    vals
+  const {
+    workerSlug,
+    pkgName,
+    appName,
+    clerkPk,
+    d1Name,
+    cmsName,
+    cmsD1Name,
+    cmsR2Bucket,
+    cmsCorsOrigin,
+    cmsApiUrl,
+  } = vals
   const changed = []
 
   const apply = (rel, transform) => {
@@ -482,6 +492,12 @@ export function substitute(rootDir, vals, { dryRun = false, customDomain = null,
       .replace(/("bucket_name":\s*")REPLACE_WITH_YOUR_CMS_R2_BUCKET(")/, `$1${cmsR2Bucket}$2`)
     if (cmsCorsOrigin) {
       out = out.replace(/("CORS_ORIGINS":\s*")(")/, `$1${cmsCorsOrigin}$2`)
+    }
+    // BETTER_AUTH_URL = the CMS Worker's OWN public origin (where /auth + /admin live).
+    // Derived from --cms-api-url (a validated single https origin, so `.origin` is safe).
+    // Without it, /admin login can't set the __Secure- session cookie (see cms/wrangler.jsonc).
+    if (cmsApiUrl) {
+      out = out.replace(/("BETTER_AUTH_URL":\s*")(")/, `$1${new URL(cmsApiUrl).origin}$2`)
     }
     return out
   })
