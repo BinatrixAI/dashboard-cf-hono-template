@@ -47,6 +47,7 @@ import { pathToFileURL } from 'node:url'
 // Files setup.mjs rewrites. wrangler.jsonc is field-targeted; all others use replaceAll.
 export const SUBSTITUTION_FILESET = [
   'wrangler.jsonc',
+  'cms/wrangler.jsonc',
   'package.json',
   'index.html',
   'src/client/components/layout/data/sidebar-data.ts',
@@ -128,6 +129,44 @@ const PK_RE = /^pk_(test|live)_[A-Za-z0-9._-]+$/
 const HOSTNAME_RE =
   /^(?=.{1,253}$)(?!-)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.(?!-)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/
 export const isValidCustomDomain = (h) => typeof h === 'string' && HOSTNAME_RE.test(h)
+
+// T-17-02: the two OPTIONAL cross-worker URL inputs (--cms-cors-origin / --cms-api-url) are
+// NOT slugs — they are https origins that land in cms/wrangler.jsonc's CORS_ORIGINS string
+// and (for the api-url) a .env.local line. Same WR-03 rigor as PK_RE / HOSTNAME_RE: an
+// embedded double-quote would corrupt the JSONC write and an embedded newline/whitespace
+// would inject an arbitrary env line. Accept ONLY '' OR a comma-separated list where every
+// entry is a well-formed https:// URL over a charset with no quote / whitespace / newline
+// (comma is the only allowed separator — CORS_ORIGINS is multi-origin, an api-url is the
+// one-entry case).
+export const isValidCmsOrigins = (v) => {
+  if (typeof v !== 'string') return false
+  if (v === '') return true
+  if (/["\s]/.test(v)) return false // no quote / whitespace / newline anywhere
+  return v.split(',').every((entry) => {
+    if (entry === '') return false
+    try {
+      return new URL(entry).protocol === 'https:'
+    } catch {
+      return false
+    }
+  })
+}
+
+// WR-17-01: --cms-api-url is a SINGLE origin — the sole seam src/client/lib/cms-client.ts reads
+// via `new URL(base)` — unlike --cms-cors-origin, which is legitimately multi-origin. Sharing
+// isValidCmsOrigins let a comma-separated value pass and land verbatim (comma included) in
+// .env.local's VITE_CMS_API_URL, where `new URL("https://a,https://b")` does NOT throw but
+// parses to a garbage host. Reject the comma here too so it must be exactly one https origin.
+export const isValidCmsApiUrl = (v) => {
+  if (typeof v !== 'string') return false
+  if (v === '') return true
+  if (/["\s,]/.test(v)) return false // single origin only — no comma either
+  try {
+    return new URL(v).protocol === 'https:'
+  } catch {
+    return false
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Pure helpers (exported for direct unit testing).
@@ -277,7 +316,74 @@ export async function resolveInputs(values, env, { interactive, rl }) {
     validate: (v) => SLUG_RE.test(v),
   })
 
-  return { workerSlug, pkgName: workerSlug, appName, clerkPk, d1Name, kvTitle, theme: values.theme }
+  // CMS Worker resource names (SETUP-09 / D-01): auto-derived from the main worker slug so a
+  // `--yes` fork parameterizes BOTH Workers with zero extra prompts. Each is overridable via a
+  // --cms-* flag / SETUP_CMS_* env (D-02). Same slugify + SLUG_RE contract as the main names.
+  const cmsName = await resolve({
+    flag: values['cms-name'],
+    envKey: 'SETUP_CMS_NAME',
+    def: `${workerSlug}-cms`,
+    prompt: 'CMS Worker name',
+    transform: slugify,
+    validate: (v) => SLUG_RE.test(v),
+  })
+  const cmsD1Name = await resolve({
+    flag: values['cms-d1-name'],
+    envKey: 'SETUP_CMS_D1_NAME',
+    def: `${workerSlug}-cms-db`,
+    prompt: 'CMS D1 database name',
+    transform: slugify,
+    validate: (v) => SLUG_RE.test(v),
+  })
+  const cmsR2Bucket = await resolve({
+    flag: values['cms-r2-bucket'],
+    envKey: 'SETUP_CMS_R2_BUCKET',
+    def: `${workerSlug}-cms-media`,
+    prompt: 'CMS R2 bucket name',
+    transform: slugify,
+    validate: (v) => SLUG_RE.test(v),
+  })
+  const cmsKvTitle = await resolve({
+    flag: values['cms-kv-title'],
+    envKey: 'SETUP_CMS_KV_TITLE',
+    def: `${workerSlug}-cms-cache`,
+    prompt: 'CMS KV namespace title',
+    transform: slugify,
+    validate: (v) => SLUG_RE.test(v),
+  })
+  // OPTIONAL cross-worker origins (D-05): default '' and validated as https origins (NOT
+  // slugified). When absent they fall through to the D-04 post-deploy checklist step — no
+  // best-guess derivation (the *.workers.dev subdomain is unknowable at fork time).
+  const cmsCorsOrigin = await resolve({
+    flag: values['cms-cors-origin'],
+    envKey: 'SETUP_CMS_CORS_ORIGIN',
+    def: '',
+    prompt: 'CMS CORS origin(s) (https, comma-separated, optional now)',
+    validate: isValidCmsOrigins,
+  })
+  const cmsApiUrl = await resolve({
+    flag: values['cms-api-url'],
+    envKey: 'SETUP_CMS_API_URL',
+    def: '',
+    prompt: 'CMS API URL for VITE_CMS_API_URL (https, single origin, optional now)',
+    validate: isValidCmsApiUrl,
+  })
+
+  return {
+    workerSlug,
+    pkgName: workerSlug,
+    appName,
+    clerkPk,
+    d1Name,
+    kvTitle,
+    cmsName,
+    cmsD1Name,
+    cmsR2Bucket,
+    cmsKvTitle,
+    cmsCorsOrigin,
+    cmsApiUrl,
+    theme: values.theme,
+  }
 }
 
 // Resolve the module toggles (SETUP-03 / D-12). The async-layer choice is RECORDED only —
@@ -320,8 +426,14 @@ export function wireCustomDomain(wj, host) {
 // (relative) paths. `dryRun` computes the rewrite without writing. NEVER JSON.parse the config
 // files — wrangler.jsonc is JSONC (comments) and package.json round-tripping drifts formatting.
 // `customDomain` (pre-validated host or null) gates the D-07 routes write on the wrangler.jsonc pass.
-export function substitute(rootDir, vals, { dryRun = false, customDomain = null } = {}) {
-  const { workerSlug, pkgName, appName, clerkPk, d1Name } = vals
+// WR-17-02: `collect` (optional) captures the post-substitution content of every CHANGED file
+// (rel → after string). --dry-run passes it so the outstanding-placeholder preview can scan the
+// in-memory result rather than the untouched disk — otherwise cms/wrangler.jsonc's auto-filled
+// `_D1_NAME`/`_R2_BUCKET` placeholders (gone after a real run) were reported as "outstanding",
+// misleading the user into hand-editing names setup.mjs actually derives.
+export function substitute(rootDir, vals, { dryRun = false, customDomain = null, collect = null } = {}) {
+  const { workerSlug, pkgName, appName, clerkPk, d1Name, cmsName, cmsD1Name, cmsR2Bucket, cmsCorsOrigin } =
+    vals
   const changed = []
 
   const apply = (rel, transform) => {
@@ -331,6 +443,7 @@ export function substitute(rootDir, vals, { dryRun = false, customDomain = null 
     const after = transform(before)
     if (after !== before) {
       changed.push(rel)
+      if (collect) collect[rel] = after
       if (!dryRun) writeFileAtomic(fp, after)
     }
   }
@@ -354,11 +467,33 @@ export function substitute(rootDir, vals, { dryRun = false, customDomain = null 
     return out
   })
 
+  // cms/wrangler.jsonc — SEPARATE field-targeted branch (D-03 / T-17-01). CRITICAL divergence
+  // from the main worker: parameterize ONLY name / database_name / bucket_name / (conditional)
+  // CORS_ORIGINS. NEVER touch a `"binding"` line — SonicJS core reads DB / MEDIA_BUCKET /
+  // CACHE_KV by literal name at runtime, so those identifiers (and the *_id resource-ID
+  // placeholders) stay literal. The worker `name` is a literal-string match on the -cms-suffixed
+  // placeholder (mirrors the main-worker literal-name carve-out); database_name / bucket_name
+  // anchor on their REPLACE_WITH_YOUR_CMS_* placeholders. CORS_ORIGINS fills from "" ONLY when
+  // an origin was supplied (truthiness gate, mirrors customDomain) — byte-stable otherwise (D-05).
+  apply('cms/wrangler.jsonc', (cw) => {
+    let out = cw
+      .replace(/("name":\s*")dashboard-cf-hono-template-cms(")/, `$1${cmsName}$2`)
+      .replace(/("database_name":\s*")REPLACE_WITH_YOUR_CMS_D1_NAME(")/, `$1${cmsD1Name}$2`)
+      .replace(/("bucket_name":\s*")REPLACE_WITH_YOUR_CMS_R2_BUCKET(")/, `$1${cmsR2Bucket}$2`)
+    if (cmsCorsOrigin) {
+      out = out.replace(/("CORS_ORIGINS":\s*")(")/, `$1${cmsCorsOrigin}$2`)
+    }
+    return out
+  })
+
   // Everywhere else the binding token maps uniformly to the code identifier → safe replaceAll.
   // __APP_NAME__ is the one free-form value, so it is context-escaped per target file (WR-04):
   // HTML-escaped for index.html, JS-single-quote-escaped for the TS string in sidebar-data.ts.
   for (const rel of SUBSTITUTION_FILESET) {
-    if (rel === 'wrangler.jsonc') continue
+    // Both wrangler configs are field-targeted above — keep the blind __X__ replaceAll loop
+    // off them so the anchored branches stay the ONLY writers (cms/wrangler.jsonc carries no
+    // __X__ tokens, but the guard preserves the invariant that binding names are never touched).
+    if (rel === 'wrangler.jsonc' || rel === 'cms/wrangler.jsonc') continue
     const appNameSafe = rel.endsWith('.html')
       ? htmlEscape(appName)
       : rel.endsWith('.ts') || rel.endsWith('.tsx')
@@ -383,14 +518,23 @@ export function substitute(rootDir, vals, { dryRun = false, customDomain = null 
 // Read each non-exempt file, strip the `//`-comment tail before testing, and split hits into
 // hardFails (identifier sentinels → BLOCKING) and outstanding (REPLACE_WITH_YOUR_* → report).
 // Pure: returns { hardFails, outstanding }; the CLI decides the exit code.
-export function scanForSentinels(rootDir, fileSet = SUBSTITUTION_FILESET) {
+// WR-17-02: `overrides` (rel → content) lets a caller scan in-memory post-substitution content
+// instead of the on-disk file — used by --dry-run so its preview matches what a real run produces
+// (a real run writes first, then scans disk). Files absent from `overrides` are read from disk.
+export function scanForSentinels(rootDir, fileSet = SUBSTITUTION_FILESET, overrides = {}) {
   const hardFails = []
   const outstanding = []
   for (const rel of fileSet) {
     if (EXEMPT_PATHS.some((p) => rel.startsWith(p))) continue
-    const fp = path.join(rootDir, rel)
-    if (!existsSync(fp)) continue
-    const lines = readFileSync(fp, 'utf8').split('\n')
+    let content
+    if (Object.prototype.hasOwnProperty.call(overrides, rel)) {
+      content = overrides[rel]
+    } else {
+      const fp = path.join(rootDir, rel)
+      if (!existsSync(fp)) continue
+      content = readFileSync(fp, 'utf8')
+    }
+    const lines = content.split('\n')
     lines.forEach((line, i) => {
       // Strip only a REAL trailing `//` comment (one preceded by whitespace), NOT a `://`
       // inside a string literal (e.g. a URL). The old `line.split('//')[0]` truncated at the
@@ -456,12 +600,18 @@ export function generateDevVars(rootDir, vals, { dryRun = false } = {}) {
 
 export function generateEnvLocal(rootDir, vals, { dryRun = false } = {}) {
   const pk = vals?.clerkPk ?? ''
+  const cmsApiUrl = vals?.cmsApiUrl ?? ''
   const envLocalPath = path.join(rootDir, '.env.local')
   const backupPath = `${envLocalPath}.bak`
 
   // Build the content directly — a single client publishable-key line (D-02). No
-  // example-template read/regex-fill (there is no .env.local.example, Pitfall 6).
-  const content = `VITE_CLERK_PUBLISHABLE_KEY=${pk}\n`
+  // example-template read/regex-fill (there is no .env.local.example, Pitfall 6). When
+  // --cms-api-url was supplied (SETUP-09 / D-05), append a second VITE_CMS_API_URL line so the
+  // Vite build bakes the CMS origin (the single seam cms-client.ts reads); byte-stable
+  // single-line output when it is absent. cmsApiUrl is https-validated up front (T-17-02), so
+  // it cannot inject an extra env line.
+  let content = `VITE_CLERK_PUBLISHABLE_KEY=${pk}\n`
+  if (cmsApiUrl) content += `VITE_CMS_API_URL=${cmsApiUrl}\n`
 
   const existed = existsSync(envLocalPath)
   if (dryRun) return { written: false, backedUp: existed, path: envLocalPath }
@@ -486,9 +636,14 @@ export function generateEnvLocal(rootDir, vals, { dryRun = false } = {}) {
 export function printChecklist(vals, { outstanding = [] } = {}) {
   const d1 = slugify(vals.d1Name)
   const kv = slugify(vals.kvTitle)
+  // Slugify every CMS name before interpolation (same command-injection guard as the main
+  // names) so a pasted `wrangler … create` line can never carry `;`, backticks, or `$(…)`.
+  const cmsD1 = slugify(vals.cmsD1Name)
+  const cmsR2 = slugify(vals.cmsR2Bucket)
+  const cmsKv = slugify(vals.cmsKvTitle)
   const lines = [
     '',
-    '── Cloudflare resource checklist ───────────────────────────────────────────',
+    '── Dashboard Worker — Cloudflare resource checklist ─────────────────────────',
     'Create the per-account resources, then paste the returned IDs into wrangler.jsonc:',
     '',
     `  1. wrangler d1 create ${d1}`,
@@ -501,6 +656,30 @@ export function printChecklist(vals, { outstanding = [] } = {}) {
     'Then regenerate the binding types authoritatively from the filled bindings:',
     '  4. pnpm cf-typegen',
     '',
+    '── CMS Worker (cms/) — resource checklist ───────────────────────────────────',
+    "Create the CMS Worker's OWN D1 / R2 / KV, then paste the returned IDs into",
+    'cms/wrangler.jsonc (its binding NAMES DB / MEDIA_BUCKET / CACHE_KV stay literal):',
+    '',
+    `  1. wrangler d1 create ${cmsD1}`,
+    '       paste the returned "database_id" over REPLACE_WITH_YOUR_CMS_D1_ID in cms/wrangler.jsonc',
+    `  2. wrangler r2 bucket create ${cmsR2}`,
+    '       the CMS needs an R2 media bucket (the dashboard Worker has none)',
+    `  3. wrangler kv namespace create ${cmsKv}`,
+    '       paste the returned "id" over REPLACE_WITH_YOUR_CMS_KV_ID in cms/wrangler.jsonc',
+    '  4. (cd cms && wrangler d1 migrations apply DB --remote)',
+    '       applies the @sonicjs-cms/core-owned migrations to the CMS D1',
+    '  5. wrangler secret put BETTER_AUTH_SECRET   (then: wrangler secret put JWT_SECRET)',
+    '       the two runtime CMS auth secrets — generate each with `openssl rand -hex 32`',
+    '  6. ADMIN_EMAIL / ADMIN_PASSWORD are SEED-TIME shell env for `pnpm seed`',
+    '       (NOT `wrangler secret put` runtime secrets — see cms/.dev.vars.example)',
+    '  ⚠ Rotate the seeded admin credentials before the FIRST CMS deploy — never ship the',
+    '       default seed credentials to a public origin.',
+    '',
+    'After BOTH Workers deploy (their *.workers.dev origins only exist post-deploy):',
+    '  7. set cms/wrangler.jsonc CORS_ORIGINS to the EXACT dashboard origin (no wildcard)',
+    '  8. set VITE_CMS_API_URL (in .env.local) to the CMS origin, then rebuild + redeploy the',
+    '       dashboard so the Vite build bakes the new value',
+    '',
   ]
   if (outstanding.length) {
     lines.push('Outstanding REPLACE_WITH_YOUR_* placeholders to fill after the steps above:')
@@ -508,6 +687,12 @@ export function printChecklist(vals, { outstanding = [] } = {}) {
     lines.push('')
   }
   console.log(lines.join('\n'))
+  // Loud, hard-to-miss admin-rotation banner (Phase 14 D-08), carried on stderr so it stands
+  // out from the copy-paste checklist above. Concept only — no seeded default credential string.
+  printLoudBlock('ROTATE CMS ADMIN CREDENTIALS BEFORE FIRST DEPLOY', [
+    'The CMS seeds a bootstrap admin account. Rotate ADMIN_EMAIL / ADMIN_PASSWORD to strong,',
+    'unique values and re-seed BEFORE the CMS Worker is first deployed to a public origin.',
+  ])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -830,6 +1015,12 @@ async function main() {
       'clerk-pk': { type: 'string' },
       'd1-name': { type: 'string' },
       'kv-title': { type: 'string' },
+      'cms-name': { type: 'string' },
+      'cms-d1-name': { type: 'string' },
+      'cms-r2-bucket': { type: 'string' },
+      'cms-kv-title': { type: 'string' },
+      'cms-cors-origin': { type: 'string' },
+      'cms-api-url': { type: 'string' },
       theme: { type: 'string' },
       'require-theme': { type: 'boolean', default: false },
       'custom-domain': { type: 'string' },
@@ -866,15 +1057,33 @@ async function main() {
     ensureValid(values['custom-domain'], isValidCustomDomain, 'custom-domain')
   }
 
+  // SETUP-09 / T-17-02: validate the two optional CMS cross-worker URLs BEFORE any file write
+  // (same atomic-failure invariant as --custom-domain) so an invalid origin exits 1 with no
+  // partial write to cms/wrangler.jsonc or .env.local.
+  if (values['cms-cors-origin'] != null) {
+    ensureValid(values['cms-cors-origin'], isValidCmsOrigins, 'cms-cors-origin')
+  }
+  if (values['cms-api-url'] != null) {
+    ensureValid(values['cms-api-url'], isValidCmsApiUrl, 'cms-api-url')
+  }
+
   // D-11/D-12: echo every slug rewrite prominently NEAR THE TOP of the run (not folded into the
   // end-of-run checklist). rawByLabel is built from USER-SUPPLIED inputs only (A4 lock): the
   // worker slug's raw source is --name/SETUP_NAME, else --app-name/SETUP_APP_NAME, else none;
   // default-sourced fields are null and never echo. A clean run prints nothing.
+  // WR-17-03: the four CMS-derived names go through the SAME slugify + SLUG_RE pipeline as the
+  // main worker/d1/kv fields, so a raw `--cms-d1-name="My CMS DB"` is silently rewritten too.
+  // Include them here so the loud SLUG REWRITES banner surfaces every auto-correction, not just
+  // the main worker's (default-sourced fields stay null and never echo).
   const rawByLabel = {
     'worker slug':
       values.name ?? process.env.SETUP_NAME ?? values['app-name'] ?? process.env.SETUP_APP_NAME ?? null,
     'd1 name': values['d1-name'] ?? process.env.SETUP_D1_NAME ?? null,
     'kv title': values['kv-title'] ?? process.env.SETUP_KV_TITLE ?? null,
+    'cms name': values['cms-name'] ?? process.env.SETUP_CMS_NAME ?? null,
+    'cms d1 name': values['cms-d1-name'] ?? process.env.SETUP_CMS_D1_NAME ?? null,
+    'cms r2 bucket': values['cms-r2-bucket'] ?? process.env.SETUP_CMS_R2_BUCKET ?? null,
+    'cms kv title': values['cms-kv-title'] ?? process.env.SETUP_CMS_KV_TITLE ?? null,
   }
   const slugRewrites = computeSlugRewrites(rawByLabel)
   if (slugRewrites.length) {
@@ -908,9 +1117,13 @@ async function main() {
   const themeCss = regenerateTheme(preset)
   const presetJson = `${JSON.stringify(preset, null, 2)}\n`
 
+  // WR-17-02: capture post-substitution content so the --dry-run outstanding-placeholder
+  // preview scans the in-memory result (parity with a real run) instead of the untouched disk.
+  const substituted = {}
   const changed = substitute(rootDir, vals, {
     dryRun: values['dry-run'],
     customDomain: values['custom-domain'] ?? null,
+    collect: substituted,
   })
 
   // Generate the developer's local .dev.vars (backup-on-exists; secret stays empty) BEFORE
@@ -946,7 +1159,7 @@ async function main() {
     // REPLACE_WITH_YOUR_* resource-ID placeholders a real run surfaces (parity with the
     // write path's printChecklist(vals, { outstanding })). No files are written in dry-run,
     // so this only reads current on-disk state — the whole point a dry-run is meant to preview.
-    const { outstanding } = scanForSentinels(rootDir)
+    const { outstanding } = scanForSentinels(rootDir, SUBSTITUTION_FILESET, substituted)
     printChecklist(vals, { outstanding })
     return
   }

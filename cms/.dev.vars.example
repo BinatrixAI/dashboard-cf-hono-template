@@ -1,0 +1,29 @@
+# Copy this file to `.dev.vars` (gitignored) and fill in real values locally.
+# NO real secrets are committed to this template — only documented variable names.
+#
+# These are the RUNTIME Worker secrets the CMS reads. In production set each one with
+# `wrangler secret put <NAME>` (never commit a real value, never add them to
+# wrangler.jsonc). Leave every assignment empty here.
+#
+# ─── Required ───────────────────────────────────────────────────────────────
+# Better Auth signing secret. Auth init refuses to start and login returns 500
+# without it. Must be >= 16 chars — generate with `openssl rand -hex 32`.
+BETTER_AUTH_SECRET=
+#
+# JWT signing secret used pervasively by the layered JWT plugin (36 refs in the
+# bundle). Set it — generate with `openssl rand -hex 32`.
+JWT_SECRET=
+#
+# ─── Optional ───────────────────────────────────────────────────────────────
+# Public base URL of the CMS Worker. Only needed if Better Auth's base-URL
+# autodetect fails (e.g. behind a proxy). Leave empty otherwise.
+BETTER_AUTH_URL=
+#
+# Comma-separated exact origins allowed to call the CMS API cross-origin (no
+# wildcard). Mirrors the `CORS_ORIGINS` var in wrangler.jsonc; filled in Phase 15/17.
+CORS_ORIGINS=
+#
+# ─── NOT runtime secrets ────────────────────────────────────────────────────
+# ADMIN_EMAIL / ADMIN_PASSWORD are SEED-TIME shell env for the one-shot admin seed
+# (`pnpm seed`, Plan 14-03 / docs/cms.md) — NOT `wrangler secret put` runtime Worker
+# secrets. Do not set real values here or in wrangler.jsonc.

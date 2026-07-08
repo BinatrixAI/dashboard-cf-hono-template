@@ -59,8 +59,13 @@ function makeTmpCopy() {
     filter: (src) => {
       const rel = path.relative(templateRoot, src)
       if (!rel) return true
-      const top = rel.split(path.sep)[0]
-      return !EXCLUDE_TOP.has(top)
+      const segs = rel.split(path.sep)
+      if (EXCLUDE_TOP.has(segs[0])) return false
+      // Skip node_modules at ANY depth (e.g. cms/node_modules — 369M). setup.mjs only
+      // rewrites tracked config, so no test needs installed deps; copying them made every
+      // sandbox copy slow enough to blow the default per-test timeout on multi-run cases.
+      if (segs.includes('node_modules')) return false
+      return true
     },
   })
   sandboxes.push(dir)
@@ -749,5 +754,67 @@ describe('setup.mjs --custom-domain (SETUP-08)', () => {
     const clean = runSetup(makeTmpCopy(), FLAGS)
     expect(clean.status, clean.stderr).toBe(0)
     expect(`${clean.stdout}${clean.stderr}`).not.toMatch(/→/)
+  })
+})
+
+describe('setup.mjs CMS Worker parameterization (SETUP-09)', () => {
+  it('rewrites cms/wrangler.jsonc name/database_name/bucket_name to derived ${slug}-cms* values (D-01)', () => {
+    const dir = makeTmpCopy()
+    const r = runSetup(dir, FLAGS)
+    expect(r.status, r.stderr).toBe(0)
+
+    const cw = read(dir, 'cms/wrangler.jsonc')
+    expect(cw).toMatch(/"name":\s*"acme-dash-cms"/)
+    expect(cw).toMatch(/"database_name":\s*"acme-dash-cms-db"/)
+    expect(cw).toMatch(/"bucket_name":\s*"acme-dash-cms-media"/)
+  })
+
+  it('keeps the three CMS binding identifiers literal (exactly one each) + retains the *_ID placeholders (D-03)', () => {
+    const dir = makeTmpCopy()
+    expect(runSetup(dir, FLAGS).status).toBe(0)
+    const cw = read(dir, 'cms/wrangler.jsonc')
+
+    const count = (s, sub) => s.split(sub).length - 1
+    expect(count(cw, '"binding": "DB"')).toBe(1)
+    expect(count(cw, '"binding": "MEDIA_BUCKET"')).toBe(1)
+    expect(count(cw, '"binding": "CACHE_KV"')).toBe(1)
+
+    // Resource-ID placeholders stay for the user to fill after `wrangler … create`.
+    expect(cw).toContain('REPLACE_WITH_YOUR_CMS_D1_ID')
+    expect(cw).toContain('REPLACE_WITH_YOUR_CMS_KV_ID')
+    // The parameterized name / database_name / bucket_name placeholders are gone.
+    expect(cw).not.toContain('REPLACE_WITH_YOUR_CMS_D1_NAME')
+    expect(cw).not.toContain('REPLACE_WITH_YOUR_CMS_R2_BUCKET')
+    expect(cw).not.toContain('dashboard-cf-hono-template-cms')
+  })
+
+  it('leaves CORS_ORIGINS "" without --cms-cors-origin and fills it with the exact origin when supplied (D-05)', () => {
+    const without = makeTmpCopy()
+    expect(runSetup(without, FLAGS).status).toBe(0)
+    expect(read(without, 'cms/wrangler.jsonc')).toMatch(/"CORS_ORIGINS":\s*""/)
+
+    const withFlag = makeTmpCopy()
+    expect(
+      runSetup(withFlag, [...FLAGS, '--cms-cors-origin=https://acme.example.com']).status,
+    ).toBe(0)
+    expect(read(withFlag, 'cms/wrangler.jsonc')).toMatch(
+      /"CORS_ORIGINS":\s*"https:\/\/acme\.example\.com"/,
+    )
+  })
+
+  it('prints the CMS resource checklist: R2 create, both CMS secrets, rotate-admin warning, post-deploy VITE_CMS_API_URL (D-04)', () => {
+    const dir = makeTmpCopy()
+    const r = runSetup(dir, FLAGS)
+    expect(r.status, r.stderr).toBe(0)
+
+    // printLoudBlock emits via console.warn (stderr) — assert against the combined stream.
+    const out = `${r.stdout}${r.stderr}`
+    expect(out).toContain('wrangler d1 create acme-dash-cms-db')
+    expect(out).toContain('wrangler r2 bucket create acme-dash-cms-media') // NEW vs. main worker
+    expect(out).toContain('wrangler kv namespace create acme-dash-cms-cache')
+    expect(out).toContain('BETTER_AUTH_SECRET')
+    expect(out).toContain('JWT_SECRET')
+    expect(out).toMatch(/rotate .*admin/i)
+    expect(out).toContain('VITE_CMS_API_URL')
   })
 })

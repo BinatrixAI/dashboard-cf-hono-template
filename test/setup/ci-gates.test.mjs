@@ -104,6 +104,48 @@ describe('CICD-04 — ci-sentinel-scan.mjs: sentinel gate', () => {
 })
 
 // ---------------------------------------------------------------------------
+// CICD-06: ci-wrangler-coverage.mjs
+// ---------------------------------------------------------------------------
+describe('CICD-06 — ci-wrangler-coverage.mjs: wrangler.* coverage gate', () => {
+  const coverageScript = path.join(templateRoot, 'scripts', 'ci-wrangler-coverage.mjs')
+
+  function runCoverage(root) {
+    return spawnSync('node', [coverageScript, root], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      encoding: 'utf8',
+      timeout: 15000,
+    })
+  }
+
+  it('exits 0 on the current tree (./wrangler.jsonc + ./cms/wrangler.jsonc both covered)', () => {
+    const r = runCoverage(templateRoot)
+    expect(r.status, `expected 0; stdout: ${r.stdout}; stderr: ${r.stderr}`).toBe(0)
+    expect(r.stdout).toMatch(/coverage clean/)
+  })
+
+  it('exits non-zero and names a stray wrangler.* that is not in SUBSTITUTION_FILESET', () => {
+    const dir = makeTmpDir()
+    mkdirSync(path.join(dir, 'some-worker'), { recursive: true })
+    writeFileSync(path.join(dir, 'wrangler.jsonc'), '{}\n') // covered
+    writeFileSync(path.join(dir, 'some-worker', 'wrangler.jsonc'), '{}\n') // stray
+
+    const r = runCoverage(dir)
+    expect(r.status, 'expected non-zero on stray wrangler.*').not.toBe(0)
+    expect(r.stderr).toMatch(/some-worker\/wrangler\.jsonc/)
+  })
+
+  it('ignores wrangler.* under node_modules (not treated as uncovered)', () => {
+    const dir = makeTmpDir()
+    mkdirSync(path.join(dir, 'node_modules', 'some-dep'), { recursive: true })
+    writeFileSync(path.join(dir, 'wrangler.jsonc'), '{}\n') // covered
+    writeFileSync(path.join(dir, 'node_modules', 'some-dep', 'wrangler.json'), '{}\n') // ignored
+
+    const r = runCoverage(dir)
+    expect(r.status, `expected 0; stderr: ${r.stderr}`).toBe(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
 // CICD-05: secret-grep.sh
 // ---------------------------------------------------------------------------
 describe('CICD-05 — secret-grep.sh: secret gate (isolated git repo)', () => {

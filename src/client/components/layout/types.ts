@@ -14,6 +14,8 @@ type BaseNavItem = {
 
 type NavLink = BaseNavItem & {
   url: LinkProps['to'] | (string & {})
+  // When true, renders an external new-tab anchor instead of a router Link.
+  external?: boolean
   items?: never
 }
 

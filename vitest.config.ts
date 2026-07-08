@@ -69,6 +69,17 @@ export default defineConfig({
           include: ['test/setup/**/*.test.mjs'],
         },
       },
+      {
+        // Plain node — client-side unit tests for pure URL/string/JSON helpers
+        // (e.g. src/client/lib/cms-client.ts). These functions have no worker or
+        // DOM dependency, so loading the workers pool (or a jsdom env) would be
+        // wrong overhead; like `setup`, this project documents WHY it runs in node.
+        test: {
+          name: 'client',
+          environment: 'node',
+          include: ['src/client/**/*.test.ts'],
+        },
+      },
     ],
   },
 })

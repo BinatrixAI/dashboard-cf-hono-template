@@ -28,6 +28,10 @@ jobs:
 
       - name: Detect un-setup template (skip if so)
         id: tmpl
+        # D-09: the grep is anchored to the ROOT wrangler.jsonc and to the exact
+        # name WITH its closing quote, so the CMS Worker (cms/wrangler.jsonc, name
+        # "dashboard-cf-hono-template-cms" — a superstring) does not match and
+        # cannot defeat the un-setup-template skip.
         run: |
           if grep -q '"name": "dashboard-cf-hono-template"' wrangler.jsonc \
              || grep -q '__PKG_NAME__' package.json; then

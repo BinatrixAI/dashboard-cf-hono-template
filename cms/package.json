@@ -1,0 +1,26 @@
+{
+  "name": "dashboard-cf-hono-template-cms",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.25.0",
+  "scripts": {
+    "dev": "wrangler dev --port 8788",
+    "typecheck": "tsc --noEmit",
+    "db:migrate:local": "wrangler d1 migrations apply DB --local",
+    "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
+    "seed": "tsx scripts/seed-admin.ts"
+  },
+  "dependencies": {
+    "@sonicjs-cms/core": "3.0.0-beta.24",
+    "@cloudflare/workers-types": "^4",
+    "drizzle-orm": "^0.44",
+    "hono": "^4",
+    "zod": "^3.25"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "tsx": "^4",
+    "typescript": "~5.9",
+    "wrangler": "^4"
+  }
+}

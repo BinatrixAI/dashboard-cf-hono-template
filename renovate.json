@@ -1,0 +1,11 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "packageRules": [
+    {
+      "description": "Pin @sonicjs-cms/core to the exact beta (3.0.0-beta.24) in cms/. This is deliberate: the CMS Worker tracks a pre-release whose schema/migrations must be re-verified by hand on every bump (see docs/cms.md 'Migrations'). Do NOT let a bot auto-upgrade it. Bump manually + re-run cms/ migrations + typecheck.",
+      "matchPackageNames": ["@sonicjs-cms/core"],
+      "enabled": false
+    }
+  ]
+}

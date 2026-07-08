@@ -1,0 +1,40 @@
+{
+  // CMS Worker config (separate from the dashboard Worker). Authored from sentinels —
+  // NEVER copied from upstream my-sonicjs-app/wrangler.toml, which commits a real
+  // account_id / database_id / KV id and a real from-address. No real account id,
+  // resource id, or secret belongs here (CMS-06 / D-09).
+  //
+  // Two-tier sentinel model (mirrors the root wrangler.jsonc): resource IDs use the
+  // REPLACE_WITH_YOUR_CMS_* convention (user fills after `wrangler d1/kv/r2 create`).
+  //
+  // DELIBERATE DIVERGENCE from the root's `__X_BINDING__` name-sentinels: SonicJS core
+  // reads its bindings by LITERAL name at runtime (c.env.DB / c.env.CACHE_KV /
+  // c.env.MEDIA_BUCKET). The binding NAMES therefore stay literal and MUST NOT be
+  // sentinelized — only database_name / bucket_name / *_id are REPLACE_WITH_YOUR_CMS_*.
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // Valid default placeholder (mirrors the dashboard worker-name carve-out); wrangler
+  // rejects a __NAME__ sentinel here. Phase 17 setup.mjs parameterizes it.
+  "name": "dashboard-cf-hono-template-cms",
+  "main": "./src/index.ts",
+  "compatibility_date": "2026-06-01",
+  // Required for Better Auth / Web Crypto used by the CMS auth layer.
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "REPLACE_WITH_YOUR_CMS_D1_NAME",
+      "database_id": "REPLACE_WITH_YOUR_CMS_D1_ID",
+      // Package-owned migrations shipped inside @sonicjs-cms/core (NOT drizzle-generated).
+      // Resolves after `pnpm install`; a version bump swaps the migration set automatically.
+      "migrations_dir": "./node_modules/@sonicjs-cms/core/migrations"
+    }
+  ],
+  // R2 is mandatory — core needs a media bucket.
+  "r2_buckets": [{ "binding": "MEDIA_BUCKET", "bucket_name": "REPLACE_WITH_YOUR_CMS_R2_BUCKET" }],
+  "kv_namespaces": [{ "binding": "CACHE_KV", "id": "REPLACE_WITH_YOUR_CMS_KV_ID" }],
+  // Non-secret plaintext vars. CORS_ORIGINS is filled per-project in Phase 15/17 (exact
+  // origin match, no wildcard). No account_id (wrangler reads it from auth). No send_email
+  // binding / DEFAULT_FROM_EMAIL — email is optional and core falls back to a console
+  // provider when absent, so the config boots without them.
+  "vars": { "ENVIRONMENT": "production", "CORS_ORIGINS": "" }
+}
