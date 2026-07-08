@@ -66,5 +66,15 @@ export default defineConfig(
       // Prevent duplicate imports from the same module
       'no-duplicate-imports': 'error',
     },
+  },
+  {
+    // CMS Worker Node CLI scripts + tsx self-check tests (cms/scripts/*.ts) legitimately
+    // print to console — same as the root .mjs scripts (setup.mjs, ci-wrangler-coverage.mjs),
+    // which escape no-console only because the block above lints .ts/.tsx. Allow it here so
+    // `pnpm lint` (and the CI quality gate) stays green with the CMS module present.
+    files: ['cms/scripts/**/*.ts'],
+    rules: {
+      'no-console': 'off',
+    },
   }
 )

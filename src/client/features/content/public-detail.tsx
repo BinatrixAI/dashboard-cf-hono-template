@@ -33,7 +33,7 @@ export function PublicDetail({ slug }: { slug: string }) {
         </p>
       </div>
       {/* React escapes text children — plaintext only, never innerHTML. */}
-      <p className='whitespace-pre-wrap leading-relaxed'>
+      <p className='leading-relaxed whitespace-pre-wrap'>
         {lexicalToPlainText(post.data?.content)}
       </p>
     </article>
@@ -82,7 +82,9 @@ function PostNotFound() {
   // the generated route tree lacks the literal, so the typed Link can't see it.
   // Widen at this single boundary — the target becomes real in Plan 02, and a
   // widening cast (not @ts-expect-error) stays valid afterwards.
-  const backLink = { to: '/blog' } as unknown as React.ComponentProps<typeof Link>
+  const backLink = { to: '/blog' } as unknown as React.ComponentProps<
+    typeof Link
+  >
   return (
     <div className='flex flex-col items-center gap-2 py-12 text-center'>
       <h1 className='text-xl font-semibold'>Post not found</h1>

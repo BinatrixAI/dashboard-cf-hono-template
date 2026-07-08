@@ -1,3 +1,4 @@
+import { cmsBaseUrl } from '@/lib/cms-client'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -7,7 +8,6 @@ import { Main } from '@/components/layout/main'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
-import { cmsBaseUrl } from '@/lib/cms-client'
 import { ContentTable } from './components/content-table'
 import { useContent } from './data/use-content'
 
@@ -63,12 +63,13 @@ function CmsNotConfigured() {
       <p className='text-muted-foreground text-sm'>
         No <code className={codeClass}>VITE_CMS_API_URL</code> is set, so there
         is no CMS to read posts from yet. Point it at your SonicJS CMS Worker
-        origin (for example <code className={codeClass}>https://cms.example.com</code>)
-        in your <code className={codeClass}>.env.local</code>, then reload.
+        origin (for example{' '}
+        <code className={codeClass}>https://cms.example.com</code>) in your{' '}
+        <code className={codeClass}>.env.local</code>, then reload.
       </p>
       <p className='text-muted-foreground text-sm'>
-        See <code className={codeClass}>docs/cms.md</code> for the full setup and
-        CORS checklist.
+        See <code className={codeClass}>docs/cms.md</code> for the full setup
+        and CORS checklist.
       </p>
     </div>
   )
@@ -101,8 +102,8 @@ function ContentError({ onRetry }: { onRetry: () => void }) {
         <AlertDescription>
           The request to the CMS failed. It may be down, or its{' '}
           <code className={codeClass}>CORS_ORIGINS</code> may not include this
-          dashboard's origin. Check <code className={codeClass}>docs/cms.md</code>,
-          then retry.
+          dashboard's origin. Check{' '}
+          <code className={codeClass}>docs/cms.md</code>, then retry.
         </AlertDescription>
       </Alert>
       <Button variant='outline' size='sm' onClick={onRetry}>

@@ -51,7 +51,7 @@ export function PublicIndex() {
               <CardContent>
                 {/* React escapes text children — plaintext only, CSS-native
                     line-clamp truncation, no injected ellipsis (T-16-01). */}
-                <p className='text-muted-foreground text-sm line-clamp-3'>
+                <p className='text-muted-foreground line-clamp-3 text-sm'>
                   {lexicalToPlainText(post.data?.content)}
                 </p>
               </CardContent>

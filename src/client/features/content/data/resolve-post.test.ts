@@ -11,7 +11,10 @@ const post = (over: Partial<ContentItem> & { id: string }): ContentItem => ({
 
 describe('findPost', () => {
   it('matches by slug', () => {
-    const posts = [post({ id: 'a', slug: 'hello' }), post({ id: 'b', slug: 'world' })]
+    const posts = [
+      post({ id: 'a', slug: 'hello' }),
+      post({ id: 'b', slug: 'world' }),
+    ]
     expect(findPost(posts, 'world')?.id).toBe('b')
   })
 

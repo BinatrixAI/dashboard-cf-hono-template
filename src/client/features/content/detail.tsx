@@ -44,11 +44,13 @@ export function ContentDetail({ id }: { id: string }) {
                     {item.status}
                   </Badge>
                 ) : null}
-                <span>{formatPublished(item.data?.publishedAt, item.created_at)}</span>
+                <span>
+                  {formatPublished(item.data?.publishedAt, item.created_at)}
+                </span>
               </div>
             </div>
             {/* React escapes text children — plaintext only, never innerHTML. */}
-            <p className='whitespace-pre-wrap leading-relaxed'>
+            <p className='leading-relaxed whitespace-pre-wrap'>
               {lexicalToPlainText(item.data?.content)}
             </p>
           </article>

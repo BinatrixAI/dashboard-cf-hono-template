@@ -4,8 +4,8 @@ import {
   siteSettingsCollection,
   redirectPlugin,
   mcpPlugin,
+  type SonicJSConfig,
 } from '@sonicjs-cms/core'
-import type { SonicJSConfig } from '@sonicjs-cms/core'
 import blogPostsCollection from './collections/blog-posts.collection'
 
 /**

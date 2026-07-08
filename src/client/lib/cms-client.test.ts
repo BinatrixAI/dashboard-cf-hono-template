@@ -55,7 +55,9 @@ describe('cmsAdminUrl', () => {
 describe('cmsFetch', () => {
   it('throws "CMS not configured" when VITE_CMS_API_URL is unset', async () => {
     vi.stubEnv('VITE_CMS_API_URL', '')
-    await expect(cmsFetch('/api/blog-posts')).rejects.toThrow('CMS not configured')
+    await expect(cmsFetch('/api/blog-posts')).rejects.toThrow(
+      'CMS not configured'
+    )
   })
 
   it('fetches the absolute cross-origin URL with EXACTLY ONE argument (no credentials — D-07)', async () => {
@@ -70,7 +72,9 @@ describe('cmsFetch', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
     // No second init/options object => browser sends no cookies/Authorization.
     expect(fetchMock.mock.calls[0]).toHaveLength(1)
-    expect(fetchMock.mock.calls[0][0]).toBe('https://cms.example.com/api/blog-posts')
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'https://cms.example.com/api/blog-posts'
+    )
   })
 
   it('resolves to the parsed JSON on res.ok', async () => {
@@ -87,7 +91,9 @@ describe('cmsFetch', () => {
     vi.stubEnv('VITE_CMS_API_URL', 'https://cms.example.com')
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue({ ok: false, status: 503, json: async () => ({}) })
+      vi
+        .fn()
+        .mockResolvedValue({ ok: false, status: 503, json: async () => ({}) })
     )
     await expect(cmsFetch('/api/blog-posts')).rejects.toThrow('503')
   })

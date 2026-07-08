@@ -44,7 +44,9 @@ describe('lexicalToPlainText', () => {
   })
 
   it('never throws on a malformed tree', () => {
-    const tree = { root: { children: [{ nope: true }, null, { children: null }] } }
+    const tree = {
+      root: { children: [{ nope: true }, null, { children: null }] },
+    }
     expect(() => lexicalToPlainText(tree)).not.toThrow()
     expect(typeof lexicalToPlainText(tree)).toBe('string')
   })
