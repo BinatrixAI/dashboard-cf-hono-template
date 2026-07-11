@@ -53,6 +53,22 @@ async function main() {
   assert.match(sql, /rbac_user_roles/, 'grant doc must be type rbac_user_roles')
   assert.match(sql, /"roleIds":\["role-admin"\]/, 'grant must reference role-admin')
 
+  // FK prerequisite: `documents.type_id` REFERENCES `document_types(id)`, and the migrations
+  // seed zero document_types rows (core registers them at runtime). Without this stub the grant
+  // INSERT dies with `FOREIGN KEY constraint failed` on a fresh D1 and the whole seed rolls
+  // back — i.e. seeding before the first deploy, exactly as docs/cms.md prescribes, is
+  // impossible. It must be OR IGNORE (deploy-first DBs already have the real row) and must be
+  // emitted BEFORE the grant.
+  assert.match(
+    sql,
+    /INSERT OR IGNORE INTO document_types[^;]*'rbac_user_roles'/,
+    'must emit the rbac_user_roles document_types stub the grant FK needs',
+  )
+  assert.ok(
+    sql.indexOf('INSERT OR IGNORE INTO document_types') < sql.indexOf('INSERT INTO documents'),
+    'the document_types stub must precede the grant INSERT (FK ordering)',
+  )
+
   console.log('seed-admin self-check: PASS')
 }
 

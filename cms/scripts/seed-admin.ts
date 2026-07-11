@@ -43,8 +43,20 @@ export async function pbkdf2Hash(password: string): Promise<string> {
 }
 
 /**
- * Emit the admin bootstrap INSERTs. Three rows, all the seeded admin needs to actually
+ * Emit the admin bootstrap INSERTs. Four rows, all the seeded admin needs to actually
  * reach `/admin` on a fresh beta.24 deploy:
+ *   0. document_types — a stub `rbac_user_roles` row. REQUIRED: `documents.type_id` carries a
+ *                      FOREIGN KEY onto `document_types(id)`, and the shipped migrations seed
+ *                      ZERO document_types rows — core registers them at RUNTIME
+ *                      (bootstrapDocumentTypes(), on the first request). So on a fresh D1 the
+ *                      grant INSERT below fails with `FOREIGN KEY constraint failed` and the
+ *                      whole seed rolls back, making the documented seed-BEFORE-first-deploy
+ *                      order impossible. Emitting the stub keeps that order working (and with
+ *                      it the "no admin exists while the CMS is publicly reachable" property).
+ *                      `INSERT OR IGNORE` so a deploy-first database is a silent no-op, and
+ *                      core's DocumentTypeRegistry.register() is an UPSERT — it UPDATEs every
+ *                      column of an existing row — so the real definition overwrites this stub
+ *                      on first boot. Only the NOT-NULL columns are set; the rest default.
  *   1. auth_user     — role='admin' AND is_super_admin=1 (the latter bypasses the
  *                      multi-tenant membership gate: `enforceMembership = user &&
  *                      pluginActive && !isSuperAdmin`; without it a non-member admin 403s).
@@ -74,6 +86,12 @@ export function buildSeedSql(email: string, passwordHash: string): string {
   const lastName = 'Admin'
   const name = `${firstName} ${lastName}`
 
+  // FK prerequisite for grantSql (see the doc comment above). Core upserts over this stub.
+  const typeSql =
+    `INSERT OR IGNORE INTO document_types ` +
+    `(id, name, display_name, source, is_system, is_auth, created_at, updated_at) VALUES ` +
+    `('rbac_user_roles', 'rbac_user_roles', 'RBAC User Roles', 'system', 1, 1, ${nowSec}, ${nowSec});`
+
   const userSql =
     `INSERT INTO auth_user ` +
     `(id, email, email_verified, name, first_name, last_name, role, is_super_admin, is_active, created_at, updated_at) VALUES ` +
@@ -92,7 +110,7 @@ export function buildSeedSql(email: string, passwordHash: string): string {
     `(id, root_id, type_id, slug, data, created_at, updated_at) VALUES ` +
     `(${q(grantId)}, ${q(grantId)}, 'rbac_user_roles', ${q(userId)}, '{"roleIds":["role-admin"]}', ${nowSec}, ${nowSec});`
 
-  return `${userSql} ${accountSql} ${grantSql}`
+  return `${typeSql} ${userSql} ${accountSql} ${grantSql}`
 }
 
 function printRotateWarning(email: string): void {

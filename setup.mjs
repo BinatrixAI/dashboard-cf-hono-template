@@ -808,39 +808,27 @@ function assertPresetShape(preset) {
 // normalizeThemeUrl() (D-04) is a pure URL→URL transform applied to a `--theme` URL AFTER
 // `new URL()` but BEFORE the host/scheme allow-list (D-06 ordering). It ONLY ever mutates the
 // pathname (host preserved), so the unchanged host guard still rejects non-tweakcn inputs
-// (Pitfall 2 — a rewrite that touched the host would be an SSRF hole). Two rules, in order:
-//   1. tweakcn page URL (`/themes/<id>`, optional trailing slash) → the registry item
-//      `/r/themes/<id>.json`, dropping any search/hash and yielding a SLASH-FREE URL (a
-//      trailing-slash registry URL 308s, Pitfall 3). Only the tweakcn host is translated —
-//      non-tweakcn hosts are deliberately left for the downstream allow-list to reject.
-//   2. else, if the LAST path segment is extensionless, append `.json` (literal fallback for
-//      an extensionless registry URL). A `/r/themes/<id>.json` URL already has an extension →
-//      returned unchanged. Bare theme-ids never reach here (they take the non-URL branch, D-04).
+// (Pitfall 2 — a rewrite that touched the host would be an SSRF hole).
+//
+// Every tweakcn form normalizes to the EXTENSIONLESS registry item `/r/themes/<id>`, dropping
+// search/hash and any trailing slash (a trailing-slash registry URL 308s under
+// redirect:'manual' → silent fallback, Pitfall 3).
+//
+// The `.json` suffix this used to append is what BROKE the whole remote-theme path: tweakcn
+// serves user-saved themes (cuid ids) ONLY extensionless — `/r/themes/<cuid>.json` returns
+// HTTP 500 while `/r/themes/<cuid>` returns the JSON. Built-in slugs still answer to both, so
+// the bug hid behind `--theme https://tweakcn.com/themes/modern-minimal` and surfaced only on
+// a real user theme. Extensionless is the one form that works for BOTH — never re-add `.json`.
+//
+// Non-tweakcn hosts are returned untouched for the downstream allow-list to reject.
 export function normalizeThemeUrl(u) {
-  if (u.hostname === TWEAKCN_HOST) {
-    const m = u.pathname.match(/^\/themes\/([A-Za-z0-9._-]+)\/?$/)
-    if (m) return new URL(`https://${TWEAKCN_HOST}/r/themes/${m[1]}.json`)
-    // IN-03: an already-extensioned registry path with a stray trailing slash
-    // (`/r/themes/<id>.json/`) 308-redirects under redirect:'manual' → silent fallback
-    // to the shipped default (Pitfall 3). Strip trailing slash(es) so the extensioned URL
-    // is fetched directly. Runs AFTER the page-URL rule so a dotted theme-id page path
-    // (`/themes/my.theme/`) still translates to the registry .json path (no regression).
-    const trimmed = u.pathname.replace(/\/+$/, '')
-    if (/\.[a-z0-9]+$/i.test(trimmed) && trimmed !== u.pathname) {
-      const out = new URL(u)
-      out.pathname = trimmed
-      out.search = ''
-      out.hash = ''
-      return out
-    }
-  }
-  const last = u.pathname.split('/').pop() ?? ''
-  if (last && !last.includes('.')) {
-    const out = new URL(u)
-    out.pathname = u.pathname.replace(/\/?$/, '') + '.json'
-    return out
-  }
-  return u
+  if (u.hostname !== TWEAKCN_HOST) return u
+
+  // Accept the page URL (`/themes/<id>`) or either registry form (`/r/themes/<id>[.json]`),
+  // each with an optional trailing slash, and emit the canonical extensionless registry path.
+  const m = u.pathname.match(/^(?:\/r)?\/themes\/(.+?)(?:\.json)?\/?$/)
+  if (!m) return u
+  return new URL(`https://${TWEAKCN_HOST}/r/themes/${m[1]}`)
 }
 
 // resolvePreset() is the outcome-signalling resolver (D-01). It runs the SAME resolution
@@ -902,7 +890,7 @@ export async function resolvePreset(themeArg, rootDir = process.cwd()) {
   try {
     url = isUrl
       ? normalizeThemeUrl(new URL(themeArg))
-      : new URL(`https://${TWEAKCN_HOST}/r/themes/${encodeURIComponent(themeArg)}.json`)
+      : new URL(`https://${TWEAKCN_HOST}/r/themes/${encodeURIComponent(themeArg)}`)
   } catch {
     return { preset: readShipped(), outcome: 'fallback', reason: 'invalid --theme value' }
   }
