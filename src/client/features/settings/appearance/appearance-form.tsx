@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form'
 import { ChevronDownIcon } from '@radix-ui/react-icons'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { fonts } from '@/config/fonts'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useFont } from '@/context/font-provider'
@@ -46,6 +47,7 @@ export function AppearanceForm() {
 }
 
 function AppearanceFormFields({ data }: { data: AppSettings }) {
+  const { t } = useTranslation()
   const { setFont } = useFont()
   const { setTheme } = useTheme()
   const update = useUpdateSettings()
@@ -69,7 +71,7 @@ function AppearanceFormFields({ data }: { data: AppSettings }) {
     // whole document (D-05, Pitfall 1) — never a partial that drops siblings.
     const next: AppSettings = { ...data, appearance: values }
     update.mutate(next, {
-      onSuccess: () => toast.success('Preferences updated'),
+      onSuccess: () => toast.success(t('settings.appearance.updated')),
     })
   }
 
@@ -81,7 +83,7 @@ function AppearanceFormFields({ data }: { data: AppSettings }) {
           name='font'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Font</FormLabel>
+              <FormLabel>{t('settings.appearance.fontLabel')}</FormLabel>
               <div className='relative w-max'>
                 <FormControl>
                   <select
@@ -102,7 +104,7 @@ function AppearanceFormFields({ data }: { data: AppSettings }) {
                 <ChevronDownIcon className='absolute end-3 top-2.5 h-4 w-4 opacity-50' />
               </div>
               <FormDescription className='font-manrope'>
-                Set the font you want to use in the dashboard.
+                {t('settings.appearance.fontDesc')}
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -113,9 +115,9 @@ function AppearanceFormFields({ data }: { data: AppSettings }) {
           name='theme'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Theme</FormLabel>
+              <FormLabel>{t('settings.appearance.themeLabel')}</FormLabel>
               <FormDescription>
-                Select the theme for the dashboard.
+                {t('settings.appearance.themeDesc')}
               </FormDescription>
               <FormMessage />
               <RadioGroup
@@ -145,7 +147,7 @@ function AppearanceFormFields({ data }: { data: AppSettings }) {
                       </div>
                     </div>
                     <span className='block w-full p-2 text-center font-normal'>
-                      Light
+                      {t('settings.appearance.light')}
                     </span>
                   </FormLabel>
                 </FormItem>
@@ -171,7 +173,7 @@ function AppearanceFormFields({ data }: { data: AppSettings }) {
                       </div>
                     </div>
                     <span className='block w-full p-2 text-center font-normal'>
-                      Dark
+                      {t('settings.appearance.dark')}
                     </span>
                   </FormLabel>
                 </FormItem>
@@ -207,7 +209,7 @@ function AppearanceFormFields({ data }: { data: AppSettings }) {
                       </div>
                     </div>
                     <span className='block w-full p-2 text-center font-normal'>
-                      System
+                      {t('settings.appearance.system')}
                     </span>
                   </FormLabel>
                 </FormItem>
@@ -216,7 +218,7 @@ function AppearanceFormFields({ data }: { data: AppSettings }) {
           )}
         />
 
-        <Button type='submit'>Update preferences</Button>
+        <Button type='submit'>{t('settings.appearance.submit')}</Button>
       </form>
     </Form>
   )
@@ -243,16 +245,17 @@ function AppearanceFormSkeleton() {
 }
 
 function AppearanceFormError({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation()
   return (
     <div className='space-y-3'>
       <Alert variant='destructive'>
-        <AlertTitle>Could not load appearance settings</AlertTitle>
+        <AlertTitle>{t('settings.appearance.loadError')}</AlertTitle>
         <AlertDescription>
-          Check your connection and try again.
+          {t('settings.common.loadErrorDesc')}
         </AlertDescription>
       </Alert>
       <Button variant='outline' size='sm' onClick={onRetry}>
-        Retry
+        {t('settings.common.retry')}
       </Button>
     </div>
   )

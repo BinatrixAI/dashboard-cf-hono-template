@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@clerk/localizations':
+        specifier: ^4.13.2
+        version: 4.13.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@clerk/react':
         specifier: ^6.4.3
         version: 6.11.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -110,6 +113,9 @@ importers:
       hono:
         specifier: ^4.12.27
         version: 4.12.27
+      i18next:
+        specifier: ^26.3.6
+        version: 26.3.6(typescript@5.9.3)
       input-otp:
         specifier: ^1.4.2
         version: 1.4.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -128,6 +134,9 @@ importers:
       react-hook-form:
         specifier: ^7.64.0
         version: 7.80.0(react@19.2.7)
+      react-i18next:
+        specifier: ^17.0.9
+        version: 17.0.9(i18next@26.3.6(typescript@5.9.3))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3)
       react-top-loading-bar:
         specifier: ^3.0.2
         version: 3.0.2(react@19.2.7)
@@ -289,6 +298,10 @@ packages:
     engines: {node: '>=6.0.0'}
     hasBin: true
 
+  '@babel/runtime@7.29.7':
+    resolution: {integrity: sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==}
+    engines: {node: '>=6.9.0'}
+
   '@babel/template@7.29.7':
     resolution: {integrity: sha512-puq+Gf35oI24FeN11LkoUQFqv9uwNeWpxXZi/Ji3rRIoKAzKnxRaZ+Gkj0vKS9ZCiTESfng1N9LyOyXvo+m+Gg==}
     engines: {node: '>=6.9.0'}
@@ -304,6 +317,10 @@ packages:
   '@clerk/backend@2.33.5':
     resolution: {integrity: sha512-YOzUYJfb1d4w+0rKKm+LnnNpkJGQ+NI/g7qmF3mgaSN9X9huteuwCZyufdsI7z2DDkwy/yGRgb9eUWV96t7xLg==}
     engines: {node: '>=18.17.0'}
+
+  '@clerk/localizations@4.13.2':
+    resolution: {integrity: sha512-HNq7RS3VZxy5K9NffgKf+8I3wH6+CwFtDSGBgcnBLjw3oVAOuIcCc5B45UzWGGguJXgquPTaIeoSOPhBAG0UAQ==}
+    engines: {node: '>=20.9.0'}
 
   '@clerk/react@6.11.1':
     resolution: {integrity: sha512-iEWckisZa/V3siCFlvGTNg7Yj+kndRx7HKBZ/QMSd6uEU9kd2tZ8Ymvd4GFPCpClwcki4h7jC750FujN656Jqg==}
@@ -326,6 +343,18 @@ packages:
 
   '@clerk/shared@4.22.0':
     resolution: {integrity: sha512-GZ56kzUB2UBb8MCF+Eo8WIey+W4RP1tAkyOL+geiHxrQxJlUcgD+xalY2YPJLH8WVFwtOnfIl8KPEo0M0e/DRg==}
+    engines: {node: '>=20.9.0'}
+    peerDependencies:
+      react: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
+      react-dom: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
+    peerDependenciesMeta:
+      react:
+        optional: true
+      react-dom:
+        optional: true
+
+  '@clerk/shared@4.25.2':
+    resolution: {integrity: sha512-v7zgDh0eVLl3KzRHbKYTsPQ+4Xcx8A2oiU5iZ9WhME024WudwkjjPJRK12RycY0VA1Sj8i4Pi5zEpecqB/gp1Q==}
     engines: {node: '>=20.9.0'}
     peerDependencies:
       react: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
@@ -2791,9 +2820,20 @@ packages:
     resolution: {integrity: sha512-1yrb/+w6HWQJrUCLkJ2IF5jNIPvvFkblV5RNOYl6bV+OA6p9GLcMpHFFGTosSvHvcAUibuUukRqhlYI4z32C7Q==}
     engines: {node: '>=16.9.0'}
 
+  html-parse-stringify@3.0.1:
+    resolution: {integrity: sha512-KknJ50kTInJ7qIScF3jeaFRpMpE8/lfiTdzf/twXyPBLAGrLRTmkz3AdTnKeh40X8k9L2fdYwEp/42WGXIRGcg==}
+
   https-proxy-agent@5.0.1:
     resolution: {integrity: sha512-dFcAjpTQFgoLMzC2VwU+C/CbS7uRL0lWmxDITmqm7C+7F0Odmj6s9l6alZc6AELXhrnggM2CeWSXHGOdX2YtwA==}
     engines: {node: '>= 6'}
+
+  i18next@26.3.6:
+    resolution: {integrity: sha512-Bu5Z2nAXgfVyM8xvW3jk9EKRIuX37PudsrBViThNFx7CR7aaYTpP01cxNB/E4c4UUzTDiAZRstEhsRfPOL/8xA==}
+    peerDependencies:
+      typescript: ^5 || ^6 || ^7
+    peerDependenciesMeta:
+      typescript:
+        optional: true
 
   ignore@5.3.2:
     resolution: {integrity: sha512-hsBTNUqQTDwkWtcdYI2i06Y/nUBEsNEDJKjWdigLvegy8kDuJAS8uRlpkkcQpyEXL0Z/pjDy5HBmMjRCJ2gq+g==}
@@ -3159,6 +3199,22 @@ packages:
     engines: {node: '>=18.0.0'}
     peerDependencies:
       react: ^16.8.0 || ^17 || ^18 || ^19
+
+  react-i18next@17.0.9:
+    resolution: {integrity: sha512-buLzOSqHtXxjf+qgSrLWNTXVZ1jSwO6kUv3uJqSP1roGBPgNnbhFm7OmdVwWcgf2gIbUyP0J333uPyx+Btsi3w==}
+    peerDependencies:
+      i18next: '>= 26.2.0'
+      react: '>= 16.8.0'
+      react-dom: '*'
+      react-native: '*'
+      typescript: ^5 || ^6 || ^7
+    peerDependenciesMeta:
+      react-dom:
+        optional: true
+      react-native:
+        optional: true
+      typescript:
+        optional: true
 
   react-is@19.2.7:
     resolution: {integrity: sha512-kZFnouyVv7eP/Phmrlo9FK+zcAdriZJvzxXHF1Sl1P377WSGe2G/JxVolhTrB/jeV47lKImhNUsijjHAAbcl/A==}
@@ -3558,6 +3614,10 @@ packages:
       jsdom:
         optional: true
 
+  void-elements@3.1.0:
+    resolution: {integrity: sha512-Dhxzh5HZuiHQhbvTW9AMetFfBHDMYpo23Uo9btPXgdYP+3T5S+p+jgNy7spra+veYhBP2dCSgxR/i2Y02h5/6w==}
+    engines: {node: '>=0.10.0'}
+
   webpack-virtual-modules@0.6.2:
     resolution: {integrity: sha512-66/V2i5hQanC51vBQKPH4aI8NMAcBW59FVBs+rC7eGHupMyfn34q7rZIE+ETlJ+XTevqfUhVVBgSUNSW2flEUQ==}
 
@@ -3724,6 +3784,8 @@ snapshots:
     dependencies:
       '@babel/types': 7.29.7
 
+  '@babel/runtime@7.29.7': {}
+
   '@babel/template@7.29.7':
     dependencies:
       '@babel/code-frame': 7.29.7
@@ -3757,6 +3819,13 @@ snapshots:
       - react
       - react-dom
 
+  '@clerk/localizations@4.13.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+    dependencies:
+      '@clerk/shared': 4.25.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+    transitivePeerDependencies:
+      - react
+      - react-dom
+
   '@clerk/react@6.11.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
       '@clerk/shared': 4.22.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -3777,6 +3846,16 @@ snapshots:
       react-dom: 19.2.7(react@19.2.7)
 
   '@clerk/shared@4.22.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+    dependencies:
+      '@tanstack/query-core': 5.101.2
+      dequal: 2.0.3
+      glob-to-regexp: 0.4.1
+      js-cookie: 3.0.7
+    optionalDependencies:
+      react: 19.2.7
+      react-dom: 19.2.7(react@19.2.7)
+
+  '@clerk/shared@4.25.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
       '@tanstack/query-core': 5.101.2
       dequal: 2.0.3
@@ -5932,12 +6011,20 @@ snapshots:
 
   hono@4.12.27: {}
 
+  html-parse-stringify@3.0.1:
+    dependencies:
+      void-elements: 3.1.0
+
   https-proxy-agent@5.0.1:
     dependencies:
       agent-base: 6.0.2
       debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
+
+  i18next@26.3.6(typescript@5.9.3):
+    optionalDependencies:
+      typescript: 5.9.3
 
   ignore@5.3.2: {}
 
@@ -6179,6 +6266,17 @@ snapshots:
   react-hook-form@7.80.0(react@19.2.7):
     dependencies:
       react: 19.2.7
+
+  react-i18next@17.0.9(i18next@26.3.6(typescript@5.9.3))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3):
+    dependencies:
+      '@babel/runtime': 7.29.7
+      html-parse-stringify: 3.0.1
+      i18next: 26.3.6(typescript@5.9.3)
+      react: 19.2.7
+      use-sync-external-store: 1.6.0(react@19.2.7)
+    optionalDependencies:
+      react-dom: 19.2.7(react@19.2.7)
+      typescript: 5.9.3
 
   react-is@19.2.7: {}
 
@@ -6523,6 +6621,8 @@ snapshots:
       '@types/node': 24.13.2
     transitivePeerDependencies:
       - msw
+
+  void-elements@3.1.0: {}
 
   webpack-virtual-modules@0.6.2: {}
 

@@ -1,4 +1,5 @@
 import { Activity, CreditCard, DollarSign, Users } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import {
   Card,
   CardContent,
@@ -27,6 +28,7 @@ import { statCards } from './data/mock'
 const statIcons = [DollarSign, Users, CreditCard, Activity]
 
 export function Dashboard() {
+  const { t } = useTranslation()
   return (
     <>
       {/* ===== Top Heading ===== */}
@@ -41,12 +43,16 @@ export function Dashboard() {
 
       {/* ===== Main ===== */}
       <Main>
-        <h1 className='text-2xl font-semibold'>Dashboard</h1>
+        <h1 className='text-2xl font-semibold'>{t('dashboard.title')}</h1>
 
         <Tabs defaultValue='overview' className='mt-4 space-y-4'>
           <TabsList>
-            <TabsTrigger value='overview'>Overview</TabsTrigger>
-            <TabsTrigger value='analytics'>Analytics</TabsTrigger>
+            <TabsTrigger value='overview'>
+              {t('dashboard.overview')}
+            </TabsTrigger>
+            <TabsTrigger value='analytics'>
+              {t('dashboard.analytics')}
+            </TabsTrigger>
           </TabsList>
 
           {/* ===== Overview tab ===== */}
@@ -58,14 +64,14 @@ export function Dashboard() {
                   <Card key={card.title}>
                     <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                       <CardTitle className='text-muted-foreground text-xs font-normal'>
-                        {card.title}
+                        {t(card.title)}
                       </CardTitle>
                       <Icon className='text-muted-foreground size-4' />
                     </CardHeader>
                     <CardContent>
                       <div className='text-2xl font-semibold'>{card.value}</div>
                       <p className='text-muted-foreground text-xs'>
-                        {card.delta}
+                        {t(card.delta)}
                       </p>
                     </CardContent>
                   </Card>
@@ -76,7 +82,7 @@ export function Dashboard() {
             <div className='grid grid-cols-1 gap-4 lg:grid-cols-7'>
               <Card className='lg:col-span-4'>
                 <CardHeader>
-                  <CardTitle>Overview</CardTitle>
+                  <CardTitle>{t('dashboard.overview')}</CardTitle>
                 </CardHeader>
                 <CardContent className='ps-2'>
                   <OverviewChart />
@@ -85,9 +91,9 @@ export function Dashboard() {
 
               <Card className='lg:col-span-3'>
                 <CardHeader>
-                  <CardTitle>Recent Sales</CardTitle>
+                  <CardTitle>{t('dashboard.recentSales')}</CardTitle>
                   <CardDescription>
-                    You made 265 sales this month.
+                    {t('dashboard.recentSalesDesc')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -102,10 +108,8 @@ export function Dashboard() {
             <div className='grid grid-cols-1 gap-4 lg:grid-cols-7'>
               <Card className='lg:col-span-4'>
                 <CardHeader>
-                  <CardTitle>Trend</CardTitle>
-                  <CardDescription>
-                    Desktop vs. mobile sessions over the week.
-                  </CardDescription>
+                  <CardTitle>{t('dashboard.trend')}</CardTitle>
+                  <CardDescription>{t('dashboard.trendDesc')}</CardDescription>
                 </CardHeader>
                 <CardContent className='ps-2'>
                   <AnalyticsAreaChart />
@@ -114,8 +118,10 @@ export function Dashboard() {
 
               <Card className='lg:col-span-3'>
                 <CardHeader>
-                  <CardTitle>Breakdown</CardTitle>
-                  <CardDescription>Traffic by source.</CardDescription>
+                  <CardTitle>{t('dashboard.breakdown')}</CardTitle>
+                  <CardDescription>
+                    {t('dashboard.breakdownDesc')}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <AnalyticsPieChart />
@@ -125,9 +131,9 @@ export function Dashboard() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Comparison</CardTitle>
+                <CardTitle>{t('dashboard.comparison')}</CardTitle>
                 <CardDescription>
-                  Revenue, profit, and expenses month over month.
+                  {t('dashboard.comparisonDesc')}
                 </CardDescription>
               </CardHeader>
               <CardContent className='ps-2'>

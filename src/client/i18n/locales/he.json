@@ -1,0 +1,518 @@
+{
+  "common": {
+    "sessionExpired": "פג תוקף החיבור!",
+    "internalServerError": "שגיאת שרת פנימית!",
+    "contentNotModified": "התוכן לא השתנה!",
+    "learnMore": "מידע נוסף"
+  },
+  "landing": {
+    "welcome": "ברוכים הבאים",
+    "description": "תבנית דשבורד מבוססת Cloudflare. העמודים הציבוריים נמצאים כאן; הדשבורד מוגן מאחורי אימות Clerk.",
+    "signIn": "התחברות",
+    "goToDashboard": "מעבר לדשבורד"
+  },
+  "authShell": {
+    "welcome": "ברוכים הבאים לעמוד ההתחברות.",
+    "backTo": "חזרה אל",
+    "dashboard": "הדשבורד"
+  },
+  "sidebar": {
+    "groups": {
+      "general": "כללי",
+      "content": "תוכן",
+      "other": "אחר"
+    },
+    "nav": {
+      "overview": "סקירה כללית",
+      "items": "פריטים",
+      "tasks": "משימות",
+      "apps": "אפליקציות",
+      "chats": "צ׳אטים",
+      "users": "משתמשים",
+      "content": "תוכן",
+      "cmsAdmin": "ניהול CMS",
+      "settings": "הגדרות",
+      "profile": "פרופיל",
+      "account": "חשבון",
+      "appearance": "מראה",
+      "notifications": "התראות",
+      "display": "תצוגה"
+    }
+  },
+  "drawer": {
+    "title": "הגדרות ערכת נושא",
+    "description": "התאימו את המראה והפריסה להעדפותיכם.",
+    "openThemeSettings": "פתיחת הגדרות ערכת נושא",
+    "reset": "איפוס",
+    "resetAll": "איפוס כל ההגדרות לברירת המחדל",
+    "selectOption": "בחירת {{label}}",
+    "optionPreview": "תצוגה מקדימה של האפשרות {{label}}",
+    "sections": {
+      "theme": "ערכת נושא",
+      "sidebar": "סרגל צד",
+      "layout": "פריסה",
+      "direction": "כיווניות"
+    },
+    "theme": {
+      "system": "מערכת",
+      "light": "בהיר",
+      "dark": "כהה",
+      "ariaLabel": "בחירת העדפת ערכת נושא",
+      "description": "בחרו בין העדפת המערכת, מצב בהיר או מצב כהה"
+    },
+    "sidebarStyle": {
+      "inset": "משוקע",
+      "floating": "צף",
+      "sidebar": "סרגל צד",
+      "ariaLabel": "בחירת סגנון סרגל צד",
+      "description": "בחרו בין סרגל צד משוקע, צף או רגיל"
+    },
+    "layout": {
+      "default": "ברירת מחדל",
+      "compact": "קומפקטי",
+      "full": "פריסה מלאה",
+      "ariaLabel": "בחירת סגנון פריסה",
+      "description": "בחרו בין פריסה מורחבת כברירת מחדל, קומפקטית עם סמלים בלבד או פריסה מלאה"
+    },
+    "direction": {
+      "ltr": "משמאל לימין",
+      "rtl": "מימין לשמאל",
+      "ariaLabel": "בחירת כיווניות האתר",
+      "description": "בחרו בין כיווניות משמאל לימין או מימין לשמאל"
+    }
+  },
+  "commandMenu": {
+    "placeholder": "הקלידו פקודה או חיפוש...",
+    "noResults": "לא נמצאו תוצאות.",
+    "theme": "ערכת נושא",
+    "light": "בהיר",
+    "dark": "כהה",
+    "system": "מערכת"
+  },
+  "search": {
+    "placeholder": "חיפוש"
+  },
+  "profileDropdown": {
+    "account": "חשבון",
+    "manageAccount": "ניהול חשבון",
+    "signOut": "התנתקות"
+  },
+  "dataTable": {
+    "rowsPerPage": "שורות לעמוד",
+    "pageOf": "עמוד {{current}} מתוך {{total}}",
+    "goToFirst": "מעבר לעמוד הראשון",
+    "goToPrevious": "מעבר לעמוד הקודם",
+    "goToNext": "מעבר לעמוד הבא",
+    "goToLast": "מעבר לעמוד האחרון",
+    "goToPage": "מעבר לעמוד {{page}}",
+    "view": "תצוגה",
+    "toggleColumns": "החלפת עמודות",
+    "noResults": "לא נמצאו תוצאות.",
+    "clearFilters": "ניקוי מסננים",
+    "selected": "{{count}} נבחרו",
+    "reset": "איפוס",
+    "filterPlaceholder": "סינון...",
+    "sortAsc": "עולה",
+    "sortDesc": "יורד",
+    "hide": "הסתרה",
+    "bulk": {
+      "clearSelection": "ניקוי הבחירה",
+      "clearSelectionHint": "ניקוי הבחירה (Escape)",
+      "selectedSuffix": "נבחרו",
+      "announcement": "{{count}} {{entity}} נבחרו. סרגל הפעולות הקבוצתיות זמין.",
+      "toolbarLabel": "פעולות קבוצתיות עבור {{count}} {{entity}} שנבחרו"
+    }
+  },
+  "settings": {
+    "title": "הגדרות",
+    "subtitle": "נהל את הגדרות החשבון שלך והגדר העדפות דוא\"ל.",
+    "nav": {
+      "profile": "פרופיל",
+      "account": "חשבון",
+      "appearance": "מראה",
+      "notifications": "התראות",
+      "display": "תצוגה",
+      "selectPlaceholder": "מקטע"
+    },
+    "common": {
+      "retry": "נסה שוב",
+      "loadErrorDesc": "בדוק את החיבור שלך ונסה שוב."
+    },
+    "profile": {
+      "title": "פרופיל",
+      "desc": "כך אחרים יראו אותך באתר."
+    },
+    "appearance": {
+      "title": "מראה",
+      "desc": "התאם אישית את מראה האפליקציה. החלף אוטומטית בין ערכת נושא של יום ולילה.",
+      "fontLabel": "גופן",
+      "fontDesc": "הגדר את הגופן שברצונך להשתמש בו בלוח הבקרה.",
+      "themeLabel": "ערכת נושא",
+      "themeDesc": "בחר את ערכת הנושא של לוח הבקרה.",
+      "light": "בהיר",
+      "dark": "כהה",
+      "system": "מערכת",
+      "submit": "עדכן העדפות",
+      "loadError": "לא ניתן לטעון את הגדרות המראה",
+      "updated": "ההעדפות עודכנו"
+    },
+    "notifications": {
+      "title": "התראות",
+      "desc": "הגדר כיצד ברצונך לקבל התראות.",
+      "notifyAbout": "הודע לי על...",
+      "typeRequired": "אנא בחר סוג התראה.",
+      "all": "כל ההודעות החדשות",
+      "mentions": "הודעות ישירות ואזכורים",
+      "none": "כלום",
+      "emailTitle": "התראות דוא\"ל",
+      "communicationLabel": "דוא\"ל תקשורת",
+      "communicationDesc": "קבל הודעות דוא\"ל על פעילות החשבון שלך.",
+      "marketingLabel": "דוא\"ל שיווקי",
+      "marketingDesc": "קבל הודעות דוא\"ל על מוצרים חדשים, תכונות ועוד.",
+      "socialLabel": "דוא\"ל חברתי",
+      "socialDesc": "קבל הודעות דוא\"ל על בקשות חברות, עוקבים ועוד.",
+      "securityLabel": "דוא\"ל אבטחה",
+      "securityDesc": "קבל הודעות דוא\"ל על פעילות ואבטחת החשבון שלך.",
+      "mobileLabel": "השתמש בהגדרות שונות עבור המכשירים הניידים שלי",
+      "mobileDescPrefix": "באפשרותך לנהל את התראות הנייד שלך בעמוד ",
+      "mobileDescLink": "הגדרות הנייד",
+      "mobileDescSuffix": ".",
+      "submit": "עדכן התראות",
+      "loadError": "לא ניתן לטעון את הגדרות ההתראות",
+      "updated": "ההעדפות עודכנו"
+    },
+    "display": {
+      "title": "תצוגה",
+      "desc": "הפעל או כבה פריטים כדי לשלוט במה שמוצג באפליקציה.",
+      "sidebarLabel": "סרגל צד",
+      "sidebarDesc": "בחר את הפריטים שברצונך להציג בסרגל הצד.",
+      "minOne": "עליך לבחור לפחות פריט אחד.",
+      "submit": "עדכן תצוגה",
+      "loadError": "לא ניתן לטעון את הגדרות התצוגה",
+      "updated": "התצוגה עודכנה",
+      "items": {
+        "recents": "אחרונים",
+        "home": "בית",
+        "applications": "יישומים",
+        "desktop": "שולחן עבודה",
+        "downloads": "הורדות",
+        "documents": "מסמכים"
+      }
+    }
+  },
+  "tasks": {
+    "title": "משימות",
+    "subtitle": "הנה רשימת המשימות שלך לחודש זה!",
+    "entity": "משימה",
+    "searchPlaceholder": "סינון לפי כותרת או מזהה...",
+    "noResults": "אין תוצאות.",
+    "selectAll": "בחר הכל",
+    "selectRow": "בחר שורה",
+    "columns": {
+      "task": "משימה",
+      "title": "כותרת",
+      "status": "סטטוס",
+      "priority": "עדיפות"
+    },
+    "label": {
+      "bug": "באג",
+      "feature": "תכונה",
+      "documentation": "תיעוד"
+    },
+    "status": {
+      "backlog": "מצבור",
+      "todo": "לביצוע",
+      "inProgress": "בתהליך",
+      "done": "הושלם",
+      "canceled": "בוטל"
+    },
+    "priority": {
+      "low": "נמוכה",
+      "medium": "בינונית",
+      "high": "גבוהה",
+      "critical": "קריטית"
+    },
+    "buttons": {
+      "import": "ייבוא",
+      "create": "יצירה"
+    },
+    "rowActions": {
+      "openMenu": "פתח תפריט",
+      "edit": "עריכה",
+      "makeCopy": "צור עותק",
+      "favorite": "מועדף",
+      "labels": "תוויות",
+      "delete": "מחיקה"
+    },
+    "drawer": {
+      "updateTitle": "עדכון משימה",
+      "createTitle": "יצירת משימה",
+      "updateDesc": "עדכן את המשימה על ידי מתן המידע הדרוש.",
+      "createDesc": "הוסף משימה חדשה על ידי מתן המידע הדרוש.",
+      "clickSave": "לחץ על שמירה בסיום.",
+      "titleLabel": "כותרת",
+      "titlePlaceholder": "הזן כותרת",
+      "statusLabel": "סטטוס",
+      "statusPlaceholder": "בחר מהרשימה",
+      "labelLabel": "תווית",
+      "priorityLabel": "עדיפות",
+      "close": "סגירה",
+      "save": "שמירת שינויים",
+      "titleRequired": "כותרת היא שדה חובה.",
+      "statusRequired": "אנא בחר סטטוס.",
+      "labelRequired": "אנא בחר תווית.",
+      "priorityRequired": "אנא בחר עדיפות."
+    },
+    "import": {
+      "title": "ייבוא משימות",
+      "desc": "ייבא משימות במהירות מקובץ CSV.",
+      "file": "קובץ",
+      "close": "סגירה",
+      "import": "ייבוא",
+      "fileRequired": "אנא העלה קובץ",
+      "csvFormat": "אנא העלה בפורמט csv.",
+      "importedFile": "ייבאת את הקובץ הבא:"
+    },
+    "delete": {
+      "title": "למחוק את המשימה הזו: {{id}} ?",
+      "descPrefix": "אתה עומד למחוק משימה עם המזהה ",
+      "descSuffix": ". לא ניתן לבטל פעולה זו.",
+      "confirm": "מחיקה",
+      "deleted": "המשימה הבאה נמחקה:"
+    },
+    "multiDelete": {
+      "title": "מחיקת {{count}} משימות",
+      "areYouSure": "האם אתה בטוח שברצונך למחוק את המשימות שנבחרו?",
+      "cannotUndo": "לא ניתן לבטל פעולה זו.",
+      "confirmByTyping": "אשר על ידי הקלדת \"{{word}}\":",
+      "typeToConfirm": "הקלד \"{{word}}\" כדי לאשר.",
+      "warning": "אזהרה!",
+      "warningDesc": "אנא היזהר, לא ניתן לבטל פעולה זו.",
+      "confirm": "מחיקה",
+      "deleting": "מוחק משימות...",
+      "deleted": "נמחקו {{count}} משימות",
+      "error": "שגיאה"
+    },
+    "bulk": {
+      "updateStatus": "עדכון סטטוס",
+      "updatePriority": "עדכון עדיפות",
+      "exportTasks": "ייצוא משימות",
+      "deleteTasks": "מחיקת המשימות שנבחרו",
+      "updatingStatus": "מעדכן סטטוס...",
+      "updatingPriority": "מעדכן עדיפות...",
+      "exporting": "מייצא משימות...",
+      "statusUpdated": "הסטטוס עודכן ל-\"{{status}}\" עבור {{count}} משימות.",
+      "priorityUpdated": "העדיפות עודכנה ל-\"{{priority}}\" עבור {{count}} משימות.",
+      "exported": "יוצאו {{count}} משימות ל-CSV.",
+      "error": "שגיאה"
+    }
+  },
+  "users": {
+    "title": "רשימת משתמשים",
+    "subtitle": "המשתמשים במופע Clerk זה, עם הסטטוס והתפקיד שלהם.",
+    "loadError": "לא ניתן לטעון משתמשים",
+    "loadErrorDescPrefix": "הבקשה ",
+    "loadErrorDescSuffix": " נכשלה. ודא שמפתח הסוד של Clerk מוגדר, ואז רענן.",
+    "refresh": "רענון",
+    "noResults": "אין תוצאות.",
+    "searchPlaceholder": "סינון משתמשים...",
+    "selectAll": "בחר הכל",
+    "selectRow": "בחר שורה",
+    "columns": {
+      "username": "שם משתמש",
+      "name": "שם",
+      "email": "דוא\"ל",
+      "phone": "מספר טלפון",
+      "status": "סטטוס",
+      "role": "תפקיד"
+    },
+    "status": {
+      "active": "פעיל",
+      "inactive": "לא פעיל",
+      "invited": "הוזמן",
+      "suspended": "מושעה"
+    },
+    "role": {
+      "superadmin": "מנהל על",
+      "admin": "מנהל",
+      "manager": "אחראי",
+      "cashier": "קופאי"
+    }
+  },
+  "content": {
+    "title": "תוכן",
+    "subtitle": "פוסטים שפורסמו מה-CMS, לקריאה בלבד. העריכה מתבצעת בממשק הניהול של ה-CMS.",
+    "searchPlaceholder": "סינון פוסטים...",
+    "noResults": "אין תוצאות.",
+    "unpublished": "לא פורסם",
+    "retry": "נסה שוב",
+    "columns": {
+      "title": "כותרת",
+      "status": "סטטוס",
+      "published": "פורסם"
+    },
+    "notConfigured": {
+      "title": "חבר את ה-CMS שלך",
+      "body1a": "לא הוגדר ",
+      "body1b": ", כך שאין עדיין CMS לקרוא ממנו פוסטים. הפנה אותו למקור ה-Worker של SonicJS CMS שלך (לדוגמה ",
+      "body1c": ") בקובץ ",
+      "body1d": " שלך, ואז טען מחדש.",
+      "body2a": "ראה ",
+      "body2b": " להתקנה המלאה ולרשימת בדיקת ה-CORS."
+    },
+    "error": {
+      "title": "לא ניתן להגיע ל-CMS",
+      "descA": "הבקשה ל-CMS נכשלה. ייתכן שהוא מושבת, או ש-",
+      "descB": " שלו אינו כולל את מקור לוח הבקרה הזה. בדוק את ",
+      "descC": ", ואז נסה שוב."
+    },
+    "detail": {
+      "errorTitle": "לא ניתן להגיע ל-CMS",
+      "errorDesc": "הבקשה עבור פוסט זה נכשלה. ייתכן שה-CMS מושבת או לא נגיש ממקור זה."
+    },
+    "public": {
+      "emptyTitle": "אין עדיין פוסטים",
+      "emptyBody": "בדוק שוב בקרוב.",
+      "errorTitle": "לא ניתן לטעון פוסטים",
+      "errorBody": "משהו השתבש בטעינת הבלוג. אנא נסה שוב.",
+      "notFoundTitle": "הפוסט לא נמצא",
+      "notFoundBody": "ייתכן שהפוסט הזה הועבר או שפרסומו בוטל.",
+      "back": "← חזרה לכל הפוסטים"
+    }
+  },
+  "apps": {
+    "title": "אינטגרציות אפליקציות",
+    "subtitle": "הנה רשימת האפליקציות שלך לאינטגרציה!",
+    "filterPlaceholder": "סינון אפליקציות...",
+    "all": "כל האפליקציות",
+    "connected": "מחובר",
+    "notConnected": "לא מחובר",
+    "connect": "התחבר",
+    "ascending": "סדר עולה",
+    "descending": "סדר יורד",
+    "desc": {
+      "telegram": "התחבר ל-Telegram לתקשורת בזמן אמת.",
+      "notion": "סנכרן בקלות דפי Notion לשיתוף פעולה חלק.",
+      "figma": "צפה ושתף פעולה על עיצובי Figma במקום אחד.",
+      "trello": "סנכרן כרטיסי Trello לניהול פרויקטים יעיל.",
+      "slack": "שלב את Slack לתקשורת צוותית יעילה",
+      "zoom": "ארח פגישות Zoom ישירות מלוח הבקרה.",
+      "stripe": "נהל בקלות עסקאות ותשלומים של Stripe.",
+      "gmail": "גש ונהל הודעות Gmail ללא מאמץ.",
+      "medium": "גלה ושתף סיפורי Medium בלוח הבקרה שלך.",
+      "skype": "התחבר לאנשי קשר של Skype בצורה חלקה.",
+      "docker": "נהל בקלות מכולות Docker בלוח הבקרה שלך.",
+      "github": "ייעל את ניהול הקוד עם אינטגרציית GitHub.",
+      "gitlab": "נהל ביעילות פרויקטי קוד עם אינטגרציית GitLab.",
+      "discord": "התחבר ל-Discord לתקשורת צוותית חלקה.",
+      "whatsapp": "שלב בקלות את WhatsApp להודעות ישירות."
+    }
+  },
+  "dashboard": {
+    "title": "לוח בקרה",
+    "overview": "סקירה",
+    "analytics": "אנליטיקה",
+    "recentSales": "מכירות אחרונות",
+    "recentSalesDesc": "ביצעת 265 מכירות החודש.",
+    "trend": "מגמה",
+    "trendDesc": "שולחן עבודה מול נייד בסשנים במהלך השבוע.",
+    "breakdown": "פילוח",
+    "breakdownDesc": "תנועה לפי מקור.",
+    "comparison": "השוואה",
+    "comparisonDesc": "הכנסות, רווח והוצאות מחודש לחודש.",
+    "stats": {
+      "revenueTitle": "סך ההכנסות",
+      "revenueDelta": "+20.1% מהחודש שעבר",
+      "subscriptionsTitle": "מנויים",
+      "subscriptionsDelta": "+180.1% מהחודש שעבר",
+      "salesTitle": "מכירות",
+      "salesDelta": "+19% מהחודש שעבר",
+      "activeTitle": "פעילים כעת",
+      "activeDelta": "+201 מהשעה האחרונה"
+    }
+  },
+  "items": {
+    "title": "פריטים",
+    "newItem": "פריט חדש",
+    "refresh": "רענון",
+    "columns": {
+      "name": "שם",
+      "description": "תיאור",
+      "created": "נוצר",
+      "actions": "פעולות"
+    },
+    "empty": {
+      "title": "אין עדיין פריטים",
+      "body": "צור את הפריט הראשון שלך כדי להתחיל."
+    },
+    "loadError": "לא ניתן לטעון פריטים",
+    "loadErrorDesc": "בדוק את החיבור שלך ורענן את הדף.",
+    "editAria": "עריכת {{name}}",
+    "deleteAria": "מחיקת {{name}}",
+    "form": {
+      "editTitle": "עריכת פריט",
+      "newTitle": "פריט חדש",
+      "nameLabel": "שם",
+      "namePlaceholder": "שם הפריט",
+      "descLabel": "תיאור",
+      "descPlaceholder": "תיאור אופציונלי",
+      "nameRequired": "שם הוא שדה חובה.",
+      "saveFailed": "השמירה נכשלה",
+      "saveFailedDesc": "לא ניתן היה לשמור את הפריט. נסה שוב.",
+      "cancel": "ביטול",
+      "saving": "שומר…",
+      "saveChanges": "שמירת שינויים",
+      "createItem": "יצירת פריט"
+    },
+    "delete": {
+      "title": "למחוק את הפריט?",
+      "desc": "לא ניתן לבטל פעולה זו. \"{{name}}\" יימחק לצמיתות.",
+      "failed": "מחיקת הפריט נכשלה. נסה שוב.",
+      "cancel": "ביטול",
+      "deleting": "מוחק…",
+      "delete": "מחיקה"
+    }
+  },
+  "chats": {
+    "inbox": "תיבת דואר נכנס",
+    "search": "חיפוש",
+    "searchPlaceholder": "חיפוש צ'אט...",
+    "youPrefix": "אני: {{message}}",
+    "textBox": "תיבת טקסט לצ'אט",
+    "messagePlaceholder": "הקלד את ההודעות שלך...",
+    "send": "שליחה",
+    "emptyTitle": "ההודעות שלך",
+    "emptyBody": "שלח הודעה כדי להתחיל צ'אט.",
+    "sendMessage": "שלח הודעה",
+    "newMessage": "הודעה חדשה",
+    "to": "אל:",
+    "searchPeople": "חיפוש אנשים...",
+    "noPeople": "לא נמצאו אנשים.",
+    "chat": "צ'אט"
+  },
+  "errors": {
+    "goBack": "חזור",
+    "backToHome": "חזרה לדף הבית",
+    "learnMore": "מידע נוסף",
+    "forbidden": {
+      "title": "הגישה אסורה",
+      "body": "אין לך הרשאה נדרשת לצפייה במשאב זה."
+    },
+    "serverError": {
+      "title": "אופס! משהו השתבש :')",
+      "body": "אנו מתנצלים על אי הנוחות. אנא נסה שוב מאוחר יותר."
+    },
+    "maintenance": {
+      "title": "האתר בתחזוקה!",
+      "body": "האתר אינו זמין כרגע. נחזור לפעילות בקרוב."
+    },
+    "notFound": {
+      "title": "אופס! הדף לא נמצא!",
+      "body": "נראה שהדף שאתה מחפש אינו קיים או שהוסר."
+    },
+    "unauthorized": {
+      "title": "גישה לא מורשית",
+      "body": "אנא התחבר עם האישורים המתאימים כדי לגשת למשאב זה."
+    }
+  }
+}

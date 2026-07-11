@@ -20,6 +20,7 @@
     "format": "prettier --write ."
   },
   "dependencies": {
+    "@clerk/localizations": "^4.13.2",
     "@clerk/react": "^6.4.3",
     "@clerk/themes": "^2.4.57",
     "@hono/clerk-auth": "^3.1.1",
@@ -54,12 +55,14 @@
     "date-fns": "^4.1.0",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.12.27",
+    "i18next": "^26.3.6",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.545.0",
     "react": "^19.2.0",
     "react-day-picker": "9.11.1",
     "react-dom": "^19.2.0",
     "react-hook-form": "^7.64.0",
+    "react-i18next": "^17.0.9",
     "react-top-loading-bar": "^3.0.2",
     "recharts": "^3.2.1",
     "sonner": "^2.0.7",

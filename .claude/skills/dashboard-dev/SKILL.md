@@ -61,6 +61,12 @@ commands; see the linked doc for depth.
 - **Secrets.** Real secret → `wrangler secret put <NAME>` (prod) + `.dev.vars`
   (local). Non-secret config → `vars` in `wrangler.jsonc`. Client-visible →
   `VITE_*` (never a secret). Run `pnpm cf-typegen` after; access via `c.env.X`.
+- **Add a UI string (i18n).** The LTR/RTL toggle is the English↔Hebrew switch.
+  Every new string goes in **both** `src/client/i18n/locales/en.json` **and**
+  `he.json` (the parity test fails otherwise); render with
+  `const { t } = useTranslation()` → `{t('your.key')}`. Never call `t()` at
+  module scope — data arrays hold `TranslationKey` strings, resolved at render.
+  See [`docs/i18n.md`](../../../docs/i18n.md).
 
 ## Commands
 
@@ -72,6 +78,7 @@ commands; see the linked doc for depth.
 
 - [`docs/adding-pages.md`](../../../docs/adding-pages.md) — every recipe in full.
 - [`docs/ui-components.md`](../../../docs/ui-components.md) — shadcn + MCP.
+- [`docs/i18n.md`](../../../docs/i18n.md) — English↔Hebrew i18n + parity rule.
 - [`docs/secrets.md`](../../../docs/secrets.md) — env/secret model.
 - [`docs/data-layer.md`](../../../docs/data-layer.md) — D1 + KV depth.
 </content>

@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { useUser } from '@clerk/react'
+import { useTranslation } from 'react-i18next'
 import { initialsFromUser } from '@/lib/initials'
 import useDialogState from '@/hooks/use-dialog-state'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -17,11 +18,12 @@ import {
 import { SignOutDialog } from '@/components/sign-out-dialog'
 
 export function ProfileDropdown() {
+  const { t } = useTranslation()
   const [open, setOpen] = useDialogState()
   const { user } = useUser()
 
   // Real Clerk identity in the header user menu (D-08); shadcn chrome intact.
-  const name = user?.fullName ?? user?.firstName ?? 'Account'
+  const name = user?.fullName ?? user?.firstName ?? t('profileDropdown.account')
   const email = user?.primaryEmailAddress?.emailAddress ?? ''
   const avatar = user?.imageUrl ?? ''
   // Derived from the current session identity, not a hardcoded placeholder (D-06a).
@@ -54,7 +56,7 @@ export function ProfileDropdown() {
                 (RESEARCH Pitfall 4 — no two rows to the same route). */}
             <DropdownMenuItem asChild>
               <Link to='/settings'>
-                Manage account
+                {t('profileDropdown.manageAccount')}
                 <DropdownMenuShortcut>⇧⌘S</DropdownMenuShortcut>
               </Link>
             </DropdownMenuItem>
@@ -72,7 +74,7 @@ export function ProfileDropdown() {
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant='destructive' onClick={() => setOpen(true)}>
-            Sign out
+            {t('profileDropdown.signOut')}
             <DropdownMenuShortcut className='text-current'>
               ⇧⌘Q
             </DropdownMenuShortcut>

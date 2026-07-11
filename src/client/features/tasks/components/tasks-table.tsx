@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { getRouteApi } from '@tanstack/react-router'
 import {
   type SortingState,
@@ -12,6 +12,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { useTableUrlState } from '@/hooks/use-table-url-state'
 import {
@@ -26,7 +27,7 @@ import { DataTablePagination, DataTableToolbar } from '@/components/data-table'
 import { priorities, statuses } from '../data/data'
 import { type Task } from '../data/schema'
 import { DataTableBulkActions } from './data-table-bulk-actions'
-import { tasksColumns as columns } from './tasks-columns'
+import { getTasksColumns } from './tasks-columns'
 
 const route = getRouteApi('/_authenticated/tasks/')
 
@@ -35,6 +36,8 @@ type DataTableProps = {
 }
 
 export function TasksTable({ data }: DataTableProps) {
+  const { t } = useTranslation()
+  const columns = useMemo(() => getTasksColumns(t), [t])
   // Local UI-only states
   const [rowSelection, setRowSelection] = useState({})
   const [sorting, setSorting] = useState<SortingState>([])
@@ -113,16 +116,16 @@ export function TasksTable({ data }: DataTableProps) {
     >
       <DataTableToolbar
         table={table}
-        searchPlaceholder='Filter by title or ID...'
+        searchPlaceholder='tasks.searchPlaceholder'
         filters={[
           {
             columnId: 'status',
-            title: 'Status',
+            title: 'tasks.columns.status',
             options: statuses,
           },
           {
             columnId: 'priority',
-            title: 'Priority',
+            title: 'tasks.columns.priority',
             options: priorities,
           },
         ]}
@@ -183,7 +186,7 @@ export function TasksTable({ data }: DataTableProps) {
                   colSpan={columns.length}
                   className='h-24 text-center'
                 >
-                  No results.
+                  {t('tasks.noResults')}
                 </TableCell>
               </TableRow>
             )}

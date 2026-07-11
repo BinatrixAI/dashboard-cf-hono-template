@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Package, Plus } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -24,6 +25,7 @@ import { ItemsTable } from './components/items-table'
 import { useItems } from './data/use-items'
 
 export function Items() {
+  const { t } = useTranslation()
   const { data: items, isPending, isError, refetch } = useItems()
 
   // Dialogs are controlled by local state — NOT separate routes (UI-SPEC A1).
@@ -62,10 +64,10 @@ export function Items() {
       {/* ===== Main ===== */}
       <Main>
         <div className='flex items-center justify-between'>
-          <h1 className='text-2xl font-bold'>Items</h1>
+          <h1 className='text-2xl font-bold'>{t('items.title')}</h1>
           <Button onClick={openCreate}>
             <Plus className='size-4' />
-            New Item
+            {t('items.newItem')}
           </Button>
         </div>
 
@@ -97,15 +99,18 @@ export function Items() {
 }
 
 function ItemsLoading() {
+  const { t } = useTranslation()
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Description</TableHead>
-          <TableHead className='w-[120px]'>Created</TableHead>
+          <TableHead>{t('items.columns.name')}</TableHead>
+          <TableHead>{t('items.columns.description')}</TableHead>
+          <TableHead className='w-[120px]'>
+            {t('items.columns.created')}
+          </TableHead>
           <TableHead className='w-[80px]'>
-            <span className='sr-only'>Actions</span>
+            <span className='sr-only'>{t('items.columns.actions')}</span>
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -135,34 +140,32 @@ function ItemsLoading() {
 }
 
 function ItemsEmpty({ onNew }: { onNew: () => void }) {
+  const { t } = useTranslation()
   return (
     <div className='flex flex-col items-center gap-4 py-16'>
       <Package className='text-muted-foreground size-12' />
       <div className='flex flex-col items-center gap-1'>
-        <p className='text-base font-medium'>No items yet</p>
-        <p className='text-muted-foreground text-sm'>
-          Create your first item to get started.
-        </p>
+        <p className='text-base font-medium'>{t('items.empty.title')}</p>
+        <p className='text-muted-foreground text-sm'>{t('items.empty.body')}</p>
       </div>
       <Button onClick={onNew}>
         <Plus className='size-4' />
-        New Item
+        {t('items.newItem')}
       </Button>
     </div>
   )
 }
 
 function ItemsError({ onRefresh }: { onRefresh: () => void }) {
+  const { t } = useTranslation()
   return (
     <div className='space-y-3'>
       <Alert variant='destructive'>
-        <AlertTitle>Could not load items</AlertTitle>
-        <AlertDescription>
-          Check your connection and refresh the page.
-        </AlertDescription>
+        <AlertTitle>{t('items.loadError')}</AlertTitle>
+        <AlertDescription>{t('items.loadErrorDesc')}</AlertDescription>
       </Alert>
       <Button variant='outline' size='sm' onClick={onRefresh}>
-        Refresh
+        {t('items.refresh')}
       </Button>
     </div>
   )

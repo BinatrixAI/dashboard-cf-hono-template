@@ -1,4 +1,5 @@
 import { type ColumnDef } from '@tanstack/react-table'
+import { type TFunction } from 'i18next'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DataTableColumnHeader } from '@/components/data-table'
@@ -6,7 +7,10 @@ import { labels, priorities, statuses } from '../data/data'
 import { type Task } from '../data/schema'
 import { DataTableRowActions } from './data-table-row-actions'
 
-export const tasksColumns: ColumnDef<Task>[] = [
+// Column factory (G2): t() is threaded in and called at render — the columns
+// are rebuilt via useMemo(() => getTasksColumns(t), [t]) so labels track the
+// active language instead of freezing at module scope.
+export const getTasksColumns = (t: TFunction): ColumnDef<Task>[] => [
   {
     id: 'select',
     header: ({ table }) => (
@@ -16,7 +20,7 @@ export const tasksColumns: ColumnDef<Task>[] = [
           (table.getIsSomePageRowsSelected() && 'indeterminate')
         }
         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label='Select all'
+        aria-label={t('tasks.selectAll')}
         className='translate-y-[2px]'
       />
     ),
@@ -24,7 +28,7 @@ export const tasksColumns: ColumnDef<Task>[] = [
       <Checkbox
         checked={row.getIsSelected()}
         onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label='Select row'
+        aria-label={t('tasks.selectRow')}
         className='translate-y-[2px]'
       />
     ),
@@ -34,7 +38,7 @@ export const tasksColumns: ColumnDef<Task>[] = [
   {
     accessorKey: 'id',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Task' />
+      <DataTableColumnHeader column={column} title='tasks.columns.task' />
     ),
     cell: ({ row }) => <div className='w-[80px]'>{row.getValue('id')}</div>,
     enableSorting: false,
@@ -43,7 +47,7 @@ export const tasksColumns: ColumnDef<Task>[] = [
   {
     accessorKey: 'title',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Title' />
+      <DataTableColumnHeader column={column} title='tasks.columns.title' />
     ),
     meta: { className: 'ps-1', tdClassName: 'ps-4' },
     cell: ({ row }) => {
@@ -51,7 +55,7 @@ export const tasksColumns: ColumnDef<Task>[] = [
 
       return (
         <div className='flex space-x-2'>
-          {label && <Badge variant='outline'>{label.label}</Badge>}
+          {label && <Badge variant='outline'>{t(label.label)}</Badge>}
           <span className='max-w-32 truncate font-medium sm:max-w-72 md:max-w-[31rem]'>
             {row.getValue('title')}
           </span>
@@ -62,7 +66,7 @@ export const tasksColumns: ColumnDef<Task>[] = [
   {
     accessorKey: 'status',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Status' />
+      <DataTableColumnHeader column={column} title='tasks.columns.status' />
     ),
     meta: { className: 'ps-1', tdClassName: 'ps-4' },
     cell: ({ row }) => {
@@ -79,7 +83,7 @@ export const tasksColumns: ColumnDef<Task>[] = [
           {status.icon && (
             <status.icon className='text-muted-foreground size-4' />
           )}
-          <span>{status.label}</span>
+          <span>{t(status.label)}</span>
         </div>
       )
     },
@@ -90,7 +94,7 @@ export const tasksColumns: ColumnDef<Task>[] = [
   {
     accessorKey: 'priority',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Priority' />
+      <DataTableColumnHeader column={column} title='tasks.columns.priority' />
     ),
     meta: { className: 'ps-1', tdClassName: 'ps-3' },
     cell: ({ row }) => {
@@ -107,7 +111,7 @@ export const tasksColumns: ColumnDef<Task>[] = [
           {priority.icon && (
             <priority.icon className='text-muted-foreground size-4' />
           )}
-          <span>{priority.label}</span>
+          <span>{t(priority.label)}</span>
         </div>
       )
     },

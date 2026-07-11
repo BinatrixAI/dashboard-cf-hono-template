@@ -10,6 +10,7 @@
  * Do NOT compute values at runtime (no Math.random, no Date.now) — reproducible
  * UAT depends on the literals below (DV-10).
  */
+import { type TranslationKey } from '@/i18n'
 
 /** One month of the Overview bar chart (single series). */
 export interface OverviewPoint {
@@ -84,23 +85,39 @@ export const lineData: LinePoint[] = [
   { month: 'Jun', revenue: 5500, profit: 3100, expenses: 2400 },
 ]
 
-/** One dashboard stat card. Icons are paired by the shell (Plan 04), not stored here. */
+/**
+ * One dashboard stat card. Icons are paired by the shell (Plan 04), not stored
+ * here. `title`/`delta` hold translation KEYS (resolved via t() at render, G2);
+ * `value` is a demo numeric literal left as-is (numbers stay LTR, DV-7).
+ */
 export interface StatCard {
-  title: string
+  title: TranslationKey
   value: string
-  delta: string
+  delta: TranslationKey
 }
 
 /** The 4 Overview-tab stat cards. Copy matches UI-SPEC Copywriting verbatim. */
 export const statCards: StatCard[] = [
   {
-    title: 'Total Revenue',
+    title: 'dashboard.stats.revenueTitle',
     value: '$45,231.89',
-    delta: '+20.1% from last month',
+    delta: 'dashboard.stats.revenueDelta',
   },
-  { title: 'Subscriptions', value: '+2,350', delta: '+180.1% from last month' },
-  { title: 'Sales', value: '+12,234', delta: '+19% from last month' },
-  { title: 'Active Now', value: '+573', delta: '+201 since last hour' },
+  {
+    title: 'dashboard.stats.subscriptionsTitle',
+    value: '+2,350',
+    delta: 'dashboard.stats.subscriptionsDelta',
+  },
+  {
+    title: 'dashboard.stats.salesTitle',
+    value: '+12,234',
+    delta: 'dashboard.stats.salesDelta',
+  },
+  {
+    title: 'dashboard.stats.activeTitle',
+    value: '+573',
+    delta: 'dashboard.stats.activeDelta',
+  },
 ]
 
 /** One row of the Recent Sales list. */

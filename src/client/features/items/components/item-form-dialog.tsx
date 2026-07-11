@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
@@ -27,6 +28,7 @@ export function ItemFormDialog({
   onOpenChange,
   item,
 }: ItemFormDialogProps) {
+  const { t } = useTranslation()
   const isEdit = item !== null
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -59,7 +61,7 @@ export function ItemFormDialog({
     // re-validates; threat T-1-03). Block the API call on an empty name.
     const parsed = createItemSchema.safeParse({ name, description })
     if (!parsed.success) {
-      setNameError('Name is required.')
+      setNameError(t('items.form.nameRequired'))
       return
     }
     setNameError(null)
@@ -88,15 +90,17 @@ export function ItemFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Edit Item' : 'New Item'}</DialogTitle>
+          <DialogTitle>
+            {isEdit ? t('items.form.editTitle') : t('items.form.newTitle')}
+          </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className='space-y-4'>
           <div className='space-y-2'>
-            <Label htmlFor='name'>Name</Label>
+            <Label htmlFor='name'>{t('items.form.nameLabel')}</Label>
             <Input
               id='name'
-              placeholder='Item name'
+              placeholder={t('items.form.namePlaceholder')}
               maxLength={100}
               autoFocus
               value={name}
@@ -113,10 +117,10 @@ export function ItemFormDialog({
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='description'>Description</Label>
+            <Label htmlFor='description'>{t('items.form.descLabel')}</Label>
             <Textarea
               id='description'
-              placeholder='Optional description'
+              placeholder={t('items.form.descPlaceholder')}
               maxLength={500}
               rows={3}
               value={description}
@@ -126,9 +130,9 @@ export function ItemFormDialog({
 
           {isApiError ? (
             <Alert variant='destructive'>
-              <AlertTitle>Save failed</AlertTitle>
+              <AlertTitle>{t('items.form.saveFailed')}</AlertTitle>
               <AlertDescription>
-                Could not save the item. Try again.
+                {t('items.form.saveFailedDesc')}
               </AlertDescription>
             </Alert>
           ) : null}
@@ -139,17 +143,17 @@ export function ItemFormDialog({
               variant='outline'
               onClick={() => onOpenChange(false)}
             >
-              Cancel
+              {t('items.form.cancel')}
             </Button>
             <Button type='submit' disabled={isSubmitting}>
               {isSubmitting ? (
                 <Loader2 className='size-4 animate-spin' />
               ) : null}
               {isSubmitting
-                ? 'Saving…'
+                ? t('items.form.saving')
                 : isEdit
-                  ? 'Save Changes'
-                  : 'Create Item'}
+                  ? t('items.form.saveChanges')
+                  : t('items.form.createItem')}
             </Button>
           </DialogFooter>
         </form>

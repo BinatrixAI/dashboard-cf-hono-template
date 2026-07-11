@@ -1,5 +1,7 @@
 import type * as React from 'react'
 import { Link } from '@tanstack/react-router'
+import { type TFunction } from 'i18next'
+import { useTranslation } from 'react-i18next'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -14,6 +16,7 @@ import { useContent } from './data/use-content'
 // raw-HTML sink (T-16-01). No status Badge (everything public is published), no
 // Clerk/dashboard chrome, neutral reader copy only (D-05).
 export function PublicDetail({ slug }: { slug: string }) {
+  const { t } = useTranslation()
   const { data, isPending, isError, refetch } = useContent()
 
   if (isPending) return <DetailLoading />
@@ -29,7 +32,7 @@ export function PublicDetail({ slug }: { slug: string }) {
       <div className='space-y-2'>
         <h1 className='text-2xl font-semibold tracking-tight'>{post.title}</h1>
         <p className='text-muted-foreground text-sm'>
-          {formatPublished(post.data?.publishedAt, post.created_at)}
+          {formatPublished(post.data?.publishedAt, post.created_at, t)}
         </p>
       </div>
       {/* React escapes text children — plaintext only, never innerHTML. */}
@@ -42,10 +45,11 @@ export function PublicDetail({ slug }: { slug: string }) {
 
 function formatPublished(
   publishedAt: string | null | undefined,
-  createdAt: number | undefined
+  createdAt: number | undefined,
+  t: TFunction
 ): string {
   const value = publishedAt ?? createdAt
-  if (value === null || value === undefined) return 'Unpublished'
+  if (value === null || value === undefined) return t('content.unpublished')
   return new Date(value).toLocaleDateString()
 }
 
@@ -62,22 +66,22 @@ function DetailLoading() {
 }
 
 function DetailError({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation()
   return (
     <div className='flex flex-col items-center gap-3 py-12 text-center'>
       <Alert variant='destructive' className='text-left'>
-        <AlertTitle>Couldn't load posts</AlertTitle>
-        <AlertDescription>
-          Something went wrong loading the blog. Please try again.
-        </AlertDescription>
+        <AlertTitle>{t('content.public.errorTitle')}</AlertTitle>
+        <AlertDescription>{t('content.public.errorBody')}</AlertDescription>
       </Alert>
       <Button variant='outline' size='sm' onClick={onRetry}>
-        Retry
+        {t('content.retry')}
       </Button>
     </div>
   )
 }
 
 function PostNotFound() {
+  const { t } = useTranslation()
   // ponytail: /blog is registered by Plan 02's route files. Until those exist
   // the generated route tree lacks the literal, so the typed Link can't see it.
   // Widen at this single boundary — the target becomes real in Plan 02, and a
@@ -87,12 +91,14 @@ function PostNotFound() {
   >
   return (
     <div className='flex flex-col items-center gap-2 py-12 text-center'>
-      <h1 className='text-xl font-semibold'>Post not found</h1>
+      <h1 className='text-xl font-semibold'>
+        {t('content.public.notFoundTitle')}
+      </h1>
       <p className='text-muted-foreground text-sm'>
-        This post may have been moved or unpublished.
+        {t('content.public.notFoundBody')}
       </p>
       <Link {...backLink} className='text-sm hover:underline'>
-        ← Back to all posts
+        {t('content.public.back')}
       </Link>
     </div>
   )

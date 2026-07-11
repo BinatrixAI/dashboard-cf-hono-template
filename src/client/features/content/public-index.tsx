@@ -1,5 +1,7 @@
 import type * as React from 'react'
 import { Link } from '@tanstack/react-router'
+import { type TFunction } from 'i18next'
+import { useTranslation } from 'react-i18next'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,6 +15,7 @@ import { useContent } from './data/use-content'
 // neutral reader copy — never an env-var name or docs link (D-05); an
 // unconfigured CMS reads as loading->empty, indistinguishable from zero posts.
 export function PublicIndex() {
+  const { t } = useTranslation()
   const { data, isPending, isError, refetch } = useContent()
 
   if (isPending) return <IndexLoading />
@@ -45,7 +48,7 @@ export function PublicIndex() {
                   {post.title}
                 </CardTitle>
                 <p className='text-muted-foreground text-sm'>
-                  {formatPublished(post.data?.publishedAt, post.created_at)}
+                  {formatPublished(post.data?.publishedAt, post.created_at, t)}
                 </p>
               </CardHeader>
               <CardContent>
@@ -72,10 +75,11 @@ function sortKey(item: ContentItem): number {
 
 function formatPublished(
   publishedAt: string | null | undefined,
-  createdAt: number | undefined
+  createdAt: number | undefined,
+  t: TFunction
 ): string {
   const value = publishedAt ?? createdAt
-  if (value === null || value === undefined) return 'Unpublished'
+  if (value === null || value === undefined) return t('content.unpublished')
   return new Date(value).toLocaleDateString()
 }
 
@@ -99,25 +103,29 @@ function IndexLoading() {
 }
 
 function IndexEmpty() {
+  const { t } = useTranslation()
   return (
     <div className='flex flex-col items-center gap-2 py-12 text-center'>
-      <h2 className='text-xl font-semibold'>No posts yet</h2>
-      <p className='text-muted-foreground text-sm'>Check back soon.</p>
+      <h2 className='text-xl font-semibold'>
+        {t('content.public.emptyTitle')}
+      </h2>
+      <p className='text-muted-foreground text-sm'>
+        {t('content.public.emptyBody')}
+      </p>
     </div>
   )
 }
 
 function IndexError({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation()
   return (
     <div className='flex flex-col items-center gap-3 py-12 text-center'>
       <Alert variant='destructive' className='text-left'>
-        <AlertTitle>Couldn't load posts</AlertTitle>
-        <AlertDescription>
-          Something went wrong loading the blog. Please try again.
-        </AlertDescription>
+        <AlertTitle>{t('content.public.errorTitle')}</AlertTitle>
+        <AlertDescription>{t('content.public.errorBody')}</AlertDescription>
       </Alert>
       <Button variant='outline' size='sm' onClick={onRetry}>
-        Retry
+        {t('content.retry')}
       </Button>
     </div>
   )

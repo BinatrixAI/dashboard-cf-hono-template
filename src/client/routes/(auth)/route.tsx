@@ -1,4 +1,5 @@
 import { createFileRoute, Link, Outlet } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { ClerkFullLogo } from '@/assets/clerk-full-logo'
 import { Logo } from '@/assets/logo'
 import { LearnMore } from '@/components/learn-more'
@@ -8,6 +9,7 @@ export const Route = createFileRoute('/(auth)')({
 })
 
 function AuthLayout() {
+  const { t } = useTranslation()
   return (
     <div className='relative container grid h-svh flex-col items-center justify-center lg:max-w-none lg:grid-cols-2 lg:px-0'>
       <div className='bg-muted relative hidden h-full flex-col p-10 text-white lg:flex dark:border-e'>
@@ -41,13 +43,13 @@ function AuthLayout() {
             }}
             contentProps={{ side: 'top', align: 'end', className: 'w-auto' }}
           >
-            Welcome to the sign-in page. <br />
-            Back to{' '}
+            {t('authShell.welcome')} <br />
+            {t('authShell.backTo')}{' '}
             <Link
               to='/dashboard'
               className='underline decoration-dashed underline-offset-2'
             >
-              Dashboard
+              {t('authShell.dashboard')}
             </Link>{' '}
             ?
           </LearnMore>

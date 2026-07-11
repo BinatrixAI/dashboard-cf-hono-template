@@ -81,4 +81,7 @@ reports filter."**
 - **RTL awareness.** The shell is direction-aware (Hebrew/RTL supported via the
   `DirectionProvider`). Prefer logical Tailwind utilities (`ms-`/`me-`,
   `start`/`end`) over hard `left`/`right` so components mirror correctly.
+- **i18n (English ↔ Hebrew).** The LTR/RTL toggle is also the language switch —
+  LTR = English, RTL = Hebrew. New UI strings go in **both** `en.json` and
+  `he.json` (a parity test enforces it). See [`docs/i18n.md`](i18n.md).
 </content>

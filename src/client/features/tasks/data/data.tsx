@@ -1,3 +1,4 @@
+import { type TranslationKey } from '@/i18n'
 import {
   ArrowDown,
   ArrowRight,
@@ -10,68 +11,78 @@ import {
   CircleOff,
 } from 'lucide-react'
 
-export const labels = [
+// `label` fields hold translation KEYS — t() is called at render (G2), never
+// here at module scope where it would freeze the initial language.
+export const labels: { value: string; label: TranslationKey }[] = [
   {
     value: 'bug',
-    label: 'Bug',
+    label: 'tasks.label.bug',
   },
   {
     value: 'feature',
-    label: 'Feature',
+    label: 'tasks.label.feature',
   },
   {
     value: 'documentation',
-    label: 'Documentation',
+    label: 'tasks.label.documentation',
   },
 ]
 
-export const statuses = [
+export const statuses: {
+  label: TranslationKey
+  value: string
+  icon: typeof HelpCircle
+}[] = [
   {
-    label: 'Backlog',
-    value: 'backlog' as const,
+    label: 'tasks.status.backlog',
+    value: 'backlog',
     icon: HelpCircle,
   },
   {
-    label: 'Todo',
-    value: 'todo' as const,
+    label: 'tasks.status.todo',
+    value: 'todo',
     icon: Circle,
   },
   {
-    label: 'In Progress',
-    value: 'in progress' as const,
+    label: 'tasks.status.inProgress',
+    value: 'in progress',
     icon: Timer,
   },
   {
-    label: 'Done',
-    value: 'done' as const,
+    label: 'tasks.status.done',
+    value: 'done',
     icon: CheckCircle,
   },
   {
-    label: 'Canceled',
-    value: 'canceled' as const,
+    label: 'tasks.status.canceled',
+    value: 'canceled',
     icon: CircleOff,
   },
 ]
 
-export const priorities = [
+export const priorities: {
+  label: TranslationKey
+  value: string
+  icon: typeof ArrowDown
+}[] = [
   {
-    label: 'Low',
-    value: 'low' as const,
+    label: 'tasks.priority.low',
+    value: 'low',
     icon: ArrowDown,
   },
   {
-    label: 'Medium',
-    value: 'medium' as const,
+    label: 'tasks.priority.medium',
+    value: 'medium',
     icon: ArrowRight,
   },
   {
-    label: 'High',
-    value: 'high' as const,
+    label: 'tasks.priority.high',
+    value: 'high',
     icon: ArrowUp,
   },
   {
-    label: 'Critical',
-    value: 'critical' as const,
+    label: 'tasks.priority.critical',
+    value: 'critical',
     icon: AlertCircle,
   },
 ]

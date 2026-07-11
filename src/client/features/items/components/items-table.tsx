@@ -1,4 +1,5 @@
 import { Pencil, Trash2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -17,15 +18,18 @@ type ItemsTableProps = {
 }
 
 export function ItemsTable({ items, onEdit, onDelete }: ItemsTableProps) {
+  const { t } = useTranslation()
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Description</TableHead>
-          <TableHead className='w-[120px]'>Created</TableHead>
+          <TableHead>{t('items.columns.name')}</TableHead>
+          <TableHead>{t('items.columns.description')}</TableHead>
+          <TableHead className='w-[120px]'>
+            {t('items.columns.created')}
+          </TableHead>
           <TableHead className='w-[80px]'>
-            <span className='sr-only'>Actions</span>
+            <span className='sr-only'>{t('items.columns.actions')}</span>
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -46,7 +50,7 @@ export function ItemsTable({ items, onEdit, onDelete }: ItemsTableProps) {
                 <Button
                   variant='ghost'
                   size='icon'
-                  aria-label={`Edit ${item.name}`}
+                  aria-label={t('items.editAria', { name: item.name })}
                   onClick={() => onEdit(item)}
                 >
                   <Pencil className='size-4' />
@@ -54,7 +58,7 @@ export function ItemsTable({ items, onEdit, onDelete }: ItemsTableProps) {
                 <Button
                   variant='ghost'
                   size='icon'
-                  aria-label={`Delete ${item.name}`}
+                  aria-label={t('items.deleteAria', { name: item.name })}
                   onClick={() => onDelete(item)}
                 >
                   <Trash2 className='size-4' />

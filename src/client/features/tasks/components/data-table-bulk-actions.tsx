@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { type Table } from '@tanstack/react-table'
 import { Trash2, CircleArrowUp, ArrowUpDown, Download } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { sleep } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -27,18 +28,22 @@ type DataTableBulkActionsProps<TData> = {
 export function DataTableBulkActions<TData>({
   table,
 }: DataTableBulkActionsProps<TData>) {
+  const { t } = useTranslation()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const selectedRows = table.getFilteredSelectedRowModel().rows
 
   const handleBulkStatusChange = (status: string) => {
     const selectedTasks = selectedRows.map((row) => row.original as Task)
     toast.promise(sleep(2000), {
-      loading: 'Updating status...',
+      loading: t('tasks.bulk.updatingStatus'),
       success: () => {
         table.resetRowSelection()
-        return `Status updated to "${status}" for ${selectedTasks.length} task${selectedTasks.length > 1 ? 's' : ''}.`
+        return t('tasks.bulk.statusUpdated', {
+          status,
+          count: selectedTasks.length,
+        })
       },
-      error: 'Error',
+      error: t('tasks.bulk.error'),
     })
     table.resetRowSelection()
   }
@@ -46,12 +51,15 @@ export function DataTableBulkActions<TData>({
   const handleBulkPriorityChange = (priority: string) => {
     const selectedTasks = selectedRows.map((row) => row.original as Task)
     toast.promise(sleep(2000), {
-      loading: 'Updating priority...',
+      loading: t('tasks.bulk.updatingPriority'),
       success: () => {
         table.resetRowSelection()
-        return `Priority updated to "${priority}" for ${selectedTasks.length} task${selectedTasks.length > 1 ? 's' : ''}.`
+        return t('tasks.bulk.priorityUpdated', {
+          priority,
+          count: selectedTasks.length,
+        })
       },
-      error: 'Error',
+      error: t('tasks.bulk.error'),
     })
     table.resetRowSelection()
   }
@@ -59,19 +67,19 @@ export function DataTableBulkActions<TData>({
   const handleBulkExport = () => {
     const selectedTasks = selectedRows.map((row) => row.original as Task)
     toast.promise(sleep(2000), {
-      loading: 'Exporting tasks...',
+      loading: t('tasks.bulk.exporting'),
       success: () => {
         table.resetRowSelection()
-        return `Exported ${selectedTasks.length} task${selectedTasks.length > 1 ? 's' : ''} to CSV.`
+        return t('tasks.bulk.exported', { count: selectedTasks.length })
       },
-      error: 'Error',
+      error: t('tasks.bulk.error'),
     })
     table.resetRowSelection()
   }
 
   return (
     <>
-      <BulkActionsToolbar table={table} entityName='task'>
+      <BulkActionsToolbar table={table} entityName={t('tasks.entity')}>
         <DropdownMenu>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -80,16 +88,18 @@ export function DataTableBulkActions<TData>({
                   variant='outline'
                   size='icon'
                   className='size-8'
-                  aria-label='Update status'
-                  title='Update status'
+                  aria-label={t('tasks.bulk.updateStatus')}
+                  title={t('tasks.bulk.updateStatus')}
                 >
                   <CircleArrowUp />
-                  <span className='sr-only'>Update status</span>
+                  <span className='sr-only'>
+                    {t('tasks.bulk.updateStatus')}
+                  </span>
                 </Button>
               </DropdownMenuTrigger>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Update status</p>
+              <p>{t('tasks.bulk.updateStatus')}</p>
             </TooltipContent>
           </Tooltip>
           <DropdownMenuContent sideOffset={14}>
@@ -102,7 +112,7 @@ export function DataTableBulkActions<TData>({
                 {status.icon && (
                   <status.icon className='text-muted-foreground size-4' />
                 )}
-                {status.label}
+                {t(status.label)}
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
@@ -116,16 +126,18 @@ export function DataTableBulkActions<TData>({
                   variant='outline'
                   size='icon'
                   className='size-8'
-                  aria-label='Update priority'
-                  title='Update priority'
+                  aria-label={t('tasks.bulk.updatePriority')}
+                  title={t('tasks.bulk.updatePriority')}
                 >
                   <ArrowUpDown />
-                  <span className='sr-only'>Update priority</span>
+                  <span className='sr-only'>
+                    {t('tasks.bulk.updatePriority')}
+                  </span>
                 </Button>
               </DropdownMenuTrigger>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Update priority</p>
+              <p>{t('tasks.bulk.updatePriority')}</p>
             </TooltipContent>
           </Tooltip>
           <DropdownMenuContent sideOffset={14}>
@@ -138,7 +150,7 @@ export function DataTableBulkActions<TData>({
                 {priority.icon && (
                   <priority.icon className='text-muted-foreground size-4' />
                 )}
-                {priority.label}
+                {t(priority.label)}
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
@@ -151,15 +163,15 @@ export function DataTableBulkActions<TData>({
               size='icon'
               onClick={() => handleBulkExport()}
               className='size-8'
-              aria-label='Export tasks'
-              title='Export tasks'
+              aria-label={t('tasks.bulk.exportTasks')}
+              title={t('tasks.bulk.exportTasks')}
             >
               <Download />
-              <span className='sr-only'>Export tasks</span>
+              <span className='sr-only'>{t('tasks.bulk.exportTasks')}</span>
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Export tasks</p>
+            <p>{t('tasks.bulk.exportTasks')}</p>
           </TooltipContent>
         </Tooltip>
 
@@ -170,15 +182,15 @@ export function DataTableBulkActions<TData>({
               size='icon'
               onClick={() => setShowDeleteConfirm(true)}
               className='size-8'
-              aria-label='Delete selected tasks'
-              title='Delete selected tasks'
+              aria-label={t('tasks.bulk.deleteTasks')}
+              title={t('tasks.bulk.deleteTasks')}
             >
               <Trash2 />
-              <span className='sr-only'>Delete selected tasks</span>
+              <span className='sr-only'>{t('tasks.bulk.deleteTasks')}</span>
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Delete selected tasks</p>
+            <p>{t('tasks.bulk.deleteTasks')}</p>
           </TooltipContent>
         </Tooltip>
       </BulkActionsToolbar>

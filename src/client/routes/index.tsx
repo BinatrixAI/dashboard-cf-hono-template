@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useAuth } from '@clerk/react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 
 // Minimal PUBLIC landing at `/` (D-06). Registered OUTSIDE `_authenticated/`,
@@ -11,27 +12,27 @@ export const Route = createFileRoute('/')({
 
 function LandingPage() {
   const { isSignedIn } = useAuth()
+  const { t } = useTranslation()
   return (
     <div className='flex min-h-svh flex-col items-center justify-center gap-6 p-6 text-center'>
       <div className='space-y-2'>
-        <h1 className='text-3xl font-bold'>Welcome</h1>
+        <h1 className='text-3xl font-bold'>{t('landing.welcome')}</h1>
         <p className='text-muted-foreground max-w-md'>
-          A Cloudflare-native dashboard template. Public pages live here; the
-          dashboard is protected behind Clerk authentication.
+          {t('landing.description')}
         </p>
       </div>
       <div className='flex flex-wrap items-center justify-center gap-3'>
         {isSignedIn ? (
           <Button asChild>
-            <Link to='/dashboard'>Go to dashboard</Link>
+            <Link to='/dashboard'>{t('landing.goToDashboard')}</Link>
           </Button>
         ) : (
           <>
             <Button asChild>
-              <Link to='/sign-in'>Sign in</Link>
+              <Link to='/sign-in'>{t('landing.signIn')}</Link>
             </Button>
             <Button asChild variant='outline'>
-              <Link to='/dashboard'>Go to dashboard</Link>
+              <Link to='/dashboard'>{t('landing.goToDashboard')}</Link>
             </Button>
           </>
         )}

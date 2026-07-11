@@ -128,6 +128,12 @@ host:
   content. `setup.mjs` parameterizes it; deploy `cms/` to enable it, or skip it
   entirely. See [`docs/cms.md`](docs/cms.md).
 
+- **Bilingual UI (English ↔ Hebrew).** The LTR/RTL toggle is also the language
+  switch — LTR renders English, RTL renders Hebrew — via `react-i18next` with both
+  locales bundled and Clerk chrome localized (`heIL`). New UI strings go in both
+  `en.json` and `he.json` (a parity test enforces it). See
+  [`docs/i18n.md`](docs/i18n.md).
+
 Theming is a per-project swap (tweakcn → Tailwind v4 oklch tokens), documented in
 [`docs/THEMING.md`](docs/THEMING.md).
 
@@ -196,6 +202,9 @@ Deep-dive guides live in [`docs/`](docs/):
   removing/renaming demo pages.
 - **[`docs/ui-components.md`](docs/ui-components.md)** — the vendored shadcn/ui
   model, adding components via `pnpm dlx shadcn@latest add`, and the shadcn MCP.
+- **[`docs/i18n.md`](docs/i18n.md)** — the English ↔ Hebrew i18n driven by the
+  LTR/RTL toggle: the single switch point, the both-locales parity rule, the
+  no-`t()`-at-module-scope convention, and what stays English (dates, charts).
 - **[`docs/secrets.md`](docs/secrets.md)** — `.dev.vars` vs `wrangler secret put`
   vs `wrangler.jsonc` `vars` vs `VITE_*`, with a worked add-a-secret example.
 - **[`docs/THEMING.md`](docs/THEMING.md)** — tweakcn + Tailwind v4 theming: the

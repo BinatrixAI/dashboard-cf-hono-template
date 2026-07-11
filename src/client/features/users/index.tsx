@@ -1,4 +1,5 @@
 import { getRouteApi } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -14,6 +15,7 @@ import { useUsers } from './data/use-users'
 const route = getRouteApi('/_authenticated/users/')
 
 export function Users() {
+  const { t } = useTranslation()
   const search = route.useSearch()
   const navigate = route.useNavigate()
 
@@ -35,10 +37,10 @@ export function Users() {
       <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
         <div className='flex flex-wrap items-end justify-between gap-2'>
           <div>
-            <h2 className='text-2xl font-bold tracking-tight'>User List</h2>
-            <p className='text-muted-foreground'>
-              The users in this Clerk instance, with their status and role.
-            </p>
+            <h2 className='text-2xl font-bold tracking-tight'>
+              {t('users.title')}
+            </h2>
+            <p className='text-muted-foreground'>{t('users.subtitle')}</p>
           </div>
         </div>
         {isPending ? (
@@ -72,17 +74,19 @@ function UsersLoading() {
 }
 
 function UsersError({ onRefresh }: { onRefresh: () => void }) {
+  const { t } = useTranslation()
   return (
     <div className='space-y-3'>
       <Alert variant='destructive'>
-        <AlertTitle>Could not load users</AlertTitle>
+        <AlertTitle>{t('users.loadError')}</AlertTitle>
         <AlertDescription>
-          The <code>/api/users</code> request failed. Confirm the Clerk secret
-          key is configured, then refresh.
+          {t('users.loadErrorDescPrefix')}
+          <code>/api/users</code>
+          {t('users.loadErrorDescSuffix')}
         </AlertDescription>
       </Alert>
       <Button variant='outline' size='sm' onClick={onRefresh}>
-        Refresh
+        {t('users.refresh')}
       </Button>
     </div>
   )

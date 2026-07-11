@@ -7,13 +7,18 @@ import {
   QueryClientProvider,
 } from '@tanstack/react-query'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
+import { heIL } from '@clerk/localizations'
 import { ClerkProvider, useAuth } from '@clerk/react'
 import { shadcn } from '@clerk/themes'
 import { toast } from 'sonner'
+import { getCookie } from '@/lib/cookies'
 import { handleServerError } from '@/lib/handle-server-error'
 import { DirectionProvider } from './context/direction-provider'
 import { FontProvider } from './context/font-provider'
 import { ThemeProvider } from './context/theme-provider'
+// i18next — init side effect + imperative t() for non-component toasts. Must load
+// before render so the initial language matches the `dir` cookie.
+import i18n from './i18n'
 // Generated Routes
 import { routeTree } from './routeTree.gen'
 // Styles
@@ -48,7 +53,7 @@ const queryClient = new QueryClient({
 
         if (error instanceof AxiosError) {
           if (error.response?.status === 304) {
-            toast.error('Content not modified!')
+            toast.error(i18n.t('common.contentNotModified'))
           }
         }
       },
@@ -58,7 +63,7 @@ const queryClient = new QueryClient({
     onError: (error) => {
       if (error instanceof AxiosError) {
         if (error.response?.status === 401) {
-          toast.error('Session expired!')
+          toast.error(i18n.t('common.sessionExpired'))
           // An edge 401 means the Clerk session is no longer valid — send the
           // user to /sign-in (preserving where they were) so an expired session
           // can't leave them on an authed-looking screen (D-11 / T-03-09).
@@ -73,7 +78,7 @@ const queryClient = new QueryClient({
           })
         }
         if (error.response?.status === 500) {
-          toast.error('Internal Server Error!')
+          toast.error(i18n.t('common.internalServerError'))
           // Only navigate to error page in production to avoid disrupting HMR in development
           if (import.meta.env.PROD) {
             router.navigate({ to: '/500' })
@@ -125,6 +130,10 @@ if (!rootElement.innerHTML) {
           <ClerkProvider
             publishableKey={PUBLISHABLE_KEY}
             appearance={{ theme: shadcn }}
+            // ponytail: Clerk-owned chrome (sign-in/up) is keyed off the `dir`
+            // cookie at load only — a mid-session RTL toggle updates it on next
+            // load. Upgrade path: lift `dir` state above ClerkProvider.
+            localization={getCookie('dir') === 'rtl' ? heIL : undefined}
             afterSignOutUrl='/'
             signInUrl='/sign-in'
             signUpUrl='/sign-up'

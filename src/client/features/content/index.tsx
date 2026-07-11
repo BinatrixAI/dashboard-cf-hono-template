@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { cmsBaseUrl } from '@/lib/cms-client'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -14,6 +15,7 @@ import { useContent } from './data/use-content'
 // DASH-01 read-only CMS list. Three distinct pre-render states:
 //   D-04 not-configured (no fetch) · D-05 couldn't-reach error (+Retry) · loading.
 export function Content() {
+  const { t } = useTranslation()
   return (
     <>
       <Header fixed>
@@ -28,11 +30,10 @@ export function Content() {
       <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
         <div className='flex flex-wrap items-end justify-between gap-2'>
           <div>
-            <h2 className='text-2xl font-bold tracking-tight'>Content</h2>
-            <p className='text-muted-foreground'>
-              Published posts from the CMS, read-only. Editing lives in the CMS
-              admin.
-            </p>
+            <h2 className='text-2xl font-bold tracking-tight'>
+              {t('content.title')}
+            </h2>
+            <p className='text-muted-foreground'>{t('content.subtitle')}</p>
           </div>
         </div>
         {/* D-04: gate BEFORE mounting the query so an unconfigured CMS issues
@@ -57,19 +58,25 @@ const codeClass =
 // D-04 onboarding panel (not an error) — mirrors main.tsx MissingClerkPubKey:
 // names the env var, links the setup doc, and never triggers a fetch.
 function CmsNotConfigured() {
+  const { t } = useTranslation()
   return (
     <div className='max-w-xl space-y-3 rounded-md border p-6'>
-      <h3 className='text-lg font-semibold'>Connect your CMS</h3>
+      <h3 className='text-lg font-semibold'>
+        {t('content.notConfigured.title')}
+      </h3>
       <p className='text-muted-foreground text-sm'>
-        No <code className={codeClass}>VITE_CMS_API_URL</code> is set, so there
-        is no CMS to read posts from yet. Point it at your SonicJS CMS Worker
-        origin (for example{' '}
-        <code className={codeClass}>https://cms.example.com</code>) in your{' '}
-        <code className={codeClass}>.env.local</code>, then reload.
+        {t('content.notConfigured.body1a')}
+        <code className={codeClass}>VITE_CMS_API_URL</code>
+        {t('content.notConfigured.body1b')}
+        <code className={codeClass}>https://cms.example.com</code>
+        {t('content.notConfigured.body1c')}
+        <code className={codeClass}>.env.local</code>
+        {t('content.notConfigured.body1d')}
       </p>
       <p className='text-muted-foreground text-sm'>
-        See <code className={codeClass}>docs/cms.md</code> for the full setup
-        and CORS checklist.
+        {t('content.notConfigured.body2a')}
+        <code className={codeClass}>docs/cms.md</code>
+        {t('content.notConfigured.body2b')}
       </p>
     </div>
   )
@@ -95,19 +102,21 @@ function ContentLoading() {
 // D-05: reachability error, distinct from the not-configured panel — a failed
 // cross-origin fetch surfaces through react-query isError here (T-15-04).
 function ContentError({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation()
   return (
     <div className='space-y-3'>
       <Alert variant='destructive'>
-        <AlertTitle>Couldn't reach the CMS</AlertTitle>
+        <AlertTitle>{t('content.error.title')}</AlertTitle>
         <AlertDescription>
-          The request to the CMS failed. It may be down, or its{' '}
-          <code className={codeClass}>CORS_ORIGINS</code> may not include this
-          dashboard's origin. Check{' '}
-          <code className={codeClass}>docs/cms.md</code>, then retry.
+          {t('content.error.descA')}
+          <code className={codeClass}>CORS_ORIGINS</code>
+          {t('content.error.descB')}
+          <code className={codeClass}>docs/cms.md</code>
+          {t('content.error.descC')}
         </AlertDescription>
       </Alert>
       <Button variant='outline' size='sm' onClick={onRetry}>
-        Retry
+        {t('content.retry')}
       </Button>
     </div>
   )

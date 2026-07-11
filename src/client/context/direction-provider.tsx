@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { DirectionProvider as RdxDirProvider } from '@radix-ui/react-direction'
+import i18n, { langFromDir } from '@/i18n'
 import { getCookie, setCookie, removeCookie } from '@/lib/cookies'
 
 export type Direction = 'ltr' | 'rtl'
@@ -23,8 +24,12 @@ export function DirectionProvider({ children }: { children: React.ReactNode }) {
   )
 
   useEffect(() => {
+    // The single language-switch point: direction drives language (LTR=en, RTL=he).
+    const lang = langFromDir(dir)
     const htmlElement = document.documentElement
     htmlElement.setAttribute('dir', dir)
+    htmlElement.setAttribute('lang', lang)
+    void i18n.changeLanguage(lang)
   }, [dir])
 
   const setDir = (dir: Direction) => {

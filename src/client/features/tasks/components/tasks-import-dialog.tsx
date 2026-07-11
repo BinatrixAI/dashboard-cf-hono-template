@@ -1,6 +1,9 @@
+import { useMemo } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { type TFunction } from 'i18next'
+import { useTranslation } from 'react-i18next'
 import { showSubmittedData } from '@/lib/show-submitted-data'
 import { Button } from '@/components/ui/button'
 import {
@@ -22,17 +25,20 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 
-const formSchema = z.object({
-  file: z
-    .instanceof(FileList)
-    .refine((files) => files.length > 0, {
-      message: 'Please upload a file',
-    })
-    .refine(
-      (files) => ['text/csv'].includes(files?.[0]?.type),
-      'Please upload csv format.'
-    ),
-})
+// Schema factory (G2): validation messages come from t() at render.
+function makeSchema(t: TFunction) {
+  return z.object({
+    file: z
+      .instanceof(FileList)
+      .refine((files) => files.length > 0, {
+        message: t('tasks.import.fileRequired'),
+      })
+      .refine(
+        (files) => ['text/csv'].includes(files?.[0]?.type),
+        t('tasks.import.csvFormat')
+      ),
+  })
+}
 
 type TaskImportDialogProps = {
   open: boolean
@@ -43,6 +49,8 @@ export function TasksImportDialog({
   open,
   onOpenChange,
 }: TaskImportDialogProps) {
+  const { t } = useTranslation()
+  const formSchema = useMemo(() => makeSchema(t), [t])
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: { file: undefined },
@@ -59,7 +67,7 @@ export function TasksImportDialog({
         size: file[0].size,
         type: file[0].type,
       }
-      showSubmittedData(fileDetails, 'You have imported the following file:')
+      showSubmittedData(fileDetails, t('tasks.import.importedFile'))
     }
     onOpenChange(false)
   }
@@ -74,10 +82,8 @@ export function TasksImportDialog({
     >
       <DialogContent className='gap-2 sm:max-w-sm'>
         <DialogHeader className='text-start'>
-          <DialogTitle>Import Tasks</DialogTitle>
-          <DialogDescription>
-            Import tasks quickly from a CSV file.
-          </DialogDescription>
+          <DialogTitle>{t('tasks.import.title')}</DialogTitle>
+          <DialogDescription>{t('tasks.import.desc')}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form id='task-import-form' onSubmit={form.handleSubmit(onSubmit)}>
@@ -86,7 +92,7 @@ export function TasksImportDialog({
               name='file'
               render={() => (
                 <FormItem className='my-2'>
-                  <FormLabel>File</FormLabel>
+                  <FormLabel>{t('tasks.import.file')}</FormLabel>
                   <FormControl>
                     <Input type='file' {...fileRef} className='h-8 py-0' />
                   </FormControl>
@@ -98,10 +104,10 @@ export function TasksImportDialog({
         </Form>
         <DialogFooter className='gap-2'>
           <DialogClose asChild>
-            <Button variant='outline'>Close</Button>
+            <Button variant='outline'>{t('tasks.import.close')}</Button>
           </DialogClose>
           <Button type='submit' form='task-import-form'>
-            Import
+            {t('tasks.import.import')}
           </Button>
         </DialogFooter>
       </DialogContent>

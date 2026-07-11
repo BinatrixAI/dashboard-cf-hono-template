@@ -1,4 +1,5 @@
 import { type ColumnDef } from '@tanstack/react-table'
+import { type TFunction } from 'i18next'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -7,7 +8,9 @@ import { LongText } from '@/components/long-text'
 import { callTypes, roles } from '../data/data'
 import { type User } from '../data/schema'
 
-export const usersColumns: ColumnDef<User>[] = [
+// Column factory (G2): t() threaded in, called at render — rebuilt via
+// useMemo(() => getUsersColumns(t), [t]) so labels track the active language.
+export const getUsersColumns = (t: TFunction): ColumnDef<User>[] => [
   {
     id: 'select',
     header: ({ table }) => (
@@ -17,7 +20,7 @@ export const usersColumns: ColumnDef<User>[] = [
           (table.getIsSomePageRowsSelected() && 'indeterminate')
         }
         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label='Select all'
+        aria-label={t('users.selectAll')}
         className='translate-y-[2px]'
       />
     ),
@@ -28,7 +31,7 @@ export const usersColumns: ColumnDef<User>[] = [
       <Checkbox
         checked={row.getIsSelected()}
         onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label='Select row'
+        aria-label={t('users.selectRow')}
         className='translate-y-[2px]'
       />
     ),
@@ -38,7 +41,7 @@ export const usersColumns: ColumnDef<User>[] = [
   {
     accessorKey: 'username',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Username' />
+      <DataTableColumnHeader column={column} title='users.columns.username' />
     ),
     cell: ({ row }) => (
       <LongText className='max-w-36 ps-3'>{row.getValue('username')}</LongText>
@@ -54,7 +57,7 @@ export const usersColumns: ColumnDef<User>[] = [
   {
     id: 'fullName',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Name' />
+      <DataTableColumnHeader column={column} title='users.columns.name' />
     ),
     cell: ({ row }) => {
       const { firstName, lastName } = row.original
@@ -66,7 +69,7 @@ export const usersColumns: ColumnDef<User>[] = [
   {
     accessorKey: 'email',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Email' />
+      <DataTableColumnHeader column={column} title='users.columns.email' />
     ),
     cell: ({ row }) => (
       <div className='w-fit ps-2 text-nowrap'>{row.getValue('email')}</div>
@@ -75,7 +78,7 @@ export const usersColumns: ColumnDef<User>[] = [
   {
     accessorKey: 'phoneNumber',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Phone Number' />
+      <DataTableColumnHeader column={column} title='users.columns.phone' />
     ),
     cell: ({ row }) => <div>{row.getValue('phoneNumber')}</div>,
     enableSorting: false,
@@ -83,7 +86,7 @@ export const usersColumns: ColumnDef<User>[] = [
   {
     accessorKey: 'status',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Status' />
+      <DataTableColumnHeader column={column} title='users.columns.status' />
     ),
     cell: ({ row }) => {
       const { status } = row.original
@@ -91,7 +94,7 @@ export const usersColumns: ColumnDef<User>[] = [
       return (
         <div className='flex space-x-2'>
           <Badge variant='outline' className={cn('capitalize', badgeColor)}>
-            {row.getValue('status')}
+            {t(`users.status.${status}`)}
           </Badge>
         </div>
       )
@@ -105,7 +108,7 @@ export const usersColumns: ColumnDef<User>[] = [
   {
     accessorKey: 'role',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Role' />
+      <DataTableColumnHeader column={column} title='users.columns.role' />
     ),
     cell: ({ row }) => {
       const { role } = row.original
@@ -120,7 +123,7 @@ export const usersColumns: ColumnDef<User>[] = [
           {userType.icon && (
             <userType.icon size={16} className='text-muted-foreground' />
           )}
-          <span className='text-sm capitalize'>{row.getValue('role')}</span>
+          <span className='text-sm capitalize'>{t(`users.role.${role}`)}</span>
         </div>
       )
     },

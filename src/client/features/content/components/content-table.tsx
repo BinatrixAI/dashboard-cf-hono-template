@@ -14,6 +14,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import {
   Table,
@@ -32,6 +33,7 @@ type DataTableProps = {
 }
 
 export function ContentTable({ data }: DataTableProps) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
 
   // LOCAL UI-only state (no useTableUrlState) — the list is a ~50-row cap
@@ -76,7 +78,7 @@ export function ContentTable({ data }: DataTableProps) {
     >
       <DataTableToolbar
         table={table}
-        searchPlaceholder='Filter posts...'
+        searchPlaceholder='content.searchPlaceholder'
         searchKey='title'
       />
       <div className='overflow-hidden rounded-md border'>
@@ -143,7 +145,7 @@ export function ContentTable({ data }: DataTableProps) {
                   colSpan={columns.length}
                   className='h-24 text-center'
                 >
-                  No results.
+                  {t('content.noResults')}
                 </TableCell>
               </TableRow>
             )}

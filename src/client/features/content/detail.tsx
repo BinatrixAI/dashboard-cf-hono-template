@@ -1,3 +1,5 @@
+import { type TFunction } from 'i18next'
+import { useTranslation } from 'react-i18next'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -14,6 +16,7 @@ import { useContentItem } from './data/use-content'
 // D-03 read-only detail. Dependency-free: title + status + published date + the
 // CMS body as ESCAPED plaintext (lexicalToPlainText) — no raw-HTML sink (T-15-05).
 export function ContentDetail({ id }: { id: string }) {
+  const { t } = useTranslation()
   const { data: item, isPending, isError, refetch } = useContentItem(id)
 
   return (
@@ -45,7 +48,7 @@ export function ContentDetail({ id }: { id: string }) {
                   </Badge>
                 ) : null}
                 <span>
-                  {formatPublished(item.data?.publishedAt, item.created_at)}
+                  {formatPublished(item.data?.publishedAt, item.created_at, t)}
                 </span>
               </div>
             </div>
@@ -62,10 +65,11 @@ export function ContentDetail({ id }: { id: string }) {
 
 function formatPublished(
   publishedAt: string | null | undefined,
-  createdAt: number | undefined
+  createdAt: number | undefined,
+  t: TFunction
 ): string {
   const value = publishedAt ?? createdAt
-  if (value === null || value === undefined) return 'Unpublished'
+  if (value === null || value === undefined) return t('content.unpublished')
   return new Date(value).toLocaleDateString()
 }
 
@@ -80,17 +84,15 @@ function DetailLoading() {
 }
 
 function DetailError({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation()
   return (
     <div className='max-w-3xl space-y-3'>
       <Alert variant='destructive'>
-        <AlertTitle>Couldn't reach the CMS</AlertTitle>
-        <AlertDescription>
-          The request for this post failed. The CMS may be down or unreachable
-          from this origin.
-        </AlertDescription>
+        <AlertTitle>{t('content.detail.errorTitle')}</AlertTitle>
+        <AlertDescription>{t('content.detail.errorDesc')}</AlertDescription>
       </Alert>
       <Button variant='outline' size='sm' onClick={onRetry}>
-        Retry
+        {t('content.retry')}
       </Button>
     </div>
   )

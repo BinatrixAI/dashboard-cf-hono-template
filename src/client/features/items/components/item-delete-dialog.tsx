@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,6 +25,7 @@ export function ItemDeleteDialog({
   onOpenChange,
   item,
 }: ItemDeleteDialogProps) {
+  const { t } = useTranslation()
   const deleteItem = useDeleteItem()
 
   useEffect(() => {
@@ -46,22 +48,21 @@ export function ItemDeleteDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete item?</AlertDialogTitle>
+          <AlertDialogTitle>{t('items.delete.title')}</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. &quot;{item.name}&quot; will be
-            permanently deleted.
+            {t('items.delete.desc', { name: item.name })}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         {deleteItem.isError ? (
           <p className='text-destructive mt-2 text-sm'>
-            Failed to delete item. Try again.
+            {t('items.delete.failed')}
           </p>
         ) : null}
 
         <AlertDialogFooter>
           {/* Focus lands on Cancel by default (less destructive option). */}
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t('items.delete.cancel')}</AlertDialogCancel>
           <AlertDialogAction
             className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
             disabled={deleteItem.isPending}
@@ -70,7 +71,9 @@ export function ItemDeleteDialog({
             {deleteItem.isPending ? (
               <Loader2 className='mr-2 size-4 animate-spin' />
             ) : null}
-            {deleteItem.isPending ? 'Deleting…' : 'Delete'}
+            {deleteItem.isPending
+              ? t('items.delete.deleting')
+              : t('items.delete.delete')}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

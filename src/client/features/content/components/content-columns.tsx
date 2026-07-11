@@ -6,12 +6,14 @@ import { type ContentItem } from '../data/schema'
 
 // Read-only, three columns only (D-02) — mirrors features/users/components/
 // users-columns.tsx but drops the select-checkbox and role columns (no bulk
-// actions, no mutations this phase).
+// actions, no mutations this phase). Header `title` fields hold translation
+// KEYS; DataTableColumnHeader calls t() at render (G2), so these columns need
+// no t threading and stay a plain module const.
 export const contentColumns: ColumnDef<ContentItem>[] = [
   {
     accessorKey: 'title',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Title' />
+      <DataTableColumnHeader column={column} title='content.columns.title' />
     ),
     cell: ({ row }) => (
       <LongText className='max-w-72 ps-3'>{row.getValue('title')}</LongText>
@@ -21,7 +23,7 @@ export const contentColumns: ColumnDef<ContentItem>[] = [
   {
     accessorKey: 'status',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Status' />
+      <DataTableColumnHeader column={column} title='content.columns.status' />
     ),
     cell: ({ row }) => {
       // status is optional on the CMS item (anon read returns 'published'; a
@@ -42,7 +44,10 @@ export const contentColumns: ColumnDef<ContentItem>[] = [
     // when null/absent so the column is never blank for a published post.
     accessorFn: (row) => row.data?.publishedAt ?? row.created_at ?? null,
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Published' />
+      <DataTableColumnHeader
+        column={column}
+        title='content.columns.published'
+      />
     ),
     cell: ({ getValue }) => {
       const value = getValue<string | number | null>()

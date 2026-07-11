@@ -1,3 +1,4 @@
+import { type TranslationKey } from '@/i18n'
 import { Shield, UserCheck, Users, CreditCard } from 'lucide-react'
 import { type UserStatus } from './schema'
 
@@ -11,25 +12,30 @@ export const callTypes = new Map<UserStatus, string>([
   ],
 ])
 
-export const roles = [
+// `label` fields hold translation KEYS — t() is called at render (G2).
+export const roles: {
+  label: TranslationKey
+  value: string
+  icon: typeof Shield
+}[] = [
   {
-    label: 'Superadmin',
+    label: 'users.role.superadmin',
     value: 'superadmin',
     icon: Shield,
   },
   {
-    label: 'Admin',
+    label: 'users.role.admin',
     value: 'admin',
     icon: UserCheck,
   },
   {
-    label: 'Manager',
+    label: 'users.role.manager',
     value: 'manager',
     icon: Users,
   },
   {
-    label: 'Cashier',
+    label: 'users.role.cashier',
     value: 'cashier',
     icon: CreditCard,
   },
-] as const
+]

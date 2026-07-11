@@ -129,6 +129,12 @@ pnpm run deploy          # pnpm build && wrangler deploy → URL *.workers.dev
   параметризует его; задеплойте `cms/`, чтобы включить, или пропустите целиком.
   См. [`docs/cms.md`](docs/cms.md).
 
+- **Двуязычный интерфейс (английский ↔ иврит).** Переключатель LTR/RTL заодно
+  переключает язык — LTR отображает английский, RTL — иврит — через `react-i18next`
+  с обоими встроенными словарями и локализованным интерфейсом Clerk (`heIL`). Новые
+  строки интерфейса добавляются в оба файла `en.json` и `he.json` (проверка паритета
+  это контролирует). См. [`docs/i18n.md`](docs/i18n.md).
+
 Тема — это замена на уровне проекта (tweakcn → oklch-токены Tailwind v4), описана в
 [`docs/THEMING.md`](docs/THEMING.md).
 
@@ -198,6 +204,10 @@ pnpm run deploy          # pnpm build && wrangler deploy → URL *.workers.dev
   удаления/переименования демо-страниц.
 - **[`docs/ui-components.md`](docs/ui-components.md)** — модель вендоренного shadcn/ui,
   добавление компонентов через `pnpm dlx shadcn@latest add` и MCP shadcn.
+- **[`docs/i18n.md`](docs/i18n.md)** — i18n английский ↔ иврит на основе
+  переключателя LTR/RTL: единая точка переключения, правило паритета обоих словарей,
+  соглашение «никакого `t()` на уровне модуля» и что остаётся на английском (даты,
+  графики).
 - **[`docs/secrets.md`](docs/secrets.md)** — `.dev.vars` vs `wrangler secret put` vs
   `vars` в `wrangler.jsonc` vs `VITE_*`, с разобранным примером добавления секрета.
 - **[`docs/THEMING.md`](docs/THEMING.md)** — темизация tweakcn + Tailwind v4: процесс

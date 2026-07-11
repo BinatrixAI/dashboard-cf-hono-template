@@ -1,6 +1,9 @@
+import { useMemo } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { type TFunction } from 'i18next'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -21,44 +24,49 @@ import {
 } from '@/features/settings/data/use-settings'
 import { type AppSettings } from '../../../../shared/settings'
 
+// `label` fields hold translation KEYS — t() is called at render (G2), never
+// here at module scope where it would freeze the initial language.
 const items = [
   {
     id: 'recents',
-    label: 'Recents',
+    label: 'settings.display.items.recents',
   },
   {
     id: 'home',
-    label: 'Home',
+    label: 'settings.display.items.home',
   },
   {
     id: 'applications',
-    label: 'Applications',
+    label: 'settings.display.items.applications',
   },
   {
     id: 'desktop',
-    label: 'Desktop',
+    label: 'settings.display.items.desktop',
   },
   {
     id: 'downloads',
-    label: 'Downloads',
+    label: 'settings.display.items.downloads',
   },
   {
     id: 'documents',
-    label: 'Documents',
+    label: 'settings.display.items.documents',
   },
 ] as const
 
 // The `.refine(non-empty)` is a FORM-level UX validation ("select at least one
 // item"); the server section is a plain `z.array(z.string())`. A non-empty array
 // validates against both, so `DisplayFormValues` ({ items: string[] }) is assignable
-// to `AppSettings['display']` with no transform (D-03).
-const displayFormSchema = z.object({
-  items: z.array(z.string()).refine((value) => value.some((item) => item), {
-    message: 'You have to select at least one item.',
-  }),
-})
+// to `AppSettings['display']` with no transform (D-03). Message comes from t()
+// via makeSchema(t) + useMemo (G2, no module-scope t()).
+function makeSchema(t: TFunction) {
+  return z.object({
+    items: z.array(z.string()).refine((value) => value.some((item) => item), {
+      message: t('settings.display.minOne'),
+    }),
+  })
+}
 
-type DisplayFormValues = z.infer<typeof displayFormSchema>
+type DisplayFormValues = z.infer<ReturnType<typeof makeSchema>>
 
 // Load gate (D-06 / Pitfall 2): never render or save hardcoded defaults before
 // the stored KV blob resolves. Mirrors the `items/index.tsx` isPending/isError
@@ -73,13 +81,15 @@ export function DisplayForm() {
 }
 
 function DisplayFormFields({ data }: { data: AppSettings }) {
+  const { t } = useTranslation()
   const update = useUpdateSettings()
+  const schema = useMemo(() => makeSchema(t), [t])
 
   // Hydrate the item selection from the stored KV display section (D-06) — this
   // component only mounts once `data` is present, so the checkboxes never flash a
   // pre-GET hardcoded selection.
   const form = useForm<DisplayFormValues>({
-    resolver: zodResolver(displayFormSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       items: data.display.items,
     },
@@ -90,7 +100,7 @@ function DisplayFormFields({ data }: { data: AppSettings }) {
     // document (D-05, Pitfall 1) — never a partial that drops siblings.
     const next: AppSettings = { ...data, display: values }
     update.mutate(next, {
-      onSuccess: () => toast.success('Display updated'),
+      onSuccess: () => toast.success(t('settings.display.updated')),
     })
   }
 
@@ -103,9 +113,11 @@ function DisplayFormFields({ data }: { data: AppSettings }) {
           render={() => (
             <FormItem>
               <div className='mb-4'>
-                <FormLabel className='text-base'>Sidebar</FormLabel>
+                <FormLabel className='text-base'>
+                  {t('settings.display.sidebarLabel')}
+                </FormLabel>
                 <FormDescription>
-                  Select the items you want to display in the sidebar.
+                  {t('settings.display.sidebarDesc')}
                 </FormDescription>
               </div>
               {items.map((item) => (
@@ -134,7 +146,7 @@ function DisplayFormFields({ data }: { data: AppSettings }) {
                           />
                         </FormControl>
                         <FormLabel className='font-normal'>
-                          {item.label}
+                          {t(item.label)}
                         </FormLabel>
                       </FormItem>
                     )
@@ -145,7 +157,7 @@ function DisplayFormFields({ data }: { data: AppSettings }) {
             </FormItem>
           )}
         />
-        <Button type='submit'>Update display</Button>
+        <Button type='submit'>{t('settings.display.submit')}</Button>
       </form>
     </Form>
   )
@@ -172,16 +184,17 @@ function DisplayFormSkeleton() {
 }
 
 function DisplayFormError({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation()
   return (
     <div className='space-y-3'>
       <Alert variant='destructive'>
-        <AlertTitle>Could not load display settings</AlertTitle>
+        <AlertTitle>{t('settings.display.loadError')}</AlertTitle>
         <AlertDescription>
-          Check your connection and try again.
+          {t('settings.common.loadErrorDesc')}
         </AlertDescription>
       </Alert>
       <Button variant='outline' size='sm' onClick={onRetry}>
-        Retry
+        {t('settings.common.retry')}
       </Button>
     </div>
   )

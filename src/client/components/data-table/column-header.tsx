@@ -5,6 +5,8 @@ import {
   EyeNoneIcon,
 } from '@radix-ui/react-icons'
 import { type Column } from '@tanstack/react-table'
+import { type TranslationKey } from '@/i18n'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -18,7 +20,7 @@ import {
 type DataTableColumnHeaderProps<TData, TValue> =
   React.HTMLAttributes<HTMLDivElement> & {
     column: Column<TData, TValue>
-    title: string
+    title: TranslationKey
   }
 
 export function DataTableColumnHeader<TData, TValue>({
@@ -26,8 +28,9 @@ export function DataTableColumnHeader<TData, TValue>({
   title,
   className,
 }: DataTableColumnHeaderProps<TData, TValue>) {
+  const { t } = useTranslation()
   if (!column.getCanSort()) {
-    return <div className={cn(className)}>{title}</div>
+    return <div className={cn(className)}>{t(title)}</div>
   }
 
   return (
@@ -39,7 +42,7 @@ export function DataTableColumnHeader<TData, TValue>({
             size='sm'
             className='data-[state=open]:bg-accent h-8'
           >
-            <span>{title}</span>
+            <span>{t(title)}</span>
             {column.getIsSorted() === 'desc' ? (
               <ArrowDownIcon className='ms-2 h-4 w-4' />
             ) : column.getIsSorted() === 'asc' ? (
@@ -52,18 +55,18 @@ export function DataTableColumnHeader<TData, TValue>({
         <DropdownMenuContent align='start'>
           <DropdownMenuItem onClick={() => column.toggleSorting(false)}>
             <ArrowUpIcon className='text-muted-foreground/70 size-3.5' />
-            Asc
+            {t('dataTable.sortAsc')}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => column.toggleSorting(true)}>
             <ArrowDownIcon className='text-muted-foreground/70 size-3.5' />
-            Desc
+            {t('dataTable.sortDesc')}
           </DropdownMenuItem>
           {column.getCanHide() && (
             <>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => column.toggleVisibility(false)}>
                 <EyeNoneIcon className='text-muted-foreground/70 size-3.5' />
-                Hide
+                {t('dataTable.hide')}
               </DropdownMenuItem>
             </>
           )}

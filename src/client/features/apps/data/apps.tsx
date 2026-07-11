@@ -1,3 +1,4 @@
+import { type TranslationKey } from '@/i18n'
 import {
   IconTelegram,
   IconNotion,
@@ -16,95 +17,102 @@ import {
   IconWhatsapp,
 } from '@/assets/brand-icons'
 
-export const apps = [
+// `desc` fields hold translation KEYS — t() is called at render (G2). Brand
+// `name` stays literal (product name). `logo` is JSX evaluated once.
+export const apps: {
+  name: string
+  logo: React.ReactNode
+  connected: boolean
+  desc: TranslationKey
+}[] = [
   {
     name: 'Telegram',
     logo: <IconTelegram />,
     connected: false,
-    desc: 'Connect with Telegram for real-time communication.',
+    desc: 'apps.desc.telegram',
   },
   {
     name: 'Notion',
     logo: <IconNotion />,
     connected: true,
-    desc: 'Effortlessly sync Notion pages for seamless collaboration.',
+    desc: 'apps.desc.notion',
   },
   {
     name: 'Figma',
     logo: <IconFigma />,
     connected: true,
-    desc: 'View and collaborate on Figma designs in one place.',
+    desc: 'apps.desc.figma',
   },
   {
     name: 'Trello',
     logo: <IconTrello />,
     connected: false,
-    desc: 'Sync Trello cards for streamlined project management.',
+    desc: 'apps.desc.trello',
   },
   {
     name: 'Slack',
     logo: <IconSlack />,
     connected: false,
-    desc: 'Integrate Slack for efficient team communication',
+    desc: 'apps.desc.slack',
   },
   {
     name: 'Zoom',
     logo: <IconZoom />,
     connected: true,
-    desc: 'Host Zoom meetings directly from the dashboard.',
+    desc: 'apps.desc.zoom',
   },
   {
     name: 'Stripe',
     logo: <IconStripe />,
     connected: false,
-    desc: 'Easily manage Stripe transactions and payments.',
+    desc: 'apps.desc.stripe',
   },
   {
     name: 'Gmail',
     logo: <IconGmail />,
     connected: true,
-    desc: 'Access and manage Gmail messages effortlessly.',
+    desc: 'apps.desc.gmail',
   },
   {
     name: 'Medium',
     logo: <IconMedium />,
     connected: false,
-    desc: 'Explore and share Medium stories on your dashboard.',
+    desc: 'apps.desc.medium',
   },
   {
     name: 'Skype',
     logo: <IconSkype />,
     connected: false,
-    desc: 'Connect with Skype contacts seamlessly.',
+    desc: 'apps.desc.skype',
   },
   {
     name: 'Docker',
     logo: <IconDocker />,
     connected: false,
-    desc: 'Effortlessly manage Docker containers on your dashboard.',
+    desc: 'apps.desc.docker',
   },
   {
     name: 'GitHub',
     logo: <IconGithub />,
     connected: false,
-    desc: 'Streamline code management with GitHub integration.',
+    desc: 'apps.desc.github',
   },
   {
     name: 'GitLab',
     logo: <IconGitlab />,
     connected: false,
-    desc: 'Efficiently manage code projects with GitLab integration.',
+    desc: 'apps.desc.gitlab',
   },
   {
     name: 'Discord',
     logo: <IconDiscord />,
     connected: false,
-    desc: 'Connect with Discord for seamless team communication.',
+    desc: 'apps.desc.discord',
   },
   {
     name: 'WhatsApp',
     logo: <IconWhatsapp />,
     connected: false,
-    desc: 'Easily integrate WhatsApp for direct messaging.',
+    desc: 'apps.desc.whatsapp',
   },
 ]

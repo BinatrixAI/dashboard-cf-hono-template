@@ -32,54 +32,57 @@ export const sidebarData: SidebarData = {
       plan: 'Template',
     },
   ],
+  // nav `title` fields hold translation KEYS (not English) — the owning
+  // components (nav-group.tsx, app-sidebar.tsx, command-menu.tsx) call t() at
+  // render so a language switch is never frozen at module scope (G2).
   navGroups: [
     {
-      title: 'General',
+      title: 'sidebar.groups.general',
       items: [
         {
-          title: 'Overview',
+          title: 'sidebar.nav.overview',
           url: '/dashboard',
           icon: LayoutDashboard,
         },
         {
           // Example CRUD feature wired to the Hono /api/items round-trip (Plan 04).
           // The command palette derives "Go to Items" from this nav entry automatically.
-          title: 'Items',
+          title: 'sidebar.nav.items',
           url: '/items',
           icon: Package,
         },
         {
-          title: 'Tasks',
+          title: 'sidebar.nav.tasks',
           url: '/tasks',
           icon: ListTodo,
         },
         {
           // LayoutGrid (not Package) — Items already uses Package; keep glyphs
           // distinct (D-03a / Pitfall 6).
-          title: 'Apps',
+          title: 'sidebar.nav.apps',
           url: '/apps',
           icon: LayoutGrid,
         },
         {
-          title: 'Chats',
+          title: 'sidebar.nav.chats',
           url: '/chats',
           icon: MessagesSquare,
           badge: '3',
         },
         {
-          title: 'Users',
+          title: 'sidebar.nav.users',
           url: '/users',
           icon: Users,
         },
       ],
     },
     {
-      title: 'Content',
+      title: 'sidebar.groups.content',
       items: [
         // Always visible even when VITE_CMS_API_URL is unset (D-04/D-10) —
         // the /content route shows a "CMS not configured" panel in that case.
         {
-          title: 'Content',
+          title: 'sidebar.nav.content',
           url: '/content',
           icon: Newspaper,
         },
@@ -87,7 +90,7 @@ export const sidebarData: SidebarData = {
         ...(adminUrl
           ? [
               {
-                title: 'CMS Admin',
+                title: 'sidebar.nav.cmsAdmin' as const,
                 url: adminUrl,
                 icon: ExternalLink,
                 external: true as const,
@@ -97,34 +100,34 @@ export const sidebarData: SidebarData = {
       ],
     },
     {
-      title: 'Other',
+      title: 'sidebar.groups.other',
       items: [
         {
-          title: 'Settings',
+          title: 'sidebar.nav.settings',
           icon: Settings,
           items: [
             {
-              title: 'Profile',
+              title: 'sidebar.nav.profile',
               url: '/settings',
               icon: UserCog,
             },
             {
-              title: 'Account',
+              title: 'sidebar.nav.account',
               url: '/settings/account',
               icon: Wrench,
             },
             {
-              title: 'Appearance',
+              title: 'sidebar.nav.appearance',
               url: '/settings/appearance',
               icon: Palette,
             },
             {
-              title: 'Notifications',
+              title: 'sidebar.nav.notifications',
               url: '/settings/notifications',
               icon: Bell,
             },
             {
-              title: 'Display',
+              title: 'sidebar.nav.display',
               url: '/settings/display',
               icon: Monitor,
             },

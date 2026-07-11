@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { type Table } from '@tanstack/react-table'
 import { AlertTriangle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { sleep } from '@/lib/utils'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -23,27 +24,26 @@ export function TasksMultiDeleteDialog<TData>({
   onOpenChange,
   table,
 }: TaskMultiDeleteDialogProps<TData>) {
+  const { t } = useTranslation()
   const [value, setValue] = useState('')
 
   const selectedRows = table.getFilteredSelectedRowModel().rows
 
   const handleDelete = () => {
     if (value.trim() !== CONFIRM_WORD) {
-      toast.error(`Please type "${CONFIRM_WORD}" to confirm.`)
+      toast.error(t('tasks.multiDelete.typeToConfirm', { word: CONFIRM_WORD }))
       return
     }
 
     onOpenChange(false)
 
     toast.promise(sleep(2000), {
-      loading: 'Deleting tasks...',
+      loading: t('tasks.multiDelete.deleting'),
       success: () => {
         table.resetRowSelection()
-        return `Deleted ${selectedRows.length} ${
-          selectedRows.length > 1 ? 'tasks' : 'task'
-        }`
+        return t('tasks.multiDelete.deleted', { count: selectedRows.length })
       },
-      error: 'Error',
+      error: t('tasks.multiDelete.error'),
     })
   }
 
@@ -59,35 +59,38 @@ export function TasksMultiDeleteDialog<TData>({
             className='stroke-destructive me-1 inline-block'
             size={18}
           />{' '}
-          Delete {selectedRows.length}{' '}
-          {selectedRows.length > 1 ? 'tasks' : 'task'}
+          {t('tasks.multiDelete.title', { count: selectedRows.length })}
         </span>
       }
       desc={
         <div className='space-y-4'>
           <p className='mb-2'>
-            Are you sure you want to delete the selected tasks? <br />
-            This action cannot be undone.
+            {t('tasks.multiDelete.areYouSure')} <br />
+            {t('tasks.multiDelete.cannotUndo')}
           </p>
 
           <Label className='my-4 flex flex-col items-start gap-1.5'>
-            <span className=''>Confirm by typing "{CONFIRM_WORD}":</span>
+            <span className=''>
+              {t('tasks.multiDelete.confirmByTyping', { word: CONFIRM_WORD })}
+            </span>
             <Input
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              placeholder={`Type "${CONFIRM_WORD}" to confirm.`}
+              placeholder={t('tasks.multiDelete.typeToConfirm', {
+                word: CONFIRM_WORD,
+              })}
             />
           </Label>
 
           <Alert variant='destructive'>
-            <AlertTitle>Warning!</AlertTitle>
+            <AlertTitle>{t('tasks.multiDelete.warning')}</AlertTitle>
             <AlertDescription>
-              Please be careful, this operation can not be rolled back.
+              {t('tasks.multiDelete.warningDesc')}
             </AlertDescription>
           </Alert>
         </div>
       }
-      confirmText='Delete'
+      confirmText={t('tasks.multiDelete.confirm')}
       destructive
     />
   )

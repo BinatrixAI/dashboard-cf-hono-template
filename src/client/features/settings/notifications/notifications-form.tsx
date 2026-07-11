@@ -1,7 +1,10 @@
+import { useMemo } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from '@tanstack/react-router'
+import { type TFunction } from 'i18next'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -31,21 +34,26 @@ import { type AppSettings } from '../../../../shared/settings'
 // input and output types identical, which `zodResolver`'s generics require; the actual
 // initial values come from the KV-hydrated `defaultValues` below, so per-field `.default`s
 // are redundant here.
-const notificationsFormSchema = z.object({
-  type: z.enum(['all', 'mentions', 'none'], {
-    error: (iss) =>
-      iss.input === undefined
-        ? 'Please select a notification type.'
-        : undefined,
-  }),
-  mobile: z.boolean(),
-  communication_emails: z.boolean(),
-  social_emails: z.boolean(),
-  marketing_emails: z.boolean(),
-  security_emails: z.boolean(),
-})
+// Schema factory (G2): validation messages are pulled from t() at render via
+// makeSchema(t) + useMemo — never a module-scope t() that would freeze the
+// initial language.
+function makeSchema(t: TFunction) {
+  return z.object({
+    type: z.enum(['all', 'mentions', 'none'], {
+      error: (iss) =>
+        iss.input === undefined
+          ? t('settings.notifications.typeRequired')
+          : undefined,
+    }),
+    mobile: z.boolean(),
+    communication_emails: z.boolean(),
+    social_emails: z.boolean(),
+    marketing_emails: z.boolean(),
+    security_emails: z.boolean(),
+  })
+}
 
-type NotificationsFormValues = z.infer<typeof notificationsFormSchema>
+type NotificationsFormValues = z.infer<ReturnType<typeof makeSchema>>
 
 // Load gate (D-06 / Pitfall 2): never render or save hardcoded defaults before
 // the stored KV blob resolves. Mirrors the `items/index.tsx` isPending/isError
@@ -60,13 +68,15 @@ export function NotificationsForm() {
 }
 
 function NotificationsFormFields({ data }: { data: AppSettings }) {
+  const { t } = useTranslation()
   const update = useUpdateSettings()
+  const schema = useMemo(() => makeSchema(t), [t])
 
   // Hydrate defaults from the stored KV notifications section (D-06) — this
   // component only mounts once `data` is present, so the form never flashes a
   // pre-GET hardcoded value.
   const form = useForm<NotificationsFormValues>({
-    resolver: zodResolver(notificationsFormSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       type: data.notifications.type,
       mobile: data.notifications.mobile,
@@ -82,7 +92,7 @@ function NotificationsFormFields({ data }: { data: AppSettings }) {
     // whole document (D-05, Pitfall 1) — never a partial that drops siblings.
     const next: AppSettings = { ...data, notifications: values }
     update.mutate(next, {
-      onSuccess: () => toast.success('Preferences updated'),
+      onSuccess: () => toast.success(t('settings.notifications.updated')),
     })
   }
 
@@ -94,7 +104,7 @@ function NotificationsFormFields({ data }: { data: AppSettings }) {
           name='type'
           render={({ field }) => (
             <FormItem className='relative space-y-3'>
-              <FormLabel>Notify me about...</FormLabel>
+              <FormLabel>{t('settings.notifications.notifyAbout')}</FormLabel>
               <FormControl>
                 <RadioGroup
                   onValueChange={field.onChange}
@@ -106,7 +116,7 @@ function NotificationsFormFields({ data }: { data: AppSettings }) {
                       <RadioGroupItem value='all' />
                     </FormControl>
                     <FormLabel className='font-normal'>
-                      All new messages
+                      {t('settings.notifications.all')}
                     </FormLabel>
                   </FormItem>
                   <FormItem className='flex items-center'>
@@ -114,14 +124,16 @@ function NotificationsFormFields({ data }: { data: AppSettings }) {
                       <RadioGroupItem value='mentions' />
                     </FormControl>
                     <FormLabel className='font-normal'>
-                      Direct messages and mentions
+                      {t('settings.notifications.mentions')}
                     </FormLabel>
                   </FormItem>
                   <FormItem className='flex items-center'>
                     <FormControl>
                       <RadioGroupItem value='none' />
                     </FormControl>
-                    <FormLabel className='font-normal'>Nothing</FormLabel>
+                    <FormLabel className='font-normal'>
+                      {t('settings.notifications.none')}
+                    </FormLabel>
                   </FormItem>
                 </RadioGroup>
               </FormControl>
@@ -130,7 +142,9 @@ function NotificationsFormFields({ data }: { data: AppSettings }) {
           )}
         />
         <div className='relative'>
-          <h3 className='mb-4 text-lg font-medium'>Email Notifications</h3>
+          <h3 className='mb-4 text-lg font-medium'>
+            {t('settings.notifications.emailTitle')}
+          </h3>
           <div className='space-y-4'>
             <FormField
               control={form.control}
@@ -139,10 +153,10 @@ function NotificationsFormFields({ data }: { data: AppSettings }) {
                 <FormItem className='flex flex-row items-center justify-between rounded-lg border p-4'>
                   <div className='space-y-0.5'>
                     <FormLabel className='text-base'>
-                      Communication emails
+                      {t('settings.notifications.communicationLabel')}
                     </FormLabel>
                     <FormDescription>
-                      Receive emails about your account activity.
+                      {t('settings.notifications.communicationDesc')}
                     </FormDescription>
                   </div>
                   <FormControl>
@@ -161,10 +175,10 @@ function NotificationsFormFields({ data }: { data: AppSettings }) {
                 <FormItem className='flex flex-row items-center justify-between rounded-lg border p-4'>
                   <div className='space-y-0.5'>
                     <FormLabel className='text-base'>
-                      Marketing emails
+                      {t('settings.notifications.marketingLabel')}
                     </FormLabel>
                     <FormDescription>
-                      Receive emails about new products, features, and more.
+                      {t('settings.notifications.marketingDesc')}
                     </FormDescription>
                   </div>
                   <FormControl>
@@ -182,9 +196,11 @@ function NotificationsFormFields({ data }: { data: AppSettings }) {
               render={({ field }) => (
                 <FormItem className='flex flex-row items-center justify-between rounded-lg border p-4'>
                   <div className='space-y-0.5'>
-                    <FormLabel className='text-base'>Social emails</FormLabel>
+                    <FormLabel className='text-base'>
+                      {t('settings.notifications.socialLabel')}
+                    </FormLabel>
                     <FormDescription>
-                      Receive emails for friend requests, follows, and more.
+                      {t('settings.notifications.socialDesc')}
                     </FormDescription>
                   </div>
                   <FormControl>
@@ -202,9 +218,11 @@ function NotificationsFormFields({ data }: { data: AppSettings }) {
               render={({ field }) => (
                 <FormItem className='flex flex-row items-center justify-between rounded-lg border p-4'>
                   <div className='space-y-0.5'>
-                    <FormLabel className='text-base'>Security emails</FormLabel>
+                    <FormLabel className='text-base'>
+                      {t('settings.notifications.securityLabel')}
+                    </FormLabel>
                     <FormDescription>
-                      Receive emails about your account activity and security.
+                      {t('settings.notifications.securityDesc')}
                     </FormDescription>
                   </div>
                   <FormControl>
@@ -232,24 +250,22 @@ function NotificationsFormFields({ data }: { data: AppSettings }) {
                 />
               </FormControl>
               <div className='space-y-1 leading-none'>
-                <FormLabel>
-                  Use different settings for my mobile devices
-                </FormLabel>
+                <FormLabel>{t('settings.notifications.mobileLabel')}</FormLabel>
                 <FormDescription>
-                  You can manage your mobile notifications in the{' '}
+                  {t('settings.notifications.mobileDescPrefix')}
                   <Link
                     to='/settings'
                     className='underline decoration-dashed underline-offset-4 hover:decoration-solid'
                   >
-                    mobile settings
-                  </Link>{' '}
-                  page.
+                    {t('settings.notifications.mobileDescLink')}
+                  </Link>
+                  {t('settings.notifications.mobileDescSuffix')}
                 </FormDescription>
               </div>
             </FormItem>
           )}
         />
-        <Button type='submit'>Update notifications</Button>
+        <Button type='submit'>{t('settings.notifications.submit')}</Button>
       </form>
     </Form>
   )
@@ -277,16 +293,17 @@ function NotificationsFormSkeleton() {
 }
 
 function NotificationsFormError({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation()
   return (
     <div className='space-y-3'>
       <Alert variant='destructive'>
-        <AlertTitle>Could not load notification settings</AlertTitle>
+        <AlertTitle>{t('settings.notifications.loadError')}</AlertTitle>
         <AlertDescription>
-          Check your connection and try again.
+          {t('settings.common.loadErrorDesc')}
         </AlertDescription>
       </Alert>
       <Button variant='outline' size='sm' onClick={onRetry}>
-        Retry
+        {t('settings.common.retry')}
       </Button>
     </div>
   )

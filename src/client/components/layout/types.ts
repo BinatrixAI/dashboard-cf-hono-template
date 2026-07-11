@@ -1,4 +1,5 @@
 import { type LinkProps } from '@tanstack/react-router'
+import { type TranslationKey } from '@/i18n'
 
 type Team = {
   name: string
@@ -7,7 +8,8 @@ type Team = {
 }
 
 type BaseNavItem = {
-  title: string
+  // Translation KEY (e.g. 'sidebar.nav.items'), resolved with t() at render (G2).
+  title: TranslationKey
   badge?: string
   icon?: React.ElementType
 }
@@ -27,7 +29,7 @@ type NavCollapsible = BaseNavItem & {
 type NavItem = NavCollapsible | NavLink
 
 type NavGroup = {
-  title: string
+  title: TranslationKey
   items: NavItem[]
 }
 

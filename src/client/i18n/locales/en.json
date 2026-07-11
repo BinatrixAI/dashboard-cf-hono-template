@@ -1,0 +1,518 @@
+{
+  "common": {
+    "sessionExpired": "Session expired!",
+    "internalServerError": "Internal Server Error!",
+    "contentNotModified": "Content not modified!",
+    "learnMore": "Learn more"
+  },
+  "landing": {
+    "welcome": "Welcome",
+    "description": "A Cloudflare-native dashboard template. Public pages live here; the dashboard is protected behind Clerk authentication.",
+    "signIn": "Sign in",
+    "goToDashboard": "Go to dashboard"
+  },
+  "authShell": {
+    "welcome": "Welcome to the sign-in page.",
+    "backTo": "Back to",
+    "dashboard": "Dashboard"
+  },
+  "sidebar": {
+    "groups": {
+      "general": "General",
+      "content": "Content",
+      "other": "Other"
+    },
+    "nav": {
+      "overview": "Overview",
+      "items": "Items",
+      "tasks": "Tasks",
+      "apps": "Apps",
+      "chats": "Chats",
+      "users": "Users",
+      "content": "Content",
+      "cmsAdmin": "CMS Admin",
+      "settings": "Settings",
+      "profile": "Profile",
+      "account": "Account",
+      "appearance": "Appearance",
+      "notifications": "Notifications",
+      "display": "Display"
+    }
+  },
+  "drawer": {
+    "title": "Theme Settings",
+    "description": "Adjust the appearance and layout to suit your preferences.",
+    "openThemeSettings": "Open theme settings",
+    "reset": "Reset",
+    "resetAll": "Reset all settings to default values",
+    "selectOption": "Select {{label}}",
+    "optionPreview": "{{label}} option preview",
+    "sections": {
+      "theme": "Theme",
+      "sidebar": "Sidebar",
+      "layout": "Layout",
+      "direction": "Direction"
+    },
+    "theme": {
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark",
+      "ariaLabel": "Select theme preference",
+      "description": "Choose between system preference, light mode, or dark mode"
+    },
+    "sidebarStyle": {
+      "inset": "Inset",
+      "floating": "Floating",
+      "sidebar": "Sidebar",
+      "ariaLabel": "Select sidebar style",
+      "description": "Choose between inset, floating, or standard sidebar layout"
+    },
+    "layout": {
+      "default": "Default",
+      "compact": "Compact",
+      "full": "Full layout",
+      "ariaLabel": "Select layout style",
+      "description": "Choose between default expanded, compact icon-only, or full layout mode"
+    },
+    "direction": {
+      "ltr": "Left to Right",
+      "rtl": "Right to Left",
+      "ariaLabel": "Select site direction",
+      "description": "Choose between left-to-right or right-to-left site direction"
+    }
+  },
+  "commandMenu": {
+    "placeholder": "Type a command or search...",
+    "noResults": "No results found.",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "search": {
+    "placeholder": "Search"
+  },
+  "profileDropdown": {
+    "account": "Account",
+    "manageAccount": "Manage account",
+    "signOut": "Sign out"
+  },
+  "dataTable": {
+    "rowsPerPage": "Rows per page",
+    "pageOf": "Page {{current}} of {{total}}",
+    "goToFirst": "Go to first page",
+    "goToPrevious": "Go to previous page",
+    "goToNext": "Go to next page",
+    "goToLast": "Go to last page",
+    "goToPage": "Go to page {{page}}",
+    "view": "View",
+    "toggleColumns": "Toggle columns",
+    "noResults": "No results found.",
+    "clearFilters": "Clear filters",
+    "selected": "{{count}} selected",
+    "reset": "Reset",
+    "filterPlaceholder": "Filter...",
+    "sortAsc": "Asc",
+    "sortDesc": "Desc",
+    "hide": "Hide",
+    "bulk": {
+      "clearSelection": "Clear selection",
+      "clearSelectionHint": "Clear selection (Escape)",
+      "selectedSuffix": "selected",
+      "announcement": "{{count}} {{entity}} selected. Bulk actions toolbar is available.",
+      "toolbarLabel": "Bulk actions for {{count}} selected {{entity}}"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage your account settings and set e-mail preferences.",
+    "nav": {
+      "profile": "Profile",
+      "account": "Account",
+      "appearance": "Appearance",
+      "notifications": "Notifications",
+      "display": "Display",
+      "selectPlaceholder": "Section"
+    },
+    "common": {
+      "retry": "Retry",
+      "loadErrorDesc": "Check your connection and try again."
+    },
+    "profile": {
+      "title": "Profile",
+      "desc": "This is how others will see you on the site."
+    },
+    "appearance": {
+      "title": "Appearance",
+      "desc": "Customize the appearance of the app. Automatically switch between day and night themes.",
+      "fontLabel": "Font",
+      "fontDesc": "Set the font you want to use in the dashboard.",
+      "themeLabel": "Theme",
+      "themeDesc": "Select the theme for the dashboard.",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System",
+      "submit": "Update preferences",
+      "loadError": "Could not load appearance settings",
+      "updated": "Preferences updated"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "desc": "Configure how you receive notifications.",
+      "notifyAbout": "Notify me about...",
+      "typeRequired": "Please select a notification type.",
+      "all": "All new messages",
+      "mentions": "Direct messages and mentions",
+      "none": "Nothing",
+      "emailTitle": "Email Notifications",
+      "communicationLabel": "Communication emails",
+      "communicationDesc": "Receive emails about your account activity.",
+      "marketingLabel": "Marketing emails",
+      "marketingDesc": "Receive emails about new products, features, and more.",
+      "socialLabel": "Social emails",
+      "socialDesc": "Receive emails for friend requests, follows, and more.",
+      "securityLabel": "Security emails",
+      "securityDesc": "Receive emails about your account activity and security.",
+      "mobileLabel": "Use different settings for my mobile devices",
+      "mobileDescPrefix": "You can manage your mobile notifications in the ",
+      "mobileDescLink": "mobile settings",
+      "mobileDescSuffix": " page.",
+      "submit": "Update notifications",
+      "loadError": "Could not load notification settings",
+      "updated": "Preferences updated"
+    },
+    "display": {
+      "title": "Display",
+      "desc": "Turn items on or off to control what's displayed in the app.",
+      "sidebarLabel": "Sidebar",
+      "sidebarDesc": "Select the items you want to display in the sidebar.",
+      "minOne": "You have to select at least one item.",
+      "submit": "Update display",
+      "loadError": "Could not load display settings",
+      "updated": "Display updated",
+      "items": {
+        "recents": "Recents",
+        "home": "Home",
+        "applications": "Applications",
+        "desktop": "Desktop",
+        "downloads": "Downloads",
+        "documents": "Documents"
+      }
+    }
+  },
+  "tasks": {
+    "title": "Tasks",
+    "subtitle": "Here's a list of your tasks for this month!",
+    "entity": "task",
+    "searchPlaceholder": "Filter by title or ID...",
+    "noResults": "No results.",
+    "selectAll": "Select all",
+    "selectRow": "Select row",
+    "columns": {
+      "task": "Task",
+      "title": "Title",
+      "status": "Status",
+      "priority": "Priority"
+    },
+    "label": {
+      "bug": "Bug",
+      "feature": "Feature",
+      "documentation": "Documentation"
+    },
+    "status": {
+      "backlog": "Backlog",
+      "todo": "Todo",
+      "inProgress": "In Progress",
+      "done": "Done",
+      "canceled": "Canceled"
+    },
+    "priority": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "critical": "Critical"
+    },
+    "buttons": {
+      "import": "Import",
+      "create": "Create"
+    },
+    "rowActions": {
+      "openMenu": "Open menu",
+      "edit": "Edit",
+      "makeCopy": "Make a copy",
+      "favorite": "Favorite",
+      "labels": "Labels",
+      "delete": "Delete"
+    },
+    "drawer": {
+      "updateTitle": "Update Task",
+      "createTitle": "Create Task",
+      "updateDesc": "Update the task by providing necessary info.",
+      "createDesc": "Add a new task by providing necessary info.",
+      "clickSave": "Click save when you're done.",
+      "titleLabel": "Title",
+      "titlePlaceholder": "Enter a title",
+      "statusLabel": "Status",
+      "statusPlaceholder": "Select dropdown",
+      "labelLabel": "Label",
+      "priorityLabel": "Priority",
+      "close": "Close",
+      "save": "Save changes",
+      "titleRequired": "Title is required.",
+      "statusRequired": "Please select a status.",
+      "labelRequired": "Please select a label.",
+      "priorityRequired": "Please choose a priority."
+    },
+    "import": {
+      "title": "Import Tasks",
+      "desc": "Import tasks quickly from a CSV file.",
+      "file": "File",
+      "close": "Close",
+      "import": "Import",
+      "fileRequired": "Please upload a file",
+      "csvFormat": "Please upload csv format.",
+      "importedFile": "You have imported the following file:"
+    },
+    "delete": {
+      "title": "Delete this task: {{id}} ?",
+      "descPrefix": "You are about to delete a task with the ID ",
+      "descSuffix": ". This action cannot be undone.",
+      "confirm": "Delete",
+      "deleted": "The following task has been deleted:"
+    },
+    "multiDelete": {
+      "title": "Delete {{count}} tasks",
+      "areYouSure": "Are you sure you want to delete the selected tasks?",
+      "cannotUndo": "This action cannot be undone.",
+      "confirmByTyping": "Confirm by typing \"{{word}}\":",
+      "typeToConfirm": "Type \"{{word}}\" to confirm.",
+      "warning": "Warning!",
+      "warningDesc": "Please be careful, this operation can not be rolled back.",
+      "confirm": "Delete",
+      "deleting": "Deleting tasks...",
+      "deleted": "Deleted {{count}} tasks",
+      "error": "Error"
+    },
+    "bulk": {
+      "updateStatus": "Update status",
+      "updatePriority": "Update priority",
+      "exportTasks": "Export tasks",
+      "deleteTasks": "Delete selected tasks",
+      "updatingStatus": "Updating status...",
+      "updatingPriority": "Updating priority...",
+      "exporting": "Exporting tasks...",
+      "statusUpdated": "Status updated to \"{{status}}\" for {{count}} tasks.",
+      "priorityUpdated": "Priority updated to \"{{priority}}\" for {{count}} tasks.",
+      "exported": "Exported {{count}} tasks to CSV.",
+      "error": "Error"
+    }
+  },
+  "users": {
+    "title": "User List",
+    "subtitle": "The users in this Clerk instance, with their status and role.",
+    "loadError": "Could not load users",
+    "loadErrorDescPrefix": "The ",
+    "loadErrorDescSuffix": " request failed. Confirm the Clerk secret key is configured, then refresh.",
+    "refresh": "Refresh",
+    "noResults": "No results.",
+    "searchPlaceholder": "Filter users...",
+    "selectAll": "Select all",
+    "selectRow": "Select row",
+    "columns": {
+      "username": "Username",
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone Number",
+      "status": "Status",
+      "role": "Role"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "invited": "Invited",
+      "suspended": "Suspended"
+    },
+    "role": {
+      "superadmin": "Superadmin",
+      "admin": "Admin",
+      "manager": "Manager",
+      "cashier": "Cashier"
+    }
+  },
+  "content": {
+    "title": "Content",
+    "subtitle": "Published posts from the CMS, read-only. Editing lives in the CMS admin.",
+    "searchPlaceholder": "Filter posts...",
+    "noResults": "No results.",
+    "unpublished": "Unpublished",
+    "retry": "Retry",
+    "columns": {
+      "title": "Title",
+      "status": "Status",
+      "published": "Published"
+    },
+    "notConfigured": {
+      "title": "Connect your CMS",
+      "body1a": "No ",
+      "body1b": " is set, so there is no CMS to read posts from yet. Point it at your SonicJS CMS Worker origin (for example ",
+      "body1c": ") in your ",
+      "body1d": ", then reload.",
+      "body2a": "See ",
+      "body2b": " for the full setup and CORS checklist."
+    },
+    "error": {
+      "title": "Couldn't reach the CMS",
+      "descA": "The request to the CMS failed. It may be down, or its ",
+      "descB": " may not include this dashboard's origin. Check ",
+      "descC": ", then retry."
+    },
+    "detail": {
+      "errorTitle": "Couldn't reach the CMS",
+      "errorDesc": "The request for this post failed. The CMS may be down or unreachable from this origin."
+    },
+    "public": {
+      "emptyTitle": "No posts yet",
+      "emptyBody": "Check back soon.",
+      "errorTitle": "Couldn't load posts",
+      "errorBody": "Something went wrong loading the blog. Please try again.",
+      "notFoundTitle": "Post not found",
+      "notFoundBody": "This post may have been moved or unpublished.",
+      "back": "← Back to all posts"
+    }
+  },
+  "apps": {
+    "title": "App Integrations",
+    "subtitle": "Here's a list of your apps for the integration!",
+    "filterPlaceholder": "Filter apps...",
+    "all": "All Apps",
+    "connected": "Connected",
+    "notConnected": "Not Connected",
+    "connect": "Connect",
+    "ascending": "Ascending",
+    "descending": "Descending",
+    "desc": {
+      "telegram": "Connect with Telegram for real-time communication.",
+      "notion": "Effortlessly sync Notion pages for seamless collaboration.",
+      "figma": "View and collaborate on Figma designs in one place.",
+      "trello": "Sync Trello cards for streamlined project management.",
+      "slack": "Integrate Slack for efficient team communication",
+      "zoom": "Host Zoom meetings directly from the dashboard.",
+      "stripe": "Easily manage Stripe transactions and payments.",
+      "gmail": "Access and manage Gmail messages effortlessly.",
+      "medium": "Explore and share Medium stories on your dashboard.",
+      "skype": "Connect with Skype contacts seamlessly.",
+      "docker": "Effortlessly manage Docker containers on your dashboard.",
+      "github": "Streamline code management with GitHub integration.",
+      "gitlab": "Efficiently manage code projects with GitLab integration.",
+      "discord": "Connect with Discord for seamless team communication.",
+      "whatsapp": "Easily integrate WhatsApp for direct messaging."
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "overview": "Overview",
+    "analytics": "Analytics",
+    "recentSales": "Recent Sales",
+    "recentSalesDesc": "You made 265 sales this month.",
+    "trend": "Trend",
+    "trendDesc": "Desktop vs. mobile sessions over the week.",
+    "breakdown": "Breakdown",
+    "breakdownDesc": "Traffic by source.",
+    "comparison": "Comparison",
+    "comparisonDesc": "Revenue, profit, and expenses month over month.",
+    "stats": {
+      "revenueTitle": "Total Revenue",
+      "revenueDelta": "+20.1% from last month",
+      "subscriptionsTitle": "Subscriptions",
+      "subscriptionsDelta": "+180.1% from last month",
+      "salesTitle": "Sales",
+      "salesDelta": "+19% from last month",
+      "activeTitle": "Active Now",
+      "activeDelta": "+201 since last hour"
+    }
+  },
+  "items": {
+    "title": "Items",
+    "newItem": "New Item",
+    "refresh": "Refresh",
+    "columns": {
+      "name": "Name",
+      "description": "Description",
+      "created": "Created",
+      "actions": "Actions"
+    },
+    "empty": {
+      "title": "No items yet",
+      "body": "Create your first item to get started."
+    },
+    "loadError": "Could not load items",
+    "loadErrorDesc": "Check your connection and refresh the page.",
+    "editAria": "Edit {{name}}",
+    "deleteAria": "Delete {{name}}",
+    "form": {
+      "editTitle": "Edit Item",
+      "newTitle": "New Item",
+      "nameLabel": "Name",
+      "namePlaceholder": "Item name",
+      "descLabel": "Description",
+      "descPlaceholder": "Optional description",
+      "nameRequired": "Name is required.",
+      "saveFailed": "Save failed",
+      "saveFailedDesc": "Could not save the item. Try again.",
+      "cancel": "Cancel",
+      "saving": "Saving…",
+      "saveChanges": "Save Changes",
+      "createItem": "Create Item"
+    },
+    "delete": {
+      "title": "Delete item?",
+      "desc": "This action cannot be undone. \"{{name}}\" will be permanently deleted.",
+      "failed": "Failed to delete item. Try again.",
+      "cancel": "Cancel",
+      "deleting": "Deleting…",
+      "delete": "Delete"
+    }
+  },
+  "chats": {
+    "inbox": "Inbox",
+    "search": "Search",
+    "searchPlaceholder": "Search chat...",
+    "youPrefix": "You: {{message}}",
+    "textBox": "Chat Text Box",
+    "messagePlaceholder": "Type your messages...",
+    "send": "Send",
+    "emptyTitle": "Your messages",
+    "emptyBody": "Send a message to start a chat.",
+    "sendMessage": "Send message",
+    "newMessage": "New message",
+    "to": "To:",
+    "searchPeople": "Search people...",
+    "noPeople": "No people found.",
+    "chat": "Chat"
+  },
+  "errors": {
+    "goBack": "Go Back",
+    "backToHome": "Back to Home",
+    "learnMore": "Learn more",
+    "forbidden": {
+      "title": "Access Forbidden",
+      "body": "You don't have necessary permission to view this resource."
+    },
+    "serverError": {
+      "title": "Oops! Something went wrong :')",
+      "body": "We apologize for the inconvenience. Please try again later."
+    },
+    "maintenance": {
+      "title": "Website is under maintenance!",
+      "body": "The site is not available at the moment. We'll be back online shortly."
+    },
+    "notFound": {
+      "title": "Oops! Page Not Found!",
+      "body": "It seems like the page you're looking for does not exist or might have been removed."
+    },
+    "unauthorized": {
+      "title": "Unauthorized Access",
+      "body": "Please log in with the appropriate credentials to access this resource."
+    }
+  }
+}
