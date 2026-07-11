@@ -32,6 +32,8 @@ Cloudflare Worker отдаёт **Vite + React SPA** (TanStack Router, shadcn/ui,
 
 ## Быстрый старт
 
+> **Настраиваете новый проект?** Сначала заполните [`docs/deployment-intake.md`](docs/deployment-intake.md) — все значения проекта в порядке развёртывания — и используйте вместе с [`setup.env.example`](setup.env.example) для запуска `node setup.mjs --yes` без вопросов.
+
 ### 1. Использовать шаблон
 
 Нажмите **«Use this template» → Create a new repository** на GitHub, затем клонируйте

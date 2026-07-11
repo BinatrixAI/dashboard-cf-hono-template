@@ -26,6 +26,9 @@ dist-ssr
 # (.dev.vars.bak is already covered by the `.dev.vars.*` rule above.)
 .setup-complete
 .setup-config.json
+# setup.env holds per-project answers (incl. the Clerk publishable key) sourced
+# into a promptless `node setup.mjs --yes`; setup.env.example stays committed.
+setup.env
 
 # Agent skills installed locally via `npx skills add` (e.g. Clerk skills).
 # Kept on disk for the coding agent (discovered via .claude/skills symlinks),

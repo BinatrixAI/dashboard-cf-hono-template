@@ -32,6 +32,8 @@ dashboard to Cloudflare in minutes.
 
 ## Quickstart
 
+> **Filling a new project?** Complete [`docs/deployment-intake.md`](docs/deployment-intake.md) first — every per-project value in deploy order — and pair it with [`setup.env.example`](setup.env.example) for a promptless `node setup.mjs --yes`.
+
 ### 1. Use this template
 
 Click **"Use this template" → Create a new repository** on GitHub, then clone your
