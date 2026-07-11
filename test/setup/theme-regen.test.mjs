@@ -76,6 +76,69 @@ describe('regenerateTheme (byte-faithful)', () => {
     expect(regenerateTheme(altPreset())).toBe(altGoldenCss())
   })
 
+  // REGRESSION: a real tweakcn preset carries shadow / font / spacing / tracking tokens, not just
+  // colours. The generator used to map EVERY light key to `--color-<key>`, which (a) emitted junk
+  // like `--color-shadow-sm` / `--color-radius` and (b) never emitted `--shadow-*`, so every
+  // `shadow-…` utility silently fell back to Tailwind's stock greys. In Tailwind v4 the namespace
+  // is the contract: `--color-*` = colour utilities, `--shadow-*` = box-shadow utilities.
+  describe('rich preset (shadows + fonts + spacing) — Tailwind v4 namespaces', () => {
+    const rich = () => {
+      const p = structuredClone(altPreset())
+      Object.assign(p.cssVars.theme, { radius: '0.875rem' })
+      Object.assign(p.cssVars.light, {
+        radius: '0.875rem',
+        spacing: '0.25rem',
+        'letter-spacing': '0em',
+        'tracking-normal': '0em',
+        'shadow-color': '#14213a',
+        'shadow-opacity': '0.35',
+        'shadow-blur': '30px',
+        'shadow-offset-x': '0',
+        'shadow-2xs': '0 1px 30px -20px hsl(219 48% 15% / 0.17)',
+        'shadow-sm': '0 1px 30px -20px hsl(219 48% 15% / 0.35)',
+        shadow: '0 1px 30px -20px hsl(219 48% 15% / 0.35)',
+        'shadow-2xl': '0 1px 30px -20px hsl(219 48% 15% / 0.88)',
+      })
+      return p
+    }
+    const themeBlock = (css) => css.slice(css.indexOf('@theme inline {'))
+
+    it('maps shadow composites into the --shadow-* namespace (so shadow utilities use the preset)', () => {
+      const block = themeBlock(regenerateTheme(rich()))
+      for (const k of ['shadow-2xs', 'shadow-sm', 'shadow', 'shadow-2xl']) {
+        expect(block).toContain(`--${k}: var(--${k});`)
+      }
+    })
+
+    it('never emits a non-colour key into the --color-* namespace', () => {
+      const block = themeBlock(regenerateTheme(rich()))
+      for (const junk of [
+        '--color-shadow-sm',
+        '--color-shadow',
+        '--color-shadow-color',
+        '--color-shadow-opacity',
+        '--color-radius',
+        '--color-spacing',
+        '--color-letter-spacing',
+        '--color-tracking-normal',
+        '--color-font-sans',
+      ]) {
+        expect(block).not.toContain(junk)
+      }
+    })
+
+    it('still maps real colours — including var()-indirected sidebar tokens — to --color-*', () => {
+      const block = themeBlock(regenerateTheme(rich()))
+      expect(block).toContain('--color-primary: var(--primary);')
+      expect(block).toContain('--color-sidebar: var(--sidebar);')
+    })
+
+    it('emits --radius exactly once even when the preset carries it in cssVars.light too', () => {
+      const css = regenerateTheme(rich())
+      expect(css.match(/^\s*--radius:/gm)?.length).toBe(1)
+    })
+  })
+
   it('rejects a preset value that would break out of a CSS declaration (T-05-02)', () => {
     const base = altPreset()
     const withBrace = structuredClone(base)

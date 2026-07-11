@@ -969,6 +969,9 @@ export function regenerateTheme(preset) {
   lines.push(`  --radius: ${theme.radius};`)
   let blankBeforeSidebar = false
   for (const [k, v] of Object.entries(light)) {
+    // `--radius` is already emitted above from cssVars.theme; a preset that ALSO carries it in
+    // cssVars.light would otherwise emit the declaration twice.
+    if (k === 'radius') continue
     if (!blankBeforeSidebar && k.startsWith('sidebar')) {
       lines.push('')
       blankBeforeSidebar = true
@@ -984,8 +987,30 @@ export function regenerateTheme(preset) {
   lines.push('}')
 
   // @theme inline — the cssVars.theme font-* entries, ONE blank line, the four fixed radius
-  // scale lines VERBATIM, then a --color-<key> for EVERY light key (color THEN sidebar, with
-  // NO blank line between — unlike :root). The color map + radius scale come from the key SET.
+  // scale lines VERBATIM, then the light keys mapped into their CORRECT Tailwind v4 namespace.
+  //
+  // This used to map EVERY light key to `--color-<key>`, which is wrong for any key that is not
+  // a colour. Against the shipped slate preset (colours only) it was harmless; against a real
+  // tweakcn preset it emitted ~15 junk tokens (`--color-shadow-sm`, `--color-radius`,
+  // `--color-font-sans`, `--color-spacing`, …) AND — the part that actually breaks the theme —
+  // never emitted `--shadow-2xs … --shadow-2xl`, so every `shadow-*` utility silently fell back
+  // to Tailwind's stock greys instead of the preset's shadow scale.
+  //
+  // In Tailwind v4 the namespace IS the contract: `--color-*` defines colour utilities and
+  // `--shadow-*` defines box-shadow utilities. So classify each key:
+  //   - a shadow composite (`shadow`, `shadow-2xs|xs|sm|md|lg|xl|2xl`) → `--shadow-<k>`
+  //   - a known NON-colour key → :root only, never @theme. That is radius / spacing /
+  //     letter-spacing / tracking-* / font-*, plus the shadow PRIMITIVES
+  //     (`shadow-color`, `-opacity`, `-blur`, `-spread`, `-offset-x/y`, `-x/-y`) which exist
+  //     only to be composed into the shadow values above.
+  //   - everything else → `--color-<k>`
+  //
+  // Classify by KEY, not by value: sidebar tokens are colours expressed as `var(--background)`
+  // indirections, so a value sniff ("does it start with oklch/hsl/#?") would wrongly drop them.
+  const SHADOW_COMPOSITE_RE = /^shadow(-(2xs|xs|sm|md|lg|xl|2xl))?$/
+  const NON_COLOR_KEY_RE =
+    /^(radius|spacing|letter-spacing|tracking-.*|font-.*|shadow-(color|opacity|blur|spread|offset-x|offset-y|x|y))$/
+
   lines.push('')
   lines.push('@theme inline {')
   for (const [k, v] of Object.entries(theme)) {
@@ -996,7 +1021,10 @@ export function regenerateTheme(preset) {
   lines.push('  --radius-md: calc(var(--radius) - 2px);')
   lines.push('  --radius-lg: var(--radius);')
   lines.push('  --radius-xl: calc(var(--radius) + 4px);')
-  for (const k of Object.keys(light)) lines.push(`  --color-${k}: var(--${k});`)
+  for (const k of Object.keys(light)) {
+    if (SHADOW_COMPOSITE_RE.test(k)) lines.push(`  --${k}: var(--${k});`)
+    else if (!NON_COLOR_KEY_RE.test(k)) lines.push(`  --color-${k}: var(--${k});`)
+  }
   lines.push('}')
 
   return lines.join('\n') + '\n'
