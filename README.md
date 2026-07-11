@@ -12,7 +12,8 @@
 **English** · [Русский](README.ru.md)
 
 A brand-neutral, reusable **Cloudflare dashboard template**. One Cloudflare Worker
-serves a **Vite + React SPA** (TanStack Router, shadcn/ui, Tailwind v4, RTL-ready)
+serves a **Vite + React SPA** (TanStack Router, shadcn/ui, Tailwind v4, bilingual
+English ↔ Hebrew with an RTL-driven language switch)
 as Static Assets and routes `/api/*` to a **Hono** API on the same runtime, backed
 by **D1** + **KV**, with **Clerk** auth verified at the edge. Click **Use this
 template**, run `setup.mjs`, create your resources, and deploy a correctly-wired
