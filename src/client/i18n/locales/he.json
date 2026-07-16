@@ -313,6 +313,8 @@
     "loadError": "לא ניתן לטעון משתמשים",
     "loadErrorDescPrefix": "הבקשה ",
     "loadErrorDescSuffix": " נכשלה. ודא שמפתח הסוד של Clerk מוגדר, ואז רענן.",
+    "forbidden": "אין הרשאה לצפייה במשתמשים",
+    "forbiddenDesc": "לחשבון שלך אין תפקיד מנהל הנדרש לצפייה ברשימת המשתמשים. מנהל מערכת יכול להעניק אותו בלוח הבקרה של Clerk.",
     "refresh": "רענון",
     "noResults": "אין תוצאות.",
     "searchPlaceholder": "סינון משתמשים...",

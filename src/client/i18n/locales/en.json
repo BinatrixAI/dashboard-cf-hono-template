@@ -313,6 +313,8 @@
     "loadError": "Could not load users",
     "loadErrorDescPrefix": "The ",
     "loadErrorDescSuffix": " request failed. Confirm the Clerk secret key is configured, then refresh.",
+    "forbidden": "No permission to view users",
+    "forbiddenDesc": "Your account does not have the admin role required to view the user list. An administrator can grant it in the Clerk dashboard.",
     "refresh": "Refresh",
     "noResults": "No results.",
     "searchPlaceholder": "Filter users...",

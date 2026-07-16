@@ -16,7 +16,11 @@ export const usersQueryKey = ['users'] as const
 async function fetchUsers(): Promise<User[]> {
   const res = await fetch('/api/users')
   if (!res.ok) {
-    throw new Error(`Failed to load users (${res.status})`)
+    // Carry the HTTP status so the page can distinguish 403 (admin gate —
+    // caller lacks the admin role) from genuine load failures.
+    throw Object.assign(new Error(`Failed to load users (${res.status})`), {
+      status: res.status,
+    })
   }
   const data = (await res.json()) as { users: User[] }
   return data.users

@@ -45,19 +45,29 @@ const CLERK_USER_FIXTURE = {
   updatedAt: 1_699_500_000_000,
 }
 
-// Build a fake ClerkClient exposing only the `users.getUserList` seam the handler
-// touches, cast to the context's `clerk` variable type (the module augmentation
+// Build a fake ClerkClient exposing the two seams the route touches — the
+// handler's `users.getUserList` and requireAdmin's `users.getUser` (the CALLER
+// lookup) — cast to the context's `clerk` variable type (the module augmentation
 // from @hono/clerk-auth types it as ClerkClient).
 function fakeClerk(
-  getUserList: () => Promise<{ data: unknown[]; totalCount: number }>
+  getUserList: () => Promise<{ data: unknown[]; totalCount: number }>,
+  getUser: (id: string) => Promise<unknown>
 ): ContextVariableMap['clerk'] {
-  return { users: { getUserList } } as unknown as ContextVariableMap['clerk']
+  return {
+    users: { getUserList, getUser },
+  } as unknown as ContextVariableMap['clerk']
 }
 
 // Authenticated harness with a controllable fake Clerk client. `signedIn=false`
 // omits the clerkAuth seed so the real requireAuth gate rejects with a 401.
+// `callerRole` seeds the CALLER's publicMetadata.role read by the real
+// requireAdmin gate — default 'admin' (success-path tests pass the gate),
+// `null` = no role set (the every-new-user state). `getUser` overrides the
+// whole caller lookup (e.g. to throw).
 function makeApp(opts: {
   signedIn?: boolean
+  callerRole?: string | null
+  getUser?: (id: string) => Promise<unknown>
   getUserList: () => Promise<{ data: unknown[]; totalCount: number }>
 }) {
   const app = new Hono<{ Bindings: Env }>()
@@ -67,14 +77,27 @@ function makeApp(opts: {
     // (that's the state requireAuth turns into the normalized 401 — not a missing
     // clerkAuth, which would instead throw as a 500).
     const userId = (opts.signedIn ?? true) ? 'user_test' : null
+    const getUser =
+      opts.getUser ??
+      (async (id: string) => ({
+        id,
+        publicMetadata:
+          opts.callerRole === null ? {} : { role: opts.callerRole ?? 'admin' },
+      }))
     c.set('clerkAuth', () => ({ userId }) as never)
-    c.set('clerk', fakeClerk(opts.getUserList))
+    c.set('clerk', fakeClerk(opts.getUserList, getUser))
     await next()
   })
   app.use('/api/*', requireAuth)
   app.route('/api/users', users)
   app.all('/api/*', (c) =>
     c.json({ error: 'Not Found', path: c.req.path }, 404)
+  )
+  // Mirror index.ts's terminal error handler so requireAdmin's fail-closed path
+  // (caller lookup throws) is asserted against the SAME JSON 500 envelope the
+  // deployed Worker produces, not Hono's text/plain default.
+  app.onError((_err, c) =>
+    c.json({ error: 'Internal Server Error', path: c.req.path }, 500)
   )
   return {
     fetch: (input: string, init?: RequestInit) => app.request(input, init, env),
@@ -165,6 +188,58 @@ describe('/api/users read-only endpoint (UI-04, D-04)', () => {
     expect(typeof body.error).toBe('string')
     expect(body.path).toBe('/api/users')
     // The raw Clerk error message must not be echoed to the client body.
+    expect(JSON.stringify(body)).not.toContain('boom')
+    expect(JSON.stringify(body)).not.toContain('secret-key')
+  })
+})
+
+describe('/api/users admin gate (requireAdmin, audit run-1 Finding 1)', () => {
+  const okUserList = async () => ({
+    data: [CLERK_USER_FIXTURE],
+    totalCount: 1,
+  })
+
+  it('caller with no role set returns 403 { error:"Forbidden", path } (default-deny)', async () => {
+    const api = makeApp({ callerRole: null, getUserList: okUserList })
+    const res = await api.fetch(`${BASE}/api/users`)
+    expect(res.status).toBe(403)
+    const body = (await res.json()) as { error?: string; path?: string }
+    expect(body.error).toBe('Forbidden')
+    expect(body.path).toBe('/api/users')
+  })
+
+  it('caller with role "cashier" returns 403 — signed-in is NOT enough', async () => {
+    const api = makeApp({ callerRole: 'cashier', getUserList: okUserList })
+    const res = await api.fetch(`${BASE}/api/users`)
+    expect(res.status).toBe(403)
+    const body = (await res.json()) as { error?: string }
+    expect(body.error).toBe('Forbidden')
+  })
+
+  it('caller with role "manager" returns 403 — only admin/superadmin pass', async () => {
+    const api = makeApp({ callerRole: 'manager', getUserList: okUserList })
+    const res = await api.fetch(`${BASE}/api/users`)
+    expect(res.status).toBe(403)
+  })
+
+  it('caller with role "superadmin" passes the gate (200)', async () => {
+    const api = makeApp({ callerRole: 'superadmin', getUserList: okUserList })
+    const res = await api.fetch(`${BASE}/api/users`)
+    expect(res.status).toBe(200)
+  })
+
+  it('caller lookup throw fails CLOSED: 500 JSON envelope, no internals, no data', async () => {
+    const api = makeApp({
+      getUser: async () => {
+        throw new Error('clerk getUser boom: secret-key rejected')
+      },
+      getUserList: okUserList,
+    })
+    const res = await api.fetch(`${BASE}/api/users`)
+    expect(res.status).toBe(500)
+    const body = (await res.json()) as Record<string, unknown>
+    expect(body.error).toBe('Internal Server Error')
+    expect(body).not.toHaveProperty('users')
     expect(JSON.stringify(body)).not.toContain('boom')
     expect(JSON.stringify(body)).not.toContain('secret-key')
   })
