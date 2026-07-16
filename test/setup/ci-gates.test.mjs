@@ -79,7 +79,8 @@ describe('CICD-04 — ci-sentinel-scan.mjs: sentinel gate', () => {
     })
     expect(r.status, `sentinel scan non-zero; stderr: ${r.stderr}; stdout: ${r.stdout}`).toBe(0)
     expect(r.stdout).toMatch(/Sentinel scan clean/)
-  })
+    // 30s: tree copy + setup.mjs run overruns vitest's 5s default under full-suite load.
+  }, 30000)
 
   it('exits non-zero and names package.json when a leftover __PKG_NAME__ is injected', () => {
     const dir = makeTmpCopy()
@@ -100,7 +101,8 @@ describe('CICD-04 — ci-sentinel-scan.mjs: sentinel gate', () => {
     const output = r.stdout + r.stderr
     expect(output).toMatch(/package\.json/)
     expect(output).toMatch(/__PKG_NAME__/)
-  })
+    // 30s: tree copy + setup.mjs run overruns vitest's 5s default under full-suite load.
+  }, 30000)
 })
 
 // ---------------------------------------------------------------------------
