@@ -808,39 +808,27 @@ function assertPresetShape(preset) {
 // normalizeThemeUrl() (D-04) is a pure URL→URL transform applied to a `--theme` URL AFTER
 // `new URL()` but BEFORE the host/scheme allow-list (D-06 ordering). It ONLY ever mutates the
 // pathname (host preserved), so the unchanged host guard still rejects non-tweakcn inputs
-// (Pitfall 2 — a rewrite that touched the host would be an SSRF hole). Two rules, in order:
-//   1. tweakcn page URL (`/themes/<id>`, optional trailing slash) → the registry item
-//      `/r/themes/<id>.json`, dropping any search/hash and yielding a SLASH-FREE URL (a
-//      trailing-slash registry URL 308s, Pitfall 3). Only the tweakcn host is translated —
-//      non-tweakcn hosts are deliberately left for the downstream allow-list to reject.
-//   2. else, if the LAST path segment is extensionless, append `.json` (literal fallback for
-//      an extensionless registry URL). A `/r/themes/<id>.json` URL already has an extension →
-//      returned unchanged. Bare theme-ids never reach here (they take the non-URL branch, D-04).
+// (Pitfall 2 — a rewrite that touched the host would be an SSRF hole).
+//
+// Every tweakcn form normalizes to the EXTENSIONLESS registry item `/r/themes/<id>`, dropping
+// search/hash and any trailing slash (a trailing-slash registry URL 308s under
+// redirect:'manual' → silent fallback, Pitfall 3).
+//
+// The `.json` suffix this used to append is what BROKE the whole remote-theme path: tweakcn
+// serves user-saved themes (cuid ids) ONLY extensionless — `/r/themes/<cuid>.json` returns
+// HTTP 500 while `/r/themes/<cuid>` returns the JSON. Built-in slugs still answer to both, so
+// the bug hid behind `--theme https://tweakcn.com/themes/modern-minimal` and surfaced only on
+// a real user theme. Extensionless is the one form that works for BOTH — never re-add `.json`.
+//
+// Non-tweakcn hosts are returned untouched for the downstream allow-list to reject.
 export function normalizeThemeUrl(u) {
-  if (u.hostname === TWEAKCN_HOST) {
-    const m = u.pathname.match(/^\/themes\/([A-Za-z0-9._-]+)\/?$/)
-    if (m) return new URL(`https://${TWEAKCN_HOST}/r/themes/${m[1]}.json`)
-    // IN-03: an already-extensioned registry path with a stray trailing slash
-    // (`/r/themes/<id>.json/`) 308-redirects under redirect:'manual' → silent fallback
-    // to the shipped default (Pitfall 3). Strip trailing slash(es) so the extensioned URL
-    // is fetched directly. Runs AFTER the page-URL rule so a dotted theme-id page path
-    // (`/themes/my.theme/`) still translates to the registry .json path (no regression).
-    const trimmed = u.pathname.replace(/\/+$/, '')
-    if (/\.[a-z0-9]+$/i.test(trimmed) && trimmed !== u.pathname) {
-      const out = new URL(u)
-      out.pathname = trimmed
-      out.search = ''
-      out.hash = ''
-      return out
-    }
-  }
-  const last = u.pathname.split('/').pop() ?? ''
-  if (last && !last.includes('.')) {
-    const out = new URL(u)
-    out.pathname = u.pathname.replace(/\/?$/, '') + '.json'
-    return out
-  }
-  return u
+  if (u.hostname !== TWEAKCN_HOST) return u
+
+  // Accept the page URL (`/themes/<id>`) or either registry form (`/r/themes/<id>[.json]`),
+  // each with an optional trailing slash, and emit the canonical extensionless registry path.
+  const m = u.pathname.match(/^(?:\/r)?\/themes\/(.+?)(?:\.json)?\/?$/)
+  if (!m) return u
+  return new URL(`https://${TWEAKCN_HOST}/r/themes/${m[1]}`)
 }
 
 // resolvePreset() is the outcome-signalling resolver (D-01). It runs the SAME resolution
@@ -902,7 +890,7 @@ export async function resolvePreset(themeArg, rootDir = process.cwd()) {
   try {
     url = isUrl
       ? normalizeThemeUrl(new URL(themeArg))
-      : new URL(`https://${TWEAKCN_HOST}/r/themes/${encodeURIComponent(themeArg)}.json`)
+      : new URL(`https://${TWEAKCN_HOST}/r/themes/${encodeURIComponent(themeArg)}`)
   } catch {
     return { preset: readShipped(), outcome: 'fallback', reason: 'invalid --theme value' }
   }
@@ -981,6 +969,9 @@ export function regenerateTheme(preset) {
   lines.push(`  --radius: ${theme.radius};`)
   let blankBeforeSidebar = false
   for (const [k, v] of Object.entries(light)) {
+    // `--radius` is already emitted above from cssVars.theme; a preset that ALSO carries it in
+    // cssVars.light would otherwise emit the declaration twice.
+    if (k === 'radius') continue
     if (!blankBeforeSidebar && k.startsWith('sidebar')) {
       lines.push('')
       blankBeforeSidebar = true
@@ -996,8 +987,30 @@ export function regenerateTheme(preset) {
   lines.push('}')
 
   // @theme inline — the cssVars.theme font-* entries, ONE blank line, the four fixed radius
-  // scale lines VERBATIM, then a --color-<key> for EVERY light key (color THEN sidebar, with
-  // NO blank line between — unlike :root). The color map + radius scale come from the key SET.
+  // scale lines VERBATIM, then the light keys mapped into their CORRECT Tailwind v4 namespace.
+  //
+  // This used to map EVERY light key to `--color-<key>`, which is wrong for any key that is not
+  // a colour. Against the shipped slate preset (colours only) it was harmless; against a real
+  // tweakcn preset it emitted ~15 junk tokens (`--color-shadow-sm`, `--color-radius`,
+  // `--color-font-sans`, `--color-spacing`, …) AND — the part that actually breaks the theme —
+  // never emitted `--shadow-2xs … --shadow-2xl`, so every `shadow-*` utility silently fell back
+  // to Tailwind's stock greys instead of the preset's shadow scale.
+  //
+  // In Tailwind v4 the namespace IS the contract: `--color-*` defines colour utilities and
+  // `--shadow-*` defines box-shadow utilities. So classify each key:
+  //   - a shadow composite (`shadow`, `shadow-2xs|xs|sm|md|lg|xl|2xl`) → `--shadow-<k>`
+  //   - a known NON-colour key → :root only, never @theme. That is radius / spacing /
+  //     letter-spacing / tracking-* / font-*, plus the shadow PRIMITIVES
+  //     (`shadow-color`, `-opacity`, `-blur`, `-spread`, `-offset-x/y`, `-x/-y`) which exist
+  //     only to be composed into the shadow values above.
+  //   - everything else → `--color-<k>`
+  //
+  // Classify by KEY, not by value: sidebar tokens are colours expressed as `var(--background)`
+  // indirections, so a value sniff ("does it start with oklch/hsl/#?") would wrongly drop them.
+  const SHADOW_COMPOSITE_RE = /^shadow(-(2xs|xs|sm|md|lg|xl|2xl))?$/
+  const NON_COLOR_KEY_RE =
+    /^(radius|spacing|letter-spacing|tracking-.*|font-.*|shadow-(color|opacity|blur|spread|offset-x|offset-y|x|y))$/
+
   lines.push('')
   lines.push('@theme inline {')
   for (const [k, v] of Object.entries(theme)) {
@@ -1008,7 +1021,10 @@ export function regenerateTheme(preset) {
   lines.push('  --radius-md: calc(var(--radius) - 2px);')
   lines.push('  --radius-lg: var(--radius);')
   lines.push('  --radius-xl: calc(var(--radius) + 4px);')
-  for (const k of Object.keys(light)) lines.push(`  --color-${k}: var(--${k});`)
+  for (const k of Object.keys(light)) {
+    if (SHADOW_COMPOSITE_RE.test(k)) lines.push(`  --${k}: var(--${k});`)
+    else if (!NON_COLOR_KEY_RE.test(k)) lines.push(`  --color-${k}: var(--${k});`)
+  }
   lines.push('}')
 
   return lines.join('\n') + '\n'

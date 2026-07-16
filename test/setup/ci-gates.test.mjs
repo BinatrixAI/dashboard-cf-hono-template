@@ -1,12 +1,19 @@
 // ci-gates.test.mjs — Nyquist gap-fill for Phase 6 CICD-04 and CICD-05.
 // CICD-04: scripts/ci-sentinel-scan.mjs — exits 0 on a clean scaffold, 1 on a leftover sentinel.
 // CICD-05: scripts/secret-grep.sh — exits 1 on a secret shape in tracked files, 0 on clean.
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 import { spawnSync } from 'node:child_process'
 import { cpSync, rmSync, mkdtempSync, writeFileSync, readFileSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+// Every test here copies the whole template to a tmpdir and spawns node several times, which
+// alone runs ~6s on a laptop — over vitest's 5s default. It only passed because the suite was
+// small enough to keep the parallel load low; adding tests anywhere else in the repo tipped it
+// into a spurious "Test timed out in 5000ms". The work is I/O + process spawns, not setup.mjs
+// (which runs in ~70ms), so budget generously rather than trimming the fixture.
+vi.setConfig({ testTimeout: 60_000 })
 
 const templateRoot = fileURLToPath(new URL('../../', import.meta.url))
 

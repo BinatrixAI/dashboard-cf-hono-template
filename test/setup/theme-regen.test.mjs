@@ -76,6 +76,69 @@ describe('regenerateTheme (byte-faithful)', () => {
     expect(regenerateTheme(altPreset())).toBe(altGoldenCss())
   })
 
+  // REGRESSION: a real tweakcn preset carries shadow / font / spacing / tracking tokens, not just
+  // colours. The generator used to map EVERY light key to `--color-<key>`, which (a) emitted junk
+  // like `--color-shadow-sm` / `--color-radius` and (b) never emitted `--shadow-*`, so every
+  // `shadow-…` utility silently fell back to Tailwind's stock greys. In Tailwind v4 the namespace
+  // is the contract: `--color-*` = colour utilities, `--shadow-*` = box-shadow utilities.
+  describe('rich preset (shadows + fonts + spacing) — Tailwind v4 namespaces', () => {
+    const rich = () => {
+      const p = structuredClone(altPreset())
+      Object.assign(p.cssVars.theme, { radius: '0.875rem' })
+      Object.assign(p.cssVars.light, {
+        radius: '0.875rem',
+        spacing: '0.25rem',
+        'letter-spacing': '0em',
+        'tracking-normal': '0em',
+        'shadow-color': '#14213a',
+        'shadow-opacity': '0.35',
+        'shadow-blur': '30px',
+        'shadow-offset-x': '0',
+        'shadow-2xs': '0 1px 30px -20px hsl(219 48% 15% / 0.17)',
+        'shadow-sm': '0 1px 30px -20px hsl(219 48% 15% / 0.35)',
+        shadow: '0 1px 30px -20px hsl(219 48% 15% / 0.35)',
+        'shadow-2xl': '0 1px 30px -20px hsl(219 48% 15% / 0.88)',
+      })
+      return p
+    }
+    const themeBlock = (css) => css.slice(css.indexOf('@theme inline {'))
+
+    it('maps shadow composites into the --shadow-* namespace (so shadow utilities use the preset)', () => {
+      const block = themeBlock(regenerateTheme(rich()))
+      for (const k of ['shadow-2xs', 'shadow-sm', 'shadow', 'shadow-2xl']) {
+        expect(block).toContain(`--${k}: var(--${k});`)
+      }
+    })
+
+    it('never emits a non-colour key into the --color-* namespace', () => {
+      const block = themeBlock(regenerateTheme(rich()))
+      for (const junk of [
+        '--color-shadow-sm',
+        '--color-shadow',
+        '--color-shadow-color',
+        '--color-shadow-opacity',
+        '--color-radius',
+        '--color-spacing',
+        '--color-letter-spacing',
+        '--color-tracking-normal',
+        '--color-font-sans',
+      ]) {
+        expect(block).not.toContain(junk)
+      }
+    })
+
+    it('still maps real colours — including var()-indirected sidebar tokens — to --color-*', () => {
+      const block = themeBlock(regenerateTheme(rich()))
+      expect(block).toContain('--color-primary: var(--primary);')
+      expect(block).toContain('--color-sidebar: var(--sidebar);')
+    })
+
+    it('emits --radius exactly once even when the preset carries it in cssVars.light too', () => {
+      const css = regenerateTheme(rich())
+      expect(css.match(/^\s*--radius:/gm)?.length).toBe(1)
+    })
+  })
+
   it('rejects a preset value that would break out of a CSS declaration (T-05-02)', () => {
     const base = altPreset()
     const withBrace = structuredClone(base)
@@ -175,14 +238,14 @@ describe('loadPreset (offline-safe, SSRF-guarded)', () => {
   })
 
   it('ACCEPTS a tweakcn PAGE URL past the host guard (rewritten to registry) and only falls back on fetch failure', async () => {
-    // A tweakcn page URL is rewritten to /r/themes/whatever.json, passes the host guard, and
+    // A tweakcn page URL is rewritten to /r/themes/whatever, passes the host guard, and
     // reaches fetch — proving the rewrite runs before the guard. With fetch stubbed to reject,
     // it degrades to the shipped preset (fallback), not a host-not-allowed rejection.
     const spy = vi.fn().mockRejectedValue(new Error('offline'))
     vi.stubGlobal('fetch', spy)
     const preset = await loadPreset('https://tweakcn.com/themes/whatever', repoRoot)
     expect(spy).toHaveBeenCalledTimes(1)
-    expect(new URL(spy.mock.calls[0][0]).href).toBe('https://tweakcn.com/r/themes/whatever.json')
+    expect(new URL(spy.mock.calls[0][0]).href).toBe('https://tweakcn.com/r/themes/whatever')
     expect(preset).toEqual(shippedPreset())
   })
 
@@ -203,27 +266,47 @@ describe('loadPreset (offline-safe, SSRF-guarded)', () => {
 
 describe('normalizeThemeUrl (page→registry, D-04)', () => {
   const U = (s) => new URL(s)
+  // A real tweakcn user-theme id (cuid). The registry serves these ONLY extensionless:
+  // `/r/themes/<cuid>` → 200 JSON, `/r/themes/<cuid>.json` → HTTP 500.
+  const CUID = 'cmrg7tt65000604jo2o2q92qz'
 
-  it('rewrites a tweakcn page URL to the registry .json path', () => {
+  it('rewrites a tweakcn page URL to the extensionless registry path', () => {
     const out = normalizeThemeUrl(U('https://tweakcn.com/themes/modern-minimal'))
-    expect(out.href).toBe('https://tweakcn.com/r/themes/modern-minimal.json')
-    expect(out.pathname).toBe('/r/themes/modern-minimal.json')
+    expect(out.href).toBe('https://tweakcn.com/r/themes/modern-minimal')
+    expect(out.pathname).toBe('/r/themes/modern-minimal')
     expect(out.hostname).toBe('tweakcn.com')
   })
 
   it('drops a trailing slash + query on a page URL, yielding a slash-free registry URL', () => {
     const out = normalizeThemeUrl(U('https://tweakcn.com/themes/modern-minimal/?foo=bar'))
-    expect(out.href).toBe('https://tweakcn.com/r/themes/modern-minimal.json')
+    expect(out.href).toBe('https://tweakcn.com/r/themes/modern-minimal')
   })
 
-  it('leaves a full registry URL (already has an extension) unchanged', () => {
-    const out = normalizeThemeUrl(U('https://tweakcn.com/r/themes/modern-minimal.json'))
-    expect(out.href).toBe('https://tweakcn.com/r/themes/modern-minimal.json')
-  })
-
-  it('appends .json to an extensionless last segment (literal fallback)', () => {
+  it('leaves an extensionless registry URL unchanged', () => {
     const out = normalizeThemeUrl(U('https://tweakcn.com/r/themes/modern-minimal'))
-    expect(out.href).toBe('https://tweakcn.com/r/themes/modern-minimal.json')
+    expect(out.href).toBe('https://tweakcn.com/r/themes/modern-minimal')
+  })
+
+  // REGRESSION: the old normalizer APPENDED `.json`, which 500s for every user-saved theme —
+  // i.e. `--theme <any real tweakcn share URL>` silently fell back to the shipped default.
+  // Never emit a `.json` suffix again.
+  it('never emits a .json suffix — the form that 500s for user themes', () => {
+    for (const s of [
+      `https://tweakcn.com/themes/${CUID}`,
+      `https://tweakcn.com/themes/${CUID}/`,
+      `https://tweakcn.com/r/themes/${CUID}`,
+      `https://tweakcn.com/r/themes/${CUID}.json`,
+      `https://tweakcn.com/r/themes/${CUID}.json/?v=1#x`,
+    ]) {
+      const out = normalizeThemeUrl(U(s))
+      expect(out.href).toBe(`https://tweakcn.com/r/themes/${CUID}`)
+      expect(out.pathname.endsWith('.json')).toBe(false)
+    }
+  })
+
+  it('strips a legacy .json suffix off a registry URL a user pasted', () => {
+    const out = normalizeThemeUrl(U('https://tweakcn.com/r/themes/modern-minimal.json'))
+    expect(out.href).toBe('https://tweakcn.com/r/themes/modern-minimal')
   })
 
   it('does NOT rewrite the host of a non-tweakcn page URL (leaves it for the allow-list)', () => {
@@ -231,22 +314,20 @@ describe('normalizeThemeUrl (page→registry, D-04)', () => {
     expect(out.hostname).toBe('evil.example.com')
   })
 
-  // IN-03: an extensioned registry URL with a stray trailing slash 308-redirects under
-  // redirect:'manual' → silent fallback. Normalize the slash away so it's fetched directly.
-  it('strips a trailing slash on an already-extensioned registry URL (IN-03)', () => {
-    const out = normalizeThemeUrl(U('https://tweakcn.com/r/themes/modern-minimal.json/'))
-    expect(out.href).toBe('https://tweakcn.com/r/themes/modern-minimal.json')
-    expect(out.pathname).toBe('/r/themes/modern-minimal.json')
-  })
-
-  it('strips trailing slash + drops query/hash on an extensioned registry URL (IN-03)', () => {
-    const out = normalizeThemeUrl(U('https://tweakcn.com/r/themes/modern-minimal.json/?v=1#x'))
-    expect(out.href).toBe('https://tweakcn.com/r/themes/modern-minimal.json')
+  // IN-03: a registry URL with a stray trailing slash 308-redirects under redirect:'manual'
+  // → silent fallback. Normalize the slash away so it's fetched directly.
+  it('strips a trailing slash + query/hash on a registry URL (IN-03)', () => {
+    expect(normalizeThemeUrl(U('https://tweakcn.com/r/themes/modern-minimal/')).href).toBe(
+      'https://tweakcn.com/r/themes/modern-minimal',
+    )
+    expect(normalizeThemeUrl(U('https://tweakcn.com/r/themes/modern-minimal/?v=1#x')).href).toBe(
+      'https://tweakcn.com/r/themes/modern-minimal',
+    )
   })
 
   it('still translates a dotted-theme-id page URL to the registry path (no IN-03 regression)', () => {
     const out = normalizeThemeUrl(U('https://tweakcn.com/themes/my.theme/'))
-    expect(out.href).toBe('https://tweakcn.com/r/themes/my.theme.json')
+    expect(out.href).toBe('https://tweakcn.com/r/themes/my.theme')
   })
 
   it('does NOT rewrite the host when trimming a trailing slash on a non-tweakcn URL', () => {
