@@ -41,6 +41,12 @@
     }
   ],
   "kv_namespaces": [{ "binding": "__KV_BINDING__", "id": "REPLACE_WITH_YOUR_KV_ID" }],
+  // Workers Logs — structured invocation logs in the dashboard, on by default.
+  "observability": { "enabled": true },
+  // Declared required secrets: validated in local dev/deploy and the source of truth for
+  // `wrangler types`. Add RESEND_API_KEY here when the async layer is armed.
+  // NOTE: keep "vars" the LAST active property below — setup.mjs wireCustomDomain anchors on it.
+  "secrets": { "required": ["CLERK_SECRET_KEY"] },
   // Non-secret plaintext vars (Phase 3, AUTH-04/D-16). CLERK_PUBLISHABLE_KEY is a
   // publishable (non-secret) Clerk key the edge `authenticateRequest()` needs alongside
   // the secret (RESEARCH Pitfall 4). It ships EMPTY as a sentinel — Phase 5 setup.mjs
