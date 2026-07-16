@@ -21,7 +21,9 @@ export function Users() {
 
   // D-04/D-02a: real Clerk users, read-only. No UsersProvider/PrimaryButtons/
   // Dialogs — every mutation path is trimmed (invite/add/edit/delete/bulk).
-  const { data: users, isPending, isError, refetch } = useUsers()
+  const { data: users, isPending, isError, error, refetch } = useUsers()
+  // 403 = the requireAdmin gate: caller is signed in but lacks the admin role.
+  const forbidden = (error as { status?: number } | null)?.status === 403
 
   return (
     <>
@@ -46,7 +48,11 @@ export function Users() {
         {isPending ? (
           <UsersLoading />
         ) : isError ? (
-          <UsersError onRefresh={() => refetch()} />
+          forbidden ? (
+            <UsersForbidden />
+          ) : (
+            <UsersError onRefresh={() => refetch()} />
+          )
         ) : (
           <UsersTable data={users} search={search} navigate={navigate} />
         )}
@@ -70,6 +76,16 @@ function UsersLoading() {
         ))}
       </div>
     </div>
+  )
+}
+
+function UsersForbidden() {
+  const { t } = useTranslation()
+  return (
+    <Alert>
+      <AlertTitle>{t('users.forbidden')}</AlertTitle>
+      <AlertDescription>{t('users.forbiddenDesc')}</AlertDescription>
+    </Alert>
   )
 }
 
