@@ -1,5 +1,6 @@
 import { clerkMiddleware } from '@hono/clerk-auth'
 import { Hono } from 'hono'
+import { secureHeaders } from 'hono/secure-headers'
 import { requireAuth } from './middleware/require-auth'
 import { health } from './routes/health'
 import { items } from './routes/items'
@@ -38,13 +39,31 @@ import { users } from './routes/users'
  */
 const app = new Hono<{ Bindings: Env }>()
 
+// 0) Security headers on every /api/* response (defaults only — no CSP; the SPA is
+//    served by the platform, not Hono). Registered before the health mount so the
+//    public route is covered too.
+app.use('/api/*', secureHeaders())
+
 // 1) PUBLIC first (D-13/D-14) — matched before the gate, terminal handler, never
 //    reaches the auth middleware below.
 app.route('/api/health', health)
 
 // 2) Populate Clerk auth context for everything below from the `__session` cookie
 //    (D-10/D-12). Needs env: CLERK_SECRET_KEY (secret) + CLERK_PUBLISHABLE_KEY (var).
-app.use('/api/*', clerkMiddleware())
+//    authorizedParties pins the accepted `azp` claim to this deployment's own origin
+//    (SPA and API are same-origin by design, so the request origin IS the authorized
+//    party — works unchanged on *.workers.dev, custom domains, and localhost dev).
+//    A session token minted for another app on the same Clerk instance is rejected.
+//    GOTCHA: passing ANY options object to clerkMiddleware() disables its env-based
+//    key fallback (`options || {env defaults}` in @hono/clerk-auth), so the keys MUST
+//    be passed explicitly — hence the per-request wrapper reading c.env.
+app.use('/api/*', (c, next) =>
+  clerkMiddleware({
+    secretKey: c.env.CLERK_SECRET_KEY,
+    publishableKey: c.env.CLERK_PUBLISHABLE_KEY,
+    authorizedParties: [new URL(c.req.url).origin],
+  })(c, next)
+)
 
 // 3) Enforce auth + normalize the 401 envelope (D-15). This is the real boundary.
 app.use('/api/*', requireAuth)
