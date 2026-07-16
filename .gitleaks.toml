@@ -24,6 +24,14 @@ regexes = ['''pk_(test|live)_[A-Za-z0-9._-]+''']
 paths = [
   '''\.dev\.vars\.example''',           # ships with EMPTY assignments; future-proofed
   '''vitest\.config\.ts''',             # contains a structurally-valid pk_test_ dummy (line 51)
+  '''wrangler\.jsonc''',                # post-setup, `vars.CLERK_PUBLISHABLE_KEY` holds the
+                                        # project's real pk_ — non-secret (ships in the client
+                                        # bundle). Empty sentinel here, so inert until setup.mjs
+                                        # fills it. condition="AND" keeps an sk_ here FAILING.
+  '''worker-configuration\.d\.ts''',    # `wrangler types` emits the vars.CLERK_PUBLISHABLE_KEY
+                                        # literal into the generated Env type once a real pk_ is
+                                        # set; CLERK_SECRET_KEY stays `string`, so no secret is
+                                        # emitted. condition="AND" keeps an sk_ here FAILING.
   '''test/setup/.*''',                  # setup tests embed pk_test_ fixtures
   '''docs/.*''',
   '''\.planning/.*''',
