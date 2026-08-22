@@ -21,8 +21,6 @@ A brand-neutral, reusable **GitHub Template repository** that becomes the starti
 
 <!-- GSD:stack-start source:research/STACK.md -->
 
-## Technology Stack
-
 ## TL;DR — Resolved Decisions
 
 | Deferred question | Decision | Confidence |
@@ -35,53 +33,6 @@ A brand-neutral, reusable **GitHub Template repository** that becomes the starti
 | Integration-API base | **Plain Hono Worker starter** (same Hono + `@hono/zod-validator` + Drizzle/D1), NOT a framework | HIGH |
 | Integration-API M2M auth | **Layered: Cloudflare Access service tokens (perimeter) + hashed API key in KV (app layer)**; HMAC for replay-sensitive inbound webhooks | MEDIUM |
 
-## Recommended Stack
-
-### Core Technologies
-
-| Technology | Version (pin) | Purpose | Why Recommended |
-|------------|---------------|---------|-----------------|
-| Cloudflare Workers | runtime (compat date `2026-06-01`+) | Single runtime for SPA assets + API + cron/queues | Locked. One deploy target; SPA assets served at edge for free, API on same isolate. |
-| Hono | `^4.12.27` | API framework on Workers | Locked. De-facto Workers HTTP framework; tiny, Web-standard `Request`/`Response`, first-class CF bindings typing. |
-| Vite | `^8.0.8` (`8.1.0` latest) | Frontend build/dev | Comes with the base; Vite 8 + `@cloudflare/vite-plugin` runs the Worker in the real workerd runtime during `dev`. |
-| `@cloudflare/vite-plugin` | `^1.42.3` | Unifies Vite SPA build + Worker in one dev server/build | **This is the glue.** Lets `pnpm dev` run SPA HMR and the Hono Worker together in workerd; `pnpm build` emits assets + worker. Preferred over legacy `wrangler dev` + separate Vite. |
-| React | `^19.2.5` (`19.2.7` latest) | UI | Base ships React 19; required by current shadcn/Radix versions. |
-| `@tanstack/react-router` | `^1.168.22` (`1.170.x` latest) | Type-safe SPA routing | Base default; file-based routes via `@tanstack/router-plugin`. |
-| `@tanstack/react-query` | `^5.99.0` | Server-state/data fetching | Ships in base; standard pairing for API calls + caching. |
-| Tailwind CSS | `^4.2.2` (`4.3.x` latest) | Styling | **v4**, via `@tailwindcss/vite` (no `tailwind.config.js`/PostCSS chain). tweakcn exports v4 `@theme`/CSS-variable tokens. |
-| shadcn/ui (CLI) | `shadcn@^4.12.0` | Component generator/registry | Use the `shadcn` CLI (not the deprecated `shadcn-ui`). Base vendors components already; CLI for adding more + tweakcn registry. |
-| Clerk (frontend) | `@clerk/react@^6.4.3` (`6.11.x` latest) | Human auth in the SPA | **New unified package** (`@clerk/react` v6 supersedes `@clerk/clerk-react` v5). Already a dependency of the base. |
-| Clerk (Worker/edge) | `@hono/clerk-auth@^3.1.1` (wraps `@clerk/backend@^3.8.4`) | Verify Clerk session in Hono | Edge-safe middleware; injects a Clerk client + auth() into Hono context. Use this, not Node-only Clerk SDKs. |
-| D1 | binding | Relational data | Locked. SQLite at edge; pair with Drizzle. |
-| KV | binding | Key-value / cache / API-key store | Locked. Fast eventually-consistent reads; also the integration-API key store. |
-| Wrangler | `^4.105.0` | CLI: dev/deploy/migrations/secrets/types | Locked tooling. v4 required for current static-assets + `wrangler types`. |
-
-### Supporting Libraries
-
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| Drizzle ORM | `drizzle-orm@^0.45.2` + `drizzle-kit` | Typed D1 schema + SQL migrations | **Recommended** for the D1 schema/migration workflow (typed, generates migrations consumed by `wrangler d1 migrations apply`). Alternative: raw `wrangler d1 migrations` SQL if you want zero ORM. |
-| `@hono/zod-validator` | `^0.8.0` | Request validation in Hono | Both Workers; validates body/query/params against Zod schemas. Base already ships `zod@^4`. |
-| Zod | `^4.3.6` | Schemas (shared client+server) | Already in base. Share schemas between SPA forms and API. |
-| Resend | `resend@^6.16.0` | Outbound email | Locked. Called from the Queue consumer (async layer) and from the integration-API outbound dispatch. **Dormant by default.** |
-| `hono-rate-limiter` | `^0.5.3` | Rate limiting integration-API ingress | Use in the integration-API Worker (KV/DO-backed) to protect inbound endpoints. |
-| `@cloudflare/workers-types` | `^4.20260627.1` | Types | Prefer `wrangler types` (generates `worker-configuration.d.ts` from your bindings) over hand-importing; keep this as fallback. |
-| tweakcn | web tool @ tweakcn.com (+ shadcn registry) | Theme generation | **Not an npm dependency.** Generate theme on tweakcn.com → export Tailwind v4 CSS variables → paste into `src/styles/index.css` → commit the exported preset JSON. Optionally `npx shadcn@latest add <tweakcn-registry-url>`. |
-
-### Development Tools
-
-| Tool | Purpose | Notes |
-|------|---------|-------|
-| pnpm | Package manager | **Confirmed**: base ships `pnpm-lock.yaml`; README uses `pnpm install` / `pnpm dev`. Set `packageManager` field + commit lockfile. |
-| Node.js 22 LTS (or 24) | Local toolchain for Vite/Wrangler | Vite 8 needs Node `^20.19 || >=22.12`; Wrangler 4 needs Node 18+. Base uses `@types/node@^25`. **Pin Node 22 LTS** in `.nvmrc` + Workers Builds config for reproducibility. |
-| Vitest + `@cloudflare/vitest-pool-workers` | API/Worker unit + integration tests | `vitest@^4.1.4` + `@cloudflare/vitest-pool-workers@^0.16.20`. Runs tests **inside workerd** with real D1/KV/Queue binding mocks via `env`. This is the locked test harness for the API. |
-| Vitest browser mode (base default) | SPA component tests | Base ships `@vitest/browser-playwright`. Optional for the template; keep for component coverage, but the **API** must use the workers pool. |
-| `wrangler types` | Generate binding types | Run in CI + a `postinstall`/`predev` hook so `Env` stays in sync with `wrangler.jsonc`. |
-| Cloudflare Workers Builds | CI/CD auto-deploy on push | Locked. Connect repo; build cmd `pnpm build`, deploy via wrangler. Separate build config per Worker (main + integration-API). |
-| GitHub Actions | typecheck + lint + test gate | Locked. `tsc -b`, `eslint`, `vitest run` (workers pool) on PR; Workers Builds handles deploy. |
-
-## How It Fits Together (verified against Cloudflare docs)
-
 ## Decision: SINGLE-PACKAGE (not monorepo)
 
 - It is **Cloudflare's own 2026 reference layout** for "React SPA + API on one Worker" (`src/` + `worker/`, one `wrangler.jsonc`). Matching it means the `@cloudflare/vite-plugin` works out-of-the-box and docs/examples apply directly.
@@ -89,43 +40,6 @@ A brand-neutral, reusable **GitHub Template repository** that becomes the starti
 - `satnaing/shadcn-admin` is itself a single package; vendoring it into `apps/web` would fight its layout (paths, `components.json`, Vite config).
 - A template optimizes for "clone → understand fast." One `package.json`, one lockfile, one `pnpm dev` is the lowest-friction onboarding.
 - The optional **integration-API is a genuinely separate Worker** (own `wrangler.jsonc` + own Workers Builds config) living in a subdirectory — you get perimeter isolation without paying the monorepo tax for the common case. It shares `shared/` and the D1/KV bindings by configuration, not by workspace plumbing.
-
-## Integration-API Module — Base + Auth
-
-### Base: plain Hono Worker (not a framework)
-
-### M2M / closed-perimeter auth — layered recommendation
-
-| Pattern | What it is | Tradeoffs | Verdict |
-|---|---|---|---|
-| **Cloudflare Access service tokens** (Zero Trust) | n8n sends `CF-Access-Client-Id` + `CF-Access-Client-Secret`; Cloudflare validates at the **edge before the Worker runs** | Strongest isolation (rejected traffic never hits your code/bill); central rotation in Zero Trust; **requires** Zero Trust setup; n8n stores token in an HTTP Header credential (documented, mild community friction) | **Primary — perimeter layer** |
-| **Hashed API key in KV** | Caller sends `Authorization: Bearer <key>`; Hono middleware hashes + looks up in KV (store only SHA-256, never plaintext) | Simplest, portable, no Zero Trust dependency; you own rotation/revocation (delete KV entry); app-managed | **Secondary — app layer (defense in depth)** |
-| **HMAC-signed requests** | Caller signs `timestamp + body` with a shared secret; server verifies + rejects stale timestamps | Replay protection + integrity; more client complexity | Use for **replay-sensitive inbound webhooks** only |
-| **mTLS** | Client certificate auth | Highest assurance; operationally heavy (cert lifecycle), n8n support awkward | Skip unless a partner mandates it |
-
-### How n8n authenticates to it
-
-### Outbound connector patterns
-
-- **Zoho CRM:** OAuth2 **refresh-token** flow. Store the long-lived refresh token as a `wrangler secret`; exchange for a short-lived access token; **cache the access token in KV with a TTL** (~55 min) to avoid re-minting per request. Region-aware base URLs (`.com`/`.eu`/etc.).
-- **Monday.com:** GraphQL API with a **personal/API token** → simple `Authorization: <token>` bearer header; token in `wrangler secret`.
-- **Resend:** API key in `wrangler secret`; reuse the same Resend client as the dormant async layer.
-
-## Installation
-
-# Package manager
-
-# Core (already in the satnaing base — listed for the template's own additions)
-
-# Dev / tooling
-
-# Frontend base already provides: react@19, vite@8, @tanstack/react-router,
-
-# @tailwindcss/vite, tailwindcss@4, @clerk/react@6, shadcn components.
-
-# Components / theme
-
-# theme: generate on tweakcn.com -> export Tailwind v4 CSS vars -> src/styles/index.css
 
 ## Alternatives Considered
 
@@ -157,28 +71,6 @@ A brand-neutral, reusable **GitHub Template repository** that becomes the starti
 - Enable the dormant Cron → Queues → Resend layer in `wrangler.jsonc` (uncomment `triggers.crons`, `queues.producers/consumers`) and the example consumer.
 - Enable `integration-api/` as a second Worker with its own Workers Builds config.
 - Turn on Cloudflare Access service tokens for the perimeter + KV API keys; add Zoho/Monday/Resend outbound connectors.
-
-## Version Compatibility
-
-| Package A | Compatible With | Notes |
-|-----------|-----------------|-------|
-| `vite@8` | Node `^20.19 \|\| >=22.12` | Pin Node 22 LTS in `.nvmrc` + Workers Builds |
-| `react@19` | `@clerk/react@6`, shadcn/Radix current | Base is built on React 19 throughout |
-| `tailwindcss@4` | `@tailwindcss/vite@4`, tweakcn v4 exports | No `tailwind.config.js`; CSS-first `@theme` |
-| `@hono/clerk-auth@3` | `hono@>=3` (use `hono@4`), `@clerk/backend@3` | Edge-safe; pair with `@clerk/react@6` on client |
-| `@cloudflare/vitest-pool-workers@0.16` | `vitest@^4`, `wrangler@4` | Runs tests in workerd with binding mocks |
-| `@cloudflare/vite-plugin@1.42` | `vite@8`, `wrangler@4` | Unified dev+build for SPA + Worker |
-
-## Sources
-
-- `https://raw.githubusercontent.com/satnaing/shadcn-admin/main/package.json` — base v2.2.1 exact deps (Clerk `@clerk/react@^6`, Vite 8, React 19, Tailwind 4, TanStack Router 1.168, Vitest 4) — HIGH
-- `https://raw.githubusercontent.com/satnaing/shadcn-admin/main/README.md` — RTL approach, "Auth (partial): Clerk", 10+ pages, pnpm — HIGH
-- `https://raw.githubusercontent.com/satnaing/shadcn-admin/main/pnpm-lock.yaml` (HTTP 200; npm/yarn/bun lockfiles 404) — package manager = pnpm — HIGH
-- npm registry live queries — hono 4.12.27, wrangler 4.105.0, @cloudflare/vitest-pool-workers 0.16.20, @clerk/react 6.11.1, @clerk/backend 3.8.4, @hono/clerk-auth 3.1.1, resend 6.16.0, @cloudflare/vite-plugin 1.42.3, shadcn 4.12.0, drizzle-orm 0.45.2, @cloudflare/workers-types 4.20260627.1 — HIGH
-- `https://developers.cloudflare.com/workers/static-assets/routing/single-page-application/` — SPA routing, `not_found_handling`, `run_worker_first` precedence — HIGH
-- `https://developers.cloudflare.com/workers/framework-guides/web-apps/react/` — official single-package `src/`+`worker/` layout + `@cloudflare/vite-plugin` — HIGH
-- `https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/` + n8n docs/community — service-token M2M pattern, n8n header-auth path — MEDIUM
-- NotebookLM notebook `71b254d1-...` — **could not consult**: the NotebookLM MCP tools were not loaded in this session (no ToolSearch available to defer-load them). Cloudflare claims were instead verified against primary `developers.cloudflare.com` docs. Recommend a follow-up NotebookLM pass to cross-check D1/Queues/Cron specifics during phase planning.
 
 <!-- GSD:stack-end -->
 
