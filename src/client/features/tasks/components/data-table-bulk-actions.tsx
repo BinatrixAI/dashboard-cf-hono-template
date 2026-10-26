@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { type Table } from '@tanstack/react-table'
+import { type RowData, type Table } from '@tanstack/react-table'
 import { Trash2, CircleArrowUp, ArrowUpDown, Download } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -17,15 +17,16 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { DataTableBulkActions as BulkActionsToolbar } from '@/components/data-table'
+import { type DataTableFeatures } from '@/components/data-table/features'
 import { priorities, statuses } from '../data/data'
 import { type Task } from '../data/schema'
 import { TasksMultiDeleteDialog } from './tasks-multi-delete-dialog'
 
-type DataTableBulkActionsProps<TData> = {
-  table: Table<TData>
+type DataTableBulkActionsProps<TData extends RowData> = {
+  table: Table<DataTableFeatures, TData>
 }
 
-export function DataTableBulkActions<TData>({
+export function DataTableBulkActions<TData extends RowData>({
   table,
 }: DataTableBulkActionsProps<TData>) {
   const { t } = useTranslation()

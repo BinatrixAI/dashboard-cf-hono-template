@@ -1,7 +1,7 @@
 import { type SVGProps } from 'react'
-import { Root as Radio, Item } from '@radix-ui/react-radio-group'
 import { type TranslationKey } from '@/i18n'
 import { CircleCheck, RotateCcw, Settings } from 'lucide-react'
+import { RadioGroup as RadioGroupPrimitive } from 'radix-ui'
 import { useTranslation } from 'react-i18next'
 import { IconDir } from '@/assets/custom/icon-dir'
 import { IconLayoutCompact } from '@/assets/custom/icon-layout-compact'
@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils'
 import { useDirection } from '@/context/direction-provider'
 import { type Collapsible, useLayout } from '@/context/layout-provider'
 import { useTheme } from '@/context/theme-provider'
+import { useMediaQuery } from '@/hooks/use-media-query'
 import { Button } from '@/components/ui/button'
 import {
   Sheet,
@@ -27,19 +28,24 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet'
+import { usePersistTheme } from '@/features/settings/data/use-settings'
+import { type AppSettings } from '../../shared/settings'
 import { useSidebar } from './ui/sidebar'
 
 export function ConfigDrawer() {
   const { t } = useTranslation()
   const { setOpen } = useSidebar()
   const { resetDir } = useDirection()
-  const { resetTheme } = useTheme()
+  const { defaultTheme } = useTheme()
+  const persistTheme = usePersistTheme()
   const { resetLayout } = useLayout()
+  // Reset restores the width default (D-06), not a forced-open sidebar.
+  const wide = useMediaQuery('(width >= 80rem)')
 
   const handleReset = () => {
-    setOpen(true)
+    setOpen(wide)
     resetDir()
-    resetTheme()
+    persistTheme(defaultTheme) // saves to KV too, so the old theme does not return on reload
     resetLayout()
   }
 
@@ -51,7 +57,7 @@ export function ConfigDrawer() {
           variant='ghost'
           aria-label={t('drawer.openThemeSettings')}
           aria-describedby='config-drawer-description'
-          className='rounded-full'
+          className='hit-44 rounded-full'
         >
           <Settings aria-hidden='true' />
         </Button>
@@ -133,7 +139,7 @@ function RadioGroupItem({
   const { t } = useTranslation()
   const label = t(item.label as TranslationKey)
   return (
-    <Item
+    <RadioGroupPrimitive.Item
       value={item.value}
       className={cn('group outline-none', 'transition duration-200 ease-in')}
       aria-label={t('drawer.selectOption', { label: label.toLowerCase() })}
@@ -153,7 +159,7 @@ function RadioGroupItem({
           className={cn(
             'fill-primary size-6 stroke-white',
             'group-data-[state=unchecked]:hidden',
-            'absolute top-0 right-0 translate-x-1/2 -translate-y-1/2'
+            'absolute end-0 top-0 translate-x-1/2 -translate-y-1/2 rtl:-translate-x-1/2'
           )}
           aria-hidden='true'
         />
@@ -172,23 +178,26 @@ function RadioGroupItem({
       >
         {label}
       </div>
-    </Item>
+    </RadioGroupPrimitive.Item>
   )
 }
 
 function ThemeConfig() {
   const { t } = useTranslation()
-  const { defaultTheme, theme, setTheme } = useTheme()
+  const { defaultTheme, theme } = useTheme()
+  const persistTheme = usePersistTheme()
   return (
     <div>
       <SectionTitle
         title='drawer.sections.theme'
         showReset={theme !== defaultTheme}
-        onReset={() => setTheme(defaultTheme)}
+        onReset={() => persistTheme(defaultTheme)}
       />
-      <Radio
+      <RadioGroupPrimitive.Root
         value={theme}
-        onValueChange={setTheme}
+        onValueChange={(v) =>
+          persistTheme(v as AppSettings['appearance']['theme'])
+        }
         className='grid w-full max-w-md grid-cols-3 gap-4'
         aria-label={t('drawer.theme.ariaLabel')}
         aria-describedby='theme-description'
@@ -212,7 +221,7 @@ function ThemeConfig() {
         ].map((item) => (
           <RadioGroupItem key={item.value} item={item} isTheme />
         ))}
-      </Radio>
+      </RadioGroupPrimitive.Root>
       <div id='theme-description' className='sr-only'>
         {t('drawer.theme.description')}
       </div>
@@ -230,7 +239,7 @@ function SidebarConfig() {
         showReset={defaultVariant !== variant}
         onReset={() => setVariant(defaultVariant)}
       />
-      <Radio
+      <RadioGroupPrimitive.Root
         value={variant}
         onValueChange={setVariant}
         className='grid w-full max-w-md grid-cols-3 gap-4'
@@ -256,7 +265,7 @@ function SidebarConfig() {
         ].map((item) => (
           <RadioGroupItem key={item.value} item={item} />
         ))}
-      </Radio>
+      </RadioGroupPrimitive.Root>
       <div id='sidebar-description' className='sr-only'>
         {t('drawer.sidebarStyle.description')}
       </div>
@@ -268,6 +277,7 @@ function LayoutConfig() {
   const { t } = useTranslation()
   const { open, setOpen } = useSidebar()
   const { defaultCollapsible, collapsible, setCollapsible } = useLayout()
+  const wide = useMediaQuery('(width >= 80rem)')
 
   const radioState = open ? 'default' : collapsible
 
@@ -275,13 +285,14 @@ function LayoutConfig() {
     <div className='max-md:hidden'>
       <SectionTitle
         title='drawer.sections.layout'
-        showReset={radioState !== 'default'}
+        // Against the width default: the 768–1279px rail is already the default, so reset would do nothing.
+        showReset={open !== wide || collapsible !== defaultCollapsible}
         onReset={() => {
-          setOpen(true)
+          setOpen(wide)
           setCollapsible(defaultCollapsible)
         }}
       />
-      <Radio
+      <RadioGroupPrimitive.Root
         value={radioState}
         onValueChange={(v) => {
           if (v === 'default') {
@@ -314,7 +325,7 @@ function LayoutConfig() {
         ].map((item) => (
           <RadioGroupItem key={item.value} item={item} />
         ))}
-      </Radio>
+      </RadioGroupPrimitive.Root>
       <div id='layout-description' className='sr-only'>
         {t('drawer.layout.description')}
       </div>
@@ -332,7 +343,7 @@ function DirConfig() {
         showReset={defaultDir !== dir}
         onReset={() => setDir(defaultDir)}
       />
-      <Radio
+      <RadioGroupPrimitive.Root
         value={dir}
         onValueChange={setDir}
         className='grid w-full max-w-md grid-cols-3 gap-4'
@@ -357,7 +368,7 @@ function DirConfig() {
         ].map((item) => (
           <RadioGroupItem key={item.value} item={item} />
         ))}
-      </Radio>
+      </RadioGroupPrimitive.Root>
       <div id='direction-description' className='sr-only'>
         {t('drawer.direction.description')}
       </div>

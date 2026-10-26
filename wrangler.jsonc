@@ -45,18 +45,26 @@
   "observability": { "enabled": true },
   // Declared required secrets: validated in local dev/deploy and the source of truth for
   // `wrangler types`. Add RESEND_API_KEY here when the async layer is armed.
+  // Both Clerk keys are Worker secrets, set with `wrangler secret put` BEFORE the first deploy:
+  // wrangler refuses to deploy while a required secret is unset, and `secret put` on a Worker
+  // that does not exist yet creates it. CLERK_PUBLISHABLE_KEY is public by design (it ships in
+  // the client bundle); it is a secret only so config and generated types carry no per-project
+  // value (D-01). Locally, wrangler loads a `.dev.vars` entry only when its name is in "vars" or
+  // here (wrangler 4.152, verified for D-03) — add every new secret name to this list, or
+  // `wrangler types` and local dev drop it.
   // NOTE: keep "vars" the LAST active property below — setup.mjs wireCustomDomain anchors on it.
-  "secrets": { "required": ["CLERK_SECRET_KEY"] },
-  // Non-secret plaintext vars (Phase 3, AUTH-04/D-16). CLERK_PUBLISHABLE_KEY is a
-  // publishable (non-secret) Clerk key the edge `authenticateRequest()` needs alongside
-  // the secret (RESEARCH Pitfall 4). It ships EMPTY as a sentinel — Phase 5 setup.mjs
-  // fills the per-project `pk_…`. The matching CLERK_SECRET_KEY is a wrangler SECRET
-  // (`wrangler secret put CLERK_SECRET_KEY`), NEVER committed here (D-16).
-  "vars": { "CLERK_PUBLISHABLE_KEY": "" }
+  "secrets": { "required": ["CLERK_SECRET_KEY", "CLERK_PUBLISHABLE_KEY"] },
+  // Non-secret plaintext vars. AUTHORIZED_PARTIES is a comma-separated list of origins whose
+  // Clerk session tokens the API accepts (the `azp` claim); `setup.mjs --origin` fills it. Local
+  // dev origins go in `.dev.vars`, never here (D-03). While it is empty or still the placeholder,
+  // the Worker answers every protected /api request with 500 (D-02 fail-closed).
+  "vars": { "AUTHORIZED_PARTIES": "REPLACE_WITH_YOUR_ORIGIN" }
 
   // ─── CUSTOM DOMAIN (DORMANT — `setup.mjs --custom-domain <host>` uncomments + fills) ──────
   // A fresh fork deploys to *.workers.dev. Run `setup.mjs --custom-domain app.example.com` to
-  // activate a custom-domain route (it also adds the comma after the "vars" line above). The
+  // activate a custom-domain route (it also adds the comma after the "vars" line above and
+  // appends "workers_dev": false, "preview_urls": false to the routes line: workers.dev and
+  // preview URLs would bypass Access/WAF on the custom domain, D-11). The
   // full-line `//` keeps this invisible to the sentinel scan, so a clean fork stays scan-clean.
   // "routes": [{ "pattern": "REPLACE_WITH_YOUR_CUSTOM_DOMAIN", "custom_domain": true }]
 
@@ -65,7 +73,8 @@
   // convention (__QUEUE_BINDING__ matches AsyncEnv in src/server/async/messages.ts;
   // __DLQ_BINDING__ is the dead-letter queue). Nothing here is active while commented, so a
   // fresh fork deploys clean and the platform never invokes scheduled()/queue() (ASYNC-02).
-  // At activation: add a leading comma after the "vars" line above, uncomment the blocks below,
+  // At activation: add a comma after the last active line above (the vars line, or the routes
+  // line once --custom-domain ran), uncomment the blocks below,
   // `wrangler queues create` the two queues, then `wrangler types`. Create the DLQ BEFORE arming.
   //
   // "triggers": {

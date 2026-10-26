@@ -8,15 +8,13 @@ export function TasksPrimaryButtons() {
   const { setOpen } = useTasks()
   return (
     <div className='flex gap-2'>
-      <Button
-        variant='outline'
-        className='space-x-1'
-        onClick={() => setOpen('import')}
-      >
-        <span>{t('tasks.buttons.import')}</span> <Download size={18} />
+      <Button variant='outline' onClick={() => setOpen('import')}>
+        <Download className='size-4' />
+        {t('tasks.buttons.import')}
       </Button>
-      <Button className='space-x-1' onClick={() => setOpen('create')}>
-        <span>{t('tasks.buttons.create')}</span> <Plus size={18} />
+      <Button variant='pill' onClick={() => setOpen('create')}>
+        <Plus className='size-4' />
+        {t('tasks.buttons.create')}
       </Button>
     </div>
   )

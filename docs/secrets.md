@@ -14,6 +14,12 @@ Rules of thumb:
 
 - A **real secret** (API key, `CLERK_SECRET_KEY`) → `wrangler secret put` in
   prod, `.dev.vars` locally. Nowhere else.
+- **Both Clerk keys** (`CLERK_SECRET_KEY` and `CLERK_PUBLISHABLE_KEY`) are Worker
+  secrets declared in `secrets.required`, set with `wrangler secret put` before
+  the first deploy (wrangler refuses to deploy while one is unset). The
+  publishable key is public, but keeping it out of `vars` keeps per-project
+  values out of committed config and generated types. `setup.mjs` prints both
+  commands, the publishable one prefilled.
 - **Non-secret Worker config** (a public URL, a feature flag) → `vars` in
   `wrangler.jsonc`.
 - **Anything the browser needs** → a `VITE_`-prefixed var. Vite inlines only
@@ -25,25 +31,34 @@ Rules of thumb:
 
 Say a new route needs `RESEND_API_KEY`.
 
-**1. Local dev** — add it to `.dev.vars` (gitignored):
+**1. Declare the name** in `secrets.required` in `wrangler.jsonc`:
+
+```jsonc
+"secrets": { "required": ["CLERK_SECRET_KEY", "CLERK_PUBLISHABLE_KEY", "RESEND_API_KEY"] },
+```
+
+Without this, `wrangler types` leaves it out of `Env` and local dev drops it
+from `.dev.vars`.
+
+**2. Local dev** — add it to `.dev.vars` (gitignored):
 
 ```
 RESEND_API_KEY=re_your_local_key
 ```
 
-**2. Production** — set it as an encrypted secret:
+**3. Production** — set it as an encrypted secret:
 
 ```bash
 wrangler secret put RESEND_API_KEY
 ```
 
-**3. Regenerate the `Env` type** so `c.env.RESEND_API_KEY` type-checks:
+**4. Regenerate the `Env` type** so `c.env.RESEND_API_KEY` type-checks:
 
 ```bash
-pnpm cf-typegen        # wrangler types → worker-configuration.d.ts
+pnpm cf-typegen        # wrangler types --strict-vars=false → worker-configuration.d.ts
 ```
 
-**4. Access it in a route** via the per-request env — never a module-scope read
+**5. Access it in a route** via the per-request env — never a module-scope read
 (the binding only exists at request time):
 
 ```ts

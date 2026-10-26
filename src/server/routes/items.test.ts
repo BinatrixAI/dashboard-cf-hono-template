@@ -1,7 +1,9 @@
-/// <reference types="@cloudflare/vitest-pool-workers/types" />
+/// <reference types="@cloudflare/vitest-plugin/types" />
 import { env } from 'cloudflare:test'
 import { Hono } from 'hono'
 import { describe, expect, it } from 'vitest'
+import { onApiError } from '../errors'
+import { catalog, t } from '../i18n'
 import { requireAuth } from '../middleware/require-auth'
 import { items } from './items'
 
@@ -38,12 +40,18 @@ const BASE = 'http://localhost'
 // The terminal catch-all matches the deployed Worker so `/api/nope` -> authenticated 404.
 const app = new Hono<{ Bindings: Env }>()
 app.use('/api/*', async (c, next) => {
-  c.set('clerkAuth', () => ({ userId: 'user_test' }))
+  c.set('clerkAuth', () => ({
+    userId: 'user_test',
+    tokenType: 'session_token',
+  }))
   await next()
 })
 app.use('/api/*', requireAuth)
 app.route('/api/items', items)
-app.all('/api/*', (c) => c.json({ error: 'Not Found', path: c.req.path }, 404))
+app.all('/api/*', (c) =>
+  c.json({ error: t(c, 'notFound'), path: c.req.path }, 404)
+)
+app.onError(onApiError)
 
 const api = {
   fetch: (input: string, init?: RequestInit) => app.request(input, init, env),
@@ -84,7 +92,7 @@ describe('/api/items CRUD round-trip (D1-backed, D-04)', () => {
     expect(body.items.some((i) => i.id === created.item.id)).toBe(true)
   })
 
-  it('GET /:id returns the item; a missing id returns JSON 404 with .error', async () => {
+  it('GET /:id returns the item; a missing id returns the localized 404 envelope', async () => {
     const created = (await (await createItem('FindMe')).json()) as {
       item: { id: string }
     }
@@ -96,8 +104,23 @@ describe('/api/items CRUD round-trip (D1-backed, D-04)', () => {
 
     const missing = await api.fetch(`${BASE}/api/items/does-not-exist`)
     expect(missing.status).toBe(404)
-    const missingBody = (await missing.json()) as { error?: string }
-    expect(typeof missingBody.error).toBe('string')
+    expect(await missing.json()).toEqual({
+      error: catalog.en.notFound,
+      path: '/api/items/does-not-exist',
+    })
+  })
+
+  it('PUT to a missing id returns the localized 404 envelope', async () => {
+    const res = await api.fetch(`${BASE}/api/items/does-not-exist`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'x' }),
+    })
+    expect(res.status).toBe(404)
+    expect(await res.json()).toEqual({
+      error: catalog.en.notFound,
+      path: '/api/items/does-not-exist',
+    })
   })
 
   it('DELETE /:id returns { success: true } and the item is gone', async () => {
@@ -132,9 +155,42 @@ describe('/api/items CRUD round-trip (D1-backed, D-04)', () => {
     expect(Array.isArray(body.items)).toBe(true)
   })
 
-  it('POST with empty name returns 400 (Zod) and writes nothing', async () => {
+  it('GET with a non-numeric ?limit returns the localized 400 envelope', async () => {
+    const res = await api.fetch(`${BASE}/api/items?limit=abc`)
+    expect(res.status).toBe(400)
+    expect(await res.json()).toEqual({
+      error: catalog.en.invalidBody,
+      path: '/api/items',
+    })
+  })
+
+  it('POST a valid body sent as text/plain returns the 400 envelope and writes nothing', async () => {
+    const name = `TextPlain-${crypto.randomUUID()}`
+    const res = await api.fetch(`${BASE}/api/items`, {
+      method: 'POST',
+      headers: { 'content-type': 'text/plain' },
+      body: JSON.stringify({ name }),
+    })
+    expect(res.status).toBe(400)
+    expect(await res.json()).toEqual({
+      error: catalog.en.invalidBody,
+      path: '/api/items',
+    })
+
+    const list = (await (await api.fetch(`${BASE}/api/items`)).json()) as {
+      items: Array<{ name: string }>
+    }
+    expect(list.items.some((i) => i.name === name)).toBe(false)
+  })
+
+  it('POST with empty name returns the localized 400 envelope and writes nothing', async () => {
     const res = await createItem('')
     expect(res.status).toBe(400)
+    // Exact envelope: no Zod issues, field names or echoed values (D-05).
+    expect(await res.json()).toEqual({
+      error: catalog.en.invalidBody,
+      path: '/api/items',
+    })
 
     const list = (await (await api.fetch(`${BASE}/api/items`)).json()) as {
       items: Array<{ name: string }>

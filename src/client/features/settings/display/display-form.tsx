@@ -5,7 +5,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { type TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -18,6 +17,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Widget } from '@/components/widget'
 import {
   useSettings,
   useUpdateSettings,
@@ -69,15 +69,16 @@ function makeSchema(t: TFunction) {
 type DisplayFormValues = z.infer<ReturnType<typeof makeSchema>>
 
 // Load gate (D-06 / Pitfall 2): never render or save hardcoded defaults before
-// the stored KV blob resolves. Mirrors the `items/index.tsx` isPending/isError
-// idiom — only the resolved-data branch mounts the editable form.
+// the stored KV blob resolves. Widget (DS-03) keeps the form on screen on a failed
+// refetch and shows the in-card error only when nothing has loaded.
 export function DisplayForm() {
-  const { data, isPending, isError, refetch } = useSettings()
+  const query = useSettings()
 
-  if (isPending) return <DisplayFormSkeleton />
-  if (isError) return <DisplayFormError onRetry={() => refetch()} />
-
-  return <DisplayFormFields data={data} />
+  return (
+    <Widget query={query} skeleton={<DisplayFormSkeleton />}>
+      {(data) => <DisplayFormFields data={data} />}
+    </Widget>
+  )
 }
 
 function DisplayFormFields({ data }: { data: AppSettings }) {
@@ -179,23 +180,6 @@ function DisplayFormSkeleton() {
         <Skeleton className='h-5 w-28' />
       </div>
       <Skeleton className='h-9 w-36' />
-    </div>
-  )
-}
-
-function DisplayFormError({ onRetry }: { onRetry: () => void }) {
-  const { t } = useTranslation()
-  return (
-    <div className='space-y-3'>
-      <Alert variant='destructive'>
-        <AlertTitle>{t('settings.display.loadError')}</AlertTitle>
-        <AlertDescription>
-          {t('settings.common.loadErrorDesc')}
-        </AlertDescription>
-      </Alert>
-      <Button variant='outline' size='sm' onClick={onRetry}>
-        {t('settings.common.retry')}
-      </Button>
     </div>
   )
 }

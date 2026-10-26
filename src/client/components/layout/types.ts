@@ -1,12 +1,6 @@
 import { type LinkProps } from '@tanstack/react-router'
 import { type TranslationKey } from '@/i18n'
 
-type Team = {
-  name: string
-  logo: React.ElementType
-  plan: string
-}
-
 type BaseNavItem = {
   // Translation KEY (e.g. 'sidebar.nav.items'), resolved with t() at render (G2).
   title: TranslationKey
@@ -18,12 +12,15 @@ type NavLink = BaseNavItem & {
   url: LinkProps['to'] | (string & {})
   // When true, renders an external new-tab anchor instead of a router Link.
   external?: boolean
+  // true → shown in the phone tab bar (first 4 in sidebar order; external links never).
+  tab?: boolean
   items?: never
 }
 
 type NavCollapsible = BaseNavItem & {
   items: (BaseNavItem & { url: LinkProps['to'] | (string & {}) })[]
   url?: never
+  tab?: never
 }
 
 type NavItem = NavCollapsible | NavLink
@@ -34,7 +31,7 @@ type NavGroup = {
 }
 
 type SidebarData = {
-  teams: Team[]
+  app: { name: string }
   navGroups: NavGroup[]
 }
 

@@ -23,9 +23,10 @@ import { Separator } from '@/components/ui/separator'
 import { ConfigDrawer } from '@/components/config-drawer'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
+import { PageHeader } from '@/components/layout/page-header'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
-import { ThemeSwitch } from '@/components/theme-switch'
+import { ThemeMenu } from '@/components/theme-menu'
 import { NewChat } from './components/new-chat'
 import { type ChatUser, type Convo } from './data/chat-types'
 // Fake Data
@@ -71,40 +72,40 @@ export function Chats() {
       <Header>
         <Search />
         <div className='ms-auto flex items-center space-x-4'>
-          <ThemeSwitch />
+          <ThemeMenu />
           <ConfigDrawer />
           <ProfileDropdown />
         </div>
       </Header>
 
       <Main fixed>
-        <section className='flex h-full gap-6'>
+        <PageHeader
+          title={t('chats.inbox')}
+          actions={
+            <Button
+              size='icon'
+              variant='outline'
+              aria-label={t('chats.newMessage')}
+              onClick={() => setCreateConversationDialog(true)}
+            >
+              <Edit />
+            </Button>
+          }
+        />
+        <section className='mt-4 flex min-h-0 flex-1 gap-6'>
           {/* Left Side */}
           <div className='flex w-full flex-col gap-2 sm:w-56 lg:w-72 2xl:w-80'>
             <div className='bg-background sticky top-0 z-10 -mx-4 px-4 pb-3 shadow-md sm:static sm:z-auto sm:mx-0 sm:p-0 sm:shadow-none'>
-              <div className='flex items-center justify-between py-2'>
-                <div className='flex gap-2'>
-                  <h1 className='text-2xl font-bold'>{t('chats.inbox')}</h1>
-                  <MessagesSquare size={20} />
-                </div>
-
-                <Button
-                  size='icon'
-                  variant='ghost'
-                  onClick={() => setCreateConversationDialog(true)}
-                  className='rounded-lg'
-                >
-                  <Edit size={24} className='stroke-muted-foreground' />
-                </Button>
-              </div>
-
               <label
                 className={cn(
                   'focus-within:ring-ring focus-within:ring-1 focus-within:outline-hidden',
                   'border-border flex h-10 w-full items-center space-x-0 rounded-md border ps-2'
                 )}
               >
-                <SearchIcon size={15} className='me-2 stroke-slate-500' />
+                <SearchIcon
+                  size={15}
+                  className='stroke-muted-foreground me-2'
+                />
                 <span className='sr-only'>{t('chats.search')}</span>
                 <input
                   type='text'
@@ -122,7 +123,10 @@ export function Chats() {
                 const lastConvo = messages[0]
                 const lastMsg =
                   lastConvo.sender === 'You'
-                    ? t('chats.youPrefix', { message: lastConvo.message })
+                    ? // FSI…PDI: the message keeps its own direction inside the translated prefix
+                      t('chats.youPrefix', {
+                        message: `\u2068${lastConvo.message}\u2069`,
+                      })
                     : lastConvo.message
                 return (
                   <Fragment key={id}>
@@ -146,10 +150,16 @@ export function Chats() {
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <span className='col-start-2 row-span-2 font-medium'>
+                          <span
+                            dir='auto'
+                            className='col-start-2 row-span-2 font-medium'
+                          >
                             {fullName}
                           </span>
-                          <span className='text-muted-foreground group-hover:text-accent-foreground/90 col-start-2 row-span-2 row-start-2 line-clamp-2 text-ellipsis'>
+                          <span
+                            dir='auto'
+                            className='text-muted-foreground group-hover:text-accent-foreground/90 col-start-2 row-span-2 row-start-2 line-clamp-2 [text-align:match-parent] text-ellipsis'
+                          >
                             {lastMsg}
                           </span>
                         </div>
@@ -179,6 +189,7 @@ export function Chats() {
                     variant='ghost'
                     className='-ms-2 h-full sm:hidden'
                     onClick={() => setMobileSelectedUser(null)}
+                    aria-label={t('chats.back')}
                   >
                     <ArrowLeft className='rtl:rotate-180' />
                   </Button>
@@ -193,7 +204,10 @@ export function Chats() {
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <span className='col-start-2 row-span-2 text-sm font-medium lg:text-base'>
+                      <span
+                        dir='auto'
+                        className='col-start-2 row-span-2 text-sm font-medium lg:text-base'
+                      >
                         {selectedUser.fullName}
                       </span>
                       <span className='text-muted-foreground col-start-2 row-span-2 row-start-2 line-clamp-1 block max-w-32 text-xs text-nowrap text-ellipsis lg:max-w-none lg:text-sm'>
@@ -209,6 +223,7 @@ export function Chats() {
                     size='icon'
                     variant='ghost'
                     className='hidden size-8 rounded-full sm:inline-flex lg:size-10'
+                    aria-label={t('chats.videoCall')}
                   >
                     <Video size={22} className='stroke-muted-foreground' />
                   </Button>
@@ -216,6 +231,7 @@ export function Chats() {
                     size='icon'
                     variant='ghost'
                     className='hidden size-8 rounded-full sm:inline-flex lg:size-10'
+                    aria-label={t('chats.call')}
                   >
                     <Phone size={22} className='stroke-muted-foreground' />
                   </Button>
@@ -223,6 +239,7 @@ export function Chats() {
                     size='icon'
                     variant='ghost'
                     className='h-10 rounded-md sm:h-8 sm:w-4 lg:h-10 lg:w-6'
+                    aria-label={t('chats.moreOptions')}
                   >
                     <MoreVertical className='stroke-muted-foreground sm:size-5' />
                   </Button>
@@ -243,11 +260,11 @@ export function Chats() {
                                 className={cn(
                                   'chat-box max-w-72 px-3 py-2 break-words shadow-lg',
                                   msg.sender === 'You'
-                                    ? 'bg-primary/90 text-primary-foreground/75 self-end rounded-[16px_16px_0_16px]'
-                                    : 'bg-muted self-start rounded-[16px_16px_16px_0]'
+                                    ? 'bg-primary/90 text-primary-foreground/75 self-end rounded-2xl rounded-ee-none'
+                                    : 'bg-muted self-start rounded-2xl rounded-es-none'
                                 )}
                               >
-                                {msg.message}{' '}
+                                <span dir='auto'>{msg.message}</span>{' '}
                                 <span
                                   className={cn(
                                     'text-foreground/75 mt-1 block text-xs font-light italic',
@@ -273,6 +290,7 @@ export function Chats() {
                         type='button'
                         variant='ghost'
                         className='h-8 rounded-md'
+                        aria-label={t('chats.add')}
                       >
                         <Plus size={20} className='stroke-muted-foreground' />
                       </Button>
@@ -281,6 +299,7 @@ export function Chats() {
                         type='button'
                         variant='ghost'
                         className='hidden h-8 rounded-md lg:inline-flex'
+                        aria-label={t('chats.addImage')}
                       >
                         <ImagePlus
                           size={20}
@@ -292,6 +311,7 @@ export function Chats() {
                         type='button'
                         variant='ghost'
                         className='hidden h-8 rounded-md lg:inline-flex'
+                        aria-label={t('chats.attachFile')}
                       >
                         <Paperclip
                           size={20}
@@ -311,6 +331,7 @@ export function Chats() {
                       variant='ghost'
                       size='icon'
                       className='hidden sm:inline-flex'
+                      aria-label={t('chats.send')}
                     >
                       <Send size={20} />
                     </Button>

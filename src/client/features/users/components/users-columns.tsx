@@ -4,13 +4,16 @@ import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DataTableColumnHeader } from '@/components/data-table'
+import { type DataTableFeatures } from '@/components/data-table/features'
 import { LongText } from '@/components/long-text'
 import { callTypes, roles } from '../data/data'
 import { type User } from '../data/schema'
 
 // Column factory (G2): t() threaded in, called at render — rebuilt via
 // useMemo(() => getUsersColumns(t), [t]) so labels track the active language.
-export const getUsersColumns = (t: TFunction): ColumnDef<User>[] => [
+export const getUsersColumns = (
+  t: TFunction
+): ColumnDef<DataTableFeatures, User>[] => [
   {
     id: 'select',
     header: ({ table }) => (
@@ -21,18 +24,18 @@ export const getUsersColumns = (t: TFunction): ColumnDef<User>[] => [
         }
         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
         aria-label={t('users.selectAll')}
-        className='translate-y-[2px]'
+        className='hit-44 translate-y-[2px]'
       />
     ),
     meta: {
-      className: cn('max-md:sticky start-0 z-10 rounded-tl-[inherit]'),
+      className: cn('max-md:sticky start-0 z-10 rounded-ss-[inherit]'),
     },
     cell: ({ row }) => (
       <Checkbox
         checked={row.getIsSelected()}
         onCheckedChange={(value) => row.toggleSelected(!!value)}
         aria-label={t('users.selectRow')}
-        className='translate-y-[2px]'
+        className='hit-44 translate-y-[2px]'
       />
     ),
     enableSorting: false,
@@ -44,7 +47,9 @@ export const getUsersColumns = (t: TFunction): ColumnDef<User>[] => [
       <DataTableColumnHeader column={column} title='users.columns.username' />
     ),
     cell: ({ row }) => (
-      <LongText className='max-w-36 ps-3'>{row.getValue('username')}</LongText>
+      <LongText className='max-w-36'>
+        <span dir='auto'>{row.getValue('username')}</span>
+      </LongText>
     ),
     meta: {
       className: cn(
@@ -62,7 +67,11 @@ export const getUsersColumns = (t: TFunction): ColumnDef<User>[] => [
     cell: ({ row }) => {
       const { firstName, lastName } = row.original
       const fullName = `${firstName} ${lastName}`
-      return <LongText className='max-w-36'>{fullName}</LongText>
+      return (
+        <LongText className='max-w-36'>
+          <span dir='auto'>{fullName}</span>
+        </LongText>
+      )
     },
     meta: { className: 'w-36' },
   },
@@ -72,7 +81,9 @@ export const getUsersColumns = (t: TFunction): ColumnDef<User>[] => [
       <DataTableColumnHeader column={column} title='users.columns.email' />
     ),
     cell: ({ row }) => (
-      <div className='w-fit ps-2 text-nowrap'>{row.getValue('email')}</div>
+      <div className='w-fit text-nowrap'>
+        <span dir='auto'>{row.getValue('email')}</span>
+      </div>
     ),
   },
   {

@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { SignIn } from '@clerk/react'
+import { safeRedirect } from '@/lib/safe-redirect'
 import { Skeleton } from '@/components/ui/skeleton'
 
 type SignInSearch = {
@@ -9,17 +10,10 @@ type SignInSearch = {
 }
 
 export const Route = createFileRoute('/(auth)/sign-in')({
-  validateSearch: (search: Record<string, unknown>): SignInSearch => {
-    const r = typeof search.redirect === 'string' ? search.redirect : undefined
-    // Only allow internal, path-absolute targets (`/dashboard`) — never an
-    // absolute/external URL (`https://evil.example`) or a protocol-relative
-    // URL (`//evil.example`). This is a same-origin guard against an
-    // open-redirect / phishing handoff after sign-in (WR-01). `forceRedirectUrl`
-    // below then only ever receives a relative same-origin path.
-    return {
-      redirect: r && r.startsWith('/') && !r.startsWith('//') ? r : undefined,
-    }
-  },
+  validateSearch: (search: Record<string, unknown>): SignInSearch => ({
+    // Same-origin targets only; see @/lib/safe-redirect for why the URL parser decides (SEC-01).
+    redirect: safeRedirect(search.redirect, '') || undefined,
+  }),
   component: SignInPage,
 })
 

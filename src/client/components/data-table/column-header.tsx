@@ -4,7 +4,7 @@ import {
   CaretSortIcon,
   EyeNoneIcon,
 } from '@radix-ui/react-icons'
-import { type Column } from '@tanstack/react-table'
+import { type RowData, type Column } from '@tanstack/react-table'
 import { type TranslationKey } from '@/i18n'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
@@ -16,14 +16,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { type DataTableFeatures } from '@/components/data-table/features'
 
-type DataTableColumnHeaderProps<TData, TValue> =
-  React.HTMLAttributes<HTMLDivElement> & {
-    column: Column<TData, TValue>
-    title: TranslationKey
-  }
+type DataTableColumnHeaderProps<
+  TData extends RowData,
+  TValue,
+> = React.HTMLAttributes<HTMLDivElement> & {
+  column: Column<DataTableFeatures, TData, TValue>
+  title: TranslationKey
+}
 
-export function DataTableColumnHeader<TData, TValue>({
+export function DataTableColumnHeader<TData extends RowData, TValue>({
   column,
   title,
   className,
@@ -40,15 +43,15 @@ export function DataTableColumnHeader<TData, TValue>({
           <Button
             variant='ghost'
             size='sm'
-            className='data-[state=open]:bg-accent h-8'
+            className='data-[state=open]:bg-accent h-8 gap-2 px-0 has-[>svg]:px-0'
           >
             <span>{t(title)}</span>
             {column.getIsSorted() === 'desc' ? (
-              <ArrowDownIcon className='ms-2 h-4 w-4' />
+              <ArrowDownIcon className='h-4 w-4' />
             ) : column.getIsSorted() === 'asc' ? (
-              <ArrowUpIcon className='ms-2 h-4 w-4' />
+              <ArrowUpIcon className='h-4 w-4' />
             ) : (
-              <CaretSortIcon className='ms-2 h-4 w-4' />
+              <CaretSortIcon className='h-4 w-4' />
             )}
           </Button>
         </DropdownMenuTrigger>

@@ -1,7 +1,9 @@
-/// <reference types="@cloudflare/vitest-pool-workers/types" />
+/// <reference types="@cloudflare/vitest-plugin/types" />
 import { env } from 'cloudflare:test'
 import { Hono, type ContextVariableMap } from 'hono'
 import { describe, expect, it } from 'vitest'
+import { onApiError } from '../errors'
+import { catalog, t } from '../i18n'
 import { requireAuth } from '../middleware/require-auth'
 import { users } from './users'
 
@@ -63,9 +65,12 @@ function fakeClerk(
 // `callerRole` seeds the CALLER's publicMetadata.role read by the real
 // requireAdmin gate — default 'admin' (success-path tests pass the gate),
 // `null` = no role set (the every-new-user state). `getUser` overrides the
-// whole caller lookup (e.g. to throw).
+// whole caller lookup (e.g. to throw). `tokenType` seeds the Clerk token type,
+// default 'session_token' (a browser session); pass a machine type such as
+// 'oauth_token' to prove the requireAuth gate turns it away (CR-01).
 function makeApp(opts: {
   signedIn?: boolean
+  tokenType?: string
   callerRole?: string | null
   getUser?: (id: string) => Promise<unknown>
   getUserList: () => Promise<{ data: unknown[]; totalCount: number }>
@@ -84,21 +89,21 @@ function makeApp(opts: {
         publicMetadata:
           opts.callerRole === null ? {} : { role: opts.callerRole ?? 'admin' },
       }))
-    c.set('clerkAuth', () => ({ userId }) as never)
+    c.set(
+      'clerkAuth',
+      () => ({ userId, tokenType: opts.tokenType ?? 'session_token' }) as never
+    )
     c.set('clerk', fakeClerk(opts.getUserList, getUser))
     await next()
   })
   app.use('/api/*', requireAuth)
   app.route('/api/users', users)
   app.all('/api/*', (c) =>
-    c.json({ error: 'Not Found', path: c.req.path }, 404)
+    c.json({ error: t(c, 'notFound'), path: c.req.path }, 404)
   )
-  // Mirror index.ts's terminal error handler so requireAdmin's fail-closed path
-  // (caller lookup throws) is asserted against the SAME JSON 500 envelope the
-  // deployed Worker produces, not Hono's text/plain default.
-  app.onError((_err, c) =>
-    c.json({ error: 'Internal Server Error', path: c.req.path }, 500)
-  )
+  // The real terminal error handler, so requireAdmin's fail-closed path (caller
+  // lookup throws) is asserted against the envelope the deployed Worker produces.
+  app.onError(onApiError)
   return {
     fetch: (input: string, init?: RequestInit) => app.request(input, init, env),
   }
@@ -185,7 +190,7 @@ describe('/api/users read-only endpoint (UI-04, D-04)', () => {
     const res = await api.fetch(`${BASE}/api/users`)
     expect(res.status).toBe(502)
     const body = (await res.json()) as Record<string, unknown>
-    expect(typeof body.error).toBe('string')
+    expect(body.error).toBe(catalog.en.upstream)
     expect(body.path).toBe('/api/users')
     // The raw Clerk error message must not be echoed to the client body.
     expect(JSON.stringify(body)).not.toContain('boom')
@@ -208,6 +213,16 @@ describe('/api/users admin gate (requireAdmin, audit run-1 Finding 1)', () => {
     expect(body.path).toBe('/api/users')
   })
 
+  it('caller with no role and dir=rtl gets the 403 in Hebrew', async () => {
+    const api = makeApp({ callerRole: null, getUserList: okUserList })
+    const res = await api.fetch(`${BASE}/api/users`, {
+      headers: { cookie: 'dir=rtl' },
+    })
+    expect(res.status).toBe(403)
+    const body = (await res.json()) as { error?: string }
+    expect(body.error).toBe(catalog.he.forbidden)
+  })
+
   it('caller with role "cashier" returns 403 — signed-in is NOT enough', async () => {
     const api = makeApp({ callerRole: 'cashier', getUserList: okUserList })
     const res = await api.fetch(`${BASE}/api/users`)
@@ -226,6 +241,23 @@ describe('/api/users admin gate (requireAdmin, audit run-1 Finding 1)', () => {
     const api = makeApp({ callerRole: 'superadmin', getUserList: okUserList })
     const res = await api.fetch(`${BASE}/api/users`)
     expect(res.status).toBe(200)
+  })
+
+  it("an admin's OAuth access token gets 401 and never lists users (CR-01)", async () => {
+    let listed = false
+    const api = makeApp({
+      tokenType: 'oauth_token',
+      callerRole: 'admin',
+      getUserList: async () => {
+        listed = true
+        return okUserList()
+      },
+    })
+    const res = await api.fetch(`${BASE}/api/users`)
+    expect(res.status).toBe(401)
+    const body = (await res.json()) as { error?: unknown }
+    expect(typeof body.error).toBe('string')
+    expect(listed).toBe(false)
   })
 
   it('caller lookup throw fails CLOSED: 500 JSON envelope, no internals, no data', async () => {

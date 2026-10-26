@@ -26,6 +26,23 @@ automatically):
 pnpm dlx shadcn@latest add date-picker
 ```
 
+**RTL and imports.** `components.json` sets `"rtl": true`, so `add` emits
+logical classes (`ms-`/`me-`, `ps-`/`pe-`, `start-`/`end-`, `border-s`/`border-e`)
+plus `rtl:` fixes, and the component works in Hebrew without hand-editing.
+Registry components import Radix primitives from the unified `radix-ui` package
+as namespaces (`import { Popover as PopoverPrimitive } from 'radix-ui'`) and
+`cn` from the `cn` package; app code keeps importing `cn` from `@/lib/utils`.
+Two things still need a human eye: the CLI does not fully convert calendar and
+sidebar, so check those (and any sheet slide animation) in Hebrew; and
+`Tooltip` no longer wraps itself in a `TooltipProvider`, so a tooltip used
+outside the authenticated layout needs one.
+
+**Review the CLI's extra edits.** Run `git diff` after `add`. The CLI may also
+rewrite `src/client/styles/index.css`, create files such as
+`hooks/use-mobile.ts`, or add or downgrade packages (for example next-themes for
+sonner). Revert those: keep the tweakcn theme in `index.css` and keep
+`@/context/theme-provider`.
+
 The component lands in `src/client/components/ui/` and is yours to edit. Commit
 it like any other source file.
 

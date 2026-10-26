@@ -2,7 +2,7 @@
 //
 // WHY node, not workerd: regenerateTheme()/loadPreset() use node:fs + global fetch +
 // AbortSignal and rewrite tracked stylesheets on disk — none of that runs inside
-// @cloudflare/vitest-pool-workers. Registered as the 'setup' project (environment:
+// @cloudflare/vitest-plugin. Registered as the 'setup' project (environment:
 // 'node') in vitest.config.ts, alongside setup.test.mjs.
 //
 // This suite is the byte-faithfulness contract for the tweakcn-preset → theme.css

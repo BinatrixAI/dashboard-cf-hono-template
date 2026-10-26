@@ -7,7 +7,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from '@/components/ui/chart'
-import { breakdownData } from '../data/mock'
+import { type BreakdownSlice } from '../data/mock'
 
 /**
  * Donut chart for the Analytics tab. Each of the 5 slices maps to a `--chart-N`
@@ -25,28 +25,35 @@ const chartConfig = {
   Email: { label: 'Email' },
 } satisfies ChartConfig
 
-export function AnalyticsPieChart() {
+export function AnalyticsPieChart({
+  data,
+  label,
+}: {
+  data: BreakdownSlice[]
+  label: string
+}) {
   // Recharts plot internals do not auto-mirror; pin the plot canvas LTR so slice
   // order and legend/tooltip anchoring stay stable under a dir="rtl" doc (DV-7).
   return (
-    <div dir='ltr'>
+    <div dir='ltr' role='img' aria-label={label}>
       <ChartContainer
         config={chartConfig}
         className='mx-auto aspect-square max-h-[250px]'
       >
-        <PieChart>
+        <PieChart accessibilityLayer={false}>
           <ChartTooltip
             cursor={false}
             content={<ChartTooltipContent hideLabel />}
           />
           <Pie
-            data={breakdownData}
+            data={data}
             dataKey='value'
             nameKey='name'
             innerRadius={50}
+            rootTabIndex={-1}
           >
-            {breakdownData.map((slice, i) => (
-              <Cell key={slice.name} fill={`var(--color-chart-${i + 1})`} />
+            {data.map((slice, i) => (
+              <Cell key={slice.name} fill={`var(--chart-${i + 1})`} />
             ))}
           </Pie>
           <ChartLegend content={<ChartLegendContent nameKey='name' />} />

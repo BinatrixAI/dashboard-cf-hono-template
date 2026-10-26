@@ -7,7 +7,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from '@/components/ui/chart'
-import { areaData } from '../data/mock'
+import { type AreaPoint } from '../data/mock'
 
 /**
  * Two-series area chart for the Analytics tab. Each series color maps to a
@@ -17,17 +17,23 @@ import { areaData } from '../data/mock'
  * UI-SPEC Chart Token Mapping (area s1 → chart-1, s2 → chart-2).
  */
 const chartConfig = {
-  desktop: { label: 'Desktop', color: 'var(--color-chart-1)' },
-  mobile: { label: 'Mobile', color: 'var(--color-chart-2)' },
+  desktop: { label: 'Desktop', color: 'var(--chart-1)' },
+  mobile: { label: 'Mobile', color: 'var(--chart-2)' },
 } satisfies ChartConfig
 
-export function AnalyticsAreaChart() {
+export function AnalyticsAreaChart({
+  data,
+  label,
+}: {
+  data: AreaPoint[]
+  label: string
+}) {
   // Recharts plot internals do not auto-mirror; pin the plot canvas LTR so axis
   // order, ticks, and numbers stay stable under a dir="rtl" document (DV-7).
   return (
-    <div dir='ltr'>
+    <div dir='ltr' role='img' aria-label={label}>
       <ChartContainer config={chartConfig} className='h-[250px] w-full'>
-        <AreaChart data={areaData}>
+        <AreaChart data={data} accessibilityLayer={false}>
           <CartesianGrid vertical={false} />
           <XAxis
             dataKey='date'

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { HttpError } from '@/lib/http-error'
 import { type User } from './schema'
 
 /**
@@ -18,9 +19,7 @@ async function fetchUsers(): Promise<User[]> {
   if (!res.ok) {
     // Carry the HTTP status so the page can distinguish 403 (admin gate —
     // caller lacks the admin role) from genuine load failures.
-    throw Object.assign(new Error(`Failed to load users (${res.status})`), {
-      status: res.status,
-    })
+    throw new HttpError(res.status, `Failed to load users (${res.status})`)
   }
   const data = (await res.json()) as { users: User[] }
   return data.users

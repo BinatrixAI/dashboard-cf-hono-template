@@ -1,0 +1,78 @@
+/* Hand-owned: setup.mjs --theme never touches this file. Derived tokens hang off tweakcn keys so a
+   re-skin carries them (D-02); status tokens are fixed so their meaning never changes with brand (D-03). */
+:root {
+  --brand: var(--ring);
+  --brand-deep: color-mix(in oklch, var(--sidebar-ring) 75%, black);
+  --brand-fg: var(--brand-deep);
+  --brand-soft: color-mix(in oklch, var(--brand) 12%, transparent);
+  --on-brand: oklch(1 0 0);
+  --track: color-mix(in oklch, var(--foreground) 8%, transparent);
+  --cardsh:
+    inset 0 1px 0 oklch(1 0 0 / 0.9),
+    0 10px 30px -18px color-mix(in oklch, var(--foreground) 25%, transparent);
+  --glow-1: color-mix(in oklch, var(--sidebar-ring) 16%, transparent);
+  --glow-2: color-mix(in oklch, var(--chart-3) 22%, transparent);
+  --sidebar-label: color-mix(
+    in oklch,
+    var(--sidebar-foreground) 70%,
+    transparent
+  );
+  --sidebar-glow: color-mix(in oklch, var(--sidebar-ring) 22%, transparent);
+
+  --success: oklch(0.624 0.127 158.6);
+  --success-soft: oklch(0.624 0.127 158.6 / 0.12);
+  --success-fg: oklch(0.46 0.098 157.7);
+  --warn: oklch(0.729 0.139 76.8);
+  --warn-soft: oklch(0.729 0.139 76.8 / 0.16);
+  --warn-fg: oklch(0.483 0.099 72.9);
+  --danger: oklch(0.603 0.167 30.5);
+  --danger-soft: oklch(0.603 0.167 30.5 / 0.12);
+  --danger-fg: oklch(0.481 0.141 31.4);
+}
+
+.dark {
+  --brand-fg: var(--brand);
+  --brand-soft: color-mix(in oklch, var(--brand) 16%, transparent);
+  --cardsh:
+    inset 0 1px 0 oklch(1 0 0 / 0.06), 0 14px 34px -18px oklch(0 0 0 / 0.6);
+  /* off --sidebar-ring, not --ring: the brighter dark ring under cards fails AA (contrast.test.ts) */
+  --glow-1: color-mix(in oklch, var(--sidebar-ring) 28%, transparent);
+  --glow-2: color-mix(in oklch, var(--chart-2) 20%, transparent);
+
+  --success: oklch(0.8 0.121 160.8);
+  --success-soft: oklch(0.75 0.143 158.9 / 0.14);
+  --success-fg: oklch(0.8 0.121 160.8);
+  --warn: oklch(0.839 0.123 82);
+  --warn-soft: oklch(0.806 0.141 79.2 / 0.16);
+  --warn-fg: oklch(0.839 0.123 82);
+  --danger: oklch(0.739 0.127 29.9);
+  --danger-soft: oklch(0.707 0.152 31 / 0.16);
+  --danger-fg: oklch(0.739 0.127 29.9);
+}
+
+@theme inline {
+  --color-brand: var(--brand);
+  --color-brand-deep: var(--brand-deep);
+  --color-brand-fg: var(--brand-fg);
+  --color-brand-soft: var(--brand-soft);
+  --color-on-brand: var(--on-brand);
+  --color-track: var(--track);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-fg: var(--success-fg);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-warn-fg: var(--warn-fg);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-fg: var(--danger-fg);
+  --color-sidebar-label: var(--sidebar-label);
+  --shadow-card: var(--cardsh);
+  --radius-card: calc(var(--radius) + 8px);
+}
+
+/* The 2px ring with a 2px offset as one utility; the colour comes from --ring and
+   the offset band is --background (Tailwind v4 defaults it to white). */
+@utility focus-ring {
+  @apply focus-visible:ring-ring focus-visible:ring-offset-background outline-none focus-visible:ring-2 focus-visible:ring-offset-2;
+}

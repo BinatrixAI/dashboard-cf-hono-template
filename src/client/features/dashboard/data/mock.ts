@@ -2,7 +2,7 @@
  * ⚠️ DEMO DATA — replace with your real metrics / API data.
  *
  * This module is the single, self-contained source of the numbers shown on the
- * dashboard (charts, stat cards, and the Recent Sales list). It is intentionally
+ * dashboard (charts, KPI cards, and the Recent Sales list). It is intentionally
  * static: every value is a fixed literal so the demo is reproducible and needs no
  * network, D1, or fetch seam (D-01 / D-01a). A forker swaps these consts for real
  * data — see REQUIREMENTS.md (D1 wiring is deferred to a later phase).
@@ -86,37 +86,45 @@ export const lineData: LinePoint[] = [
 ]
 
 /**
- * One dashboard stat card. Icons are paired by the shell (Plan 04), not stored
- * here. `title`/`delta` hold translation KEYS (resolved via t() at render, G2);
- * `value` is a demo numeric literal left as-is (numbers stay LTR, DV-7).
+ * One dashboard KPI card. `title`/`delta` hold translation KEYS (resolved via t()
+ * at render, G2); `value` is a demo numeric literal left as-is (numbers stay LTR,
+ * DV-7); `series` is the 12-point sparkline, oldest first.
  */
-export interface StatCard {
+export interface Kpi {
   title: TranslationKey
   value: string
   delta: TranslationKey
+  series: number[]
 }
 
-/** The 4 Overview-tab stat cards. Copy matches UI-SPEC Copywriting verbatim. */
-export const statCards: StatCard[] = [
+/** The 4 KPI cards above the dashboard tabs. Copy matches UI-SPEC Copywriting. */
+export const kpis: Kpi[] = [
   {
     title: 'dashboard.stats.revenueTitle',
     value: '$45,231.89',
     delta: 'dashboard.stats.revenueDelta',
+    series: [28, 31, 30, 33, 35, 34, 36, 37, 36, 38, 37.6, 45.2],
   },
   {
     title: 'dashboard.stats.subscriptionsTitle',
     value: '+2,350',
     delta: 'dashboard.stats.subscriptionsDelta',
+    series: [610, 640, 700, 690, 760, 820, 800, 870, 840, 880, 838, 2350],
   },
   {
     title: 'dashboard.stats.salesTitle',
     value: '+12,234',
     delta: 'dashboard.stats.salesDelta',
+    series: [
+      8200, 8600, 8900, 8700, 9300, 9800, 9600, 10100, 10400, 10200, 10280,
+      12234,
+    ],
   },
   {
     title: 'dashboard.stats.activeTitle',
     value: '+573',
     delta: 'dashboard.stats.activeDelta',
+    series: [310, 290, 340, 360, 330, 380, 350, 372, 400, 390, 372, 573],
   },
 ]
 

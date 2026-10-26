@@ -1,10 +1,10 @@
-import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import {
   settingsSchema,
   SETTINGS_KEY,
   defaultSettings,
 } from '../../shared/settings'
+import { v } from '../validator'
 
 /**
  * KV-backed `/api/settings` config store (Plan 03 / DATA-04 / D-04). This is the
@@ -20,7 +20,13 @@ import {
  *    deploys (T-02-04), so it is re-validated with `settingsSchema.safeParse` and
  *    falls back to `defaultSettings` — a malformed stored blob can never crash the
  *    route or inject an unexpected shape. The write whitelists exactly the three
- *    fields via `zValidator` (T-02-02 — no over-posting).
+ *    fields via `v` (the localized zValidator in ../validator, T-02-02 — no over-posting;
+ *    a bad or non-JSON body gets a localized 400 and never overwrites the stored blob).
+ *
+ * PUT replaces the whole document; it is not a merge. A valid JSON body missing a
+ * section, `{}` included, stores that section's defaults. The SPA always sends the
+ * full blob; a fork that needs partial updates should merge with the stored blob
+ * server-side.
  *
  * KV is eventually consistent (Pitfall 9): a write may take up to ~60s to propagate
  * across edge POPs. That is acceptable for a settings store; use D1 where strong
@@ -33,8 +39,8 @@ export const settings = new Hono<{ Bindings: Env }>()
     const parsed = settingsSchema.safeParse(stored) // validate untrusted stored JSON
     return c.json({ settings: parsed.success ? parsed.data : defaultSettings })
   })
-  // PUT / — validate the body, persist the whole blob under the fixed key.
-  .put('/', zValidator('json', settingsSchema), async (c) => {
+  // PUT / — validate the body; it replaces the whole document (missing sections = defaults).
+  .put('/', v('json', settingsSchema), async (c) => {
     const next = c.req.valid('json')
     await c.env.__KV_BINDING__.put(SETTINGS_KEY, JSON.stringify(next))
     return c.json({ settings: next })

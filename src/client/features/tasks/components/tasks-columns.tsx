@@ -3,6 +3,7 @@ import { type TFunction } from 'i18next'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DataTableColumnHeader } from '@/components/data-table'
+import { type DataTableFeatures } from '@/components/data-table/features'
 import { labels, priorities, statuses } from '../data/data'
 import { type Task } from '../data/schema'
 import { DataTableRowActions } from './data-table-row-actions'
@@ -10,7 +11,9 @@ import { DataTableRowActions } from './data-table-row-actions'
 // Column factory (G2): t() is threaded in and called at render — the columns
 // are rebuilt via useMemo(() => getTasksColumns(t), [t]) so labels track the
 // active language instead of freezing at module scope.
-export const getTasksColumns = (t: TFunction): ColumnDef<Task>[] => [
+export const getTasksColumns = (
+  t: TFunction
+): ColumnDef<DataTableFeatures, Task>[] => [
   {
     id: 'select',
     header: ({ table }) => (
@@ -21,7 +24,7 @@ export const getTasksColumns = (t: TFunction): ColumnDef<Task>[] => [
         }
         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
         aria-label={t('tasks.selectAll')}
-        className='translate-y-[2px]'
+        className='hit-44 translate-y-[2px]'
       />
     ),
     cell: ({ row }) => (
@@ -29,7 +32,7 @@ export const getTasksColumns = (t: TFunction): ColumnDef<Task>[] => [
         checked={row.getIsSelected()}
         onCheckedChange={(value) => row.toggleSelected(!!value)}
         aria-label={t('tasks.selectRow')}
-        className='translate-y-[2px]'
+        className='hit-44 translate-y-[2px]'
       />
     ),
     enableSorting: false,
@@ -49,14 +52,16 @@ export const getTasksColumns = (t: TFunction): ColumnDef<Task>[] => [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title='tasks.columns.title' />
     ),
-    meta: { className: 'ps-1', tdClassName: 'ps-4' },
     cell: ({ row }) => {
       const label = labels.find((label) => label.value === row.original.label)
 
       return (
         <div className='flex space-x-2'>
           {label && <Badge variant='outline'>{t(label.label)}</Badge>}
-          <span className='max-w-32 truncate font-medium sm:max-w-72 md:max-w-[31rem]'>
+          <span
+            dir='auto'
+            className='max-w-32 truncate font-medium sm:max-w-72 md:max-w-[31rem]'
+          >
             {row.getValue('title')}
           </span>
         </div>
@@ -68,7 +73,6 @@ export const getTasksColumns = (t: TFunction): ColumnDef<Task>[] => [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title='tasks.columns.status' />
     ),
-    meta: { className: 'ps-1', tdClassName: 'ps-4' },
     cell: ({ row }) => {
       const status = statuses.find(
         (status) => status.value === row.getValue('status')
@@ -96,7 +100,6 @@ export const getTasksColumns = (t: TFunction): ColumnDef<Task>[] => [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title='tasks.columns.priority' />
     ),
-    meta: { className: 'ps-1', tdClassName: 'ps-3' },
     cell: ({ row }) => {
       const priority = priorities.find(
         (priority) => priority.value === row.getValue('priority')

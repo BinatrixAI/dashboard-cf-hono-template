@@ -7,7 +7,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from '@/components/ui/chart'
-import { lineData } from '../data/mock'
+import { type LinePoint } from '../data/mock'
 
 /**
  * Three-series line chart for the Analytics tab. Each line color maps to a
@@ -17,18 +17,24 @@ import { lineData } from '../data/mock'
  * Series → token map is fixed by the UI-SPEC Chart Token Mapping.
  */
 const chartConfig = {
-  revenue: { label: 'Revenue', color: 'var(--color-chart-1)' },
-  profit: { label: 'Profit', color: 'var(--color-chart-2)' },
-  expenses: { label: 'Expenses', color: 'var(--color-chart-3)' },
+  revenue: { label: 'Revenue', color: 'var(--chart-1)' },
+  profit: { label: 'Profit', color: 'var(--chart-2)' },
+  expenses: { label: 'Expenses', color: 'var(--chart-3)' },
 } satisfies ChartConfig
 
-export function AnalyticsLineChart() {
+export function AnalyticsLineChart({
+  data,
+  label,
+}: {
+  data: LinePoint[]
+  label: string
+}) {
   // Recharts plot internals do not auto-mirror; pin the plot canvas LTR so axis
   // order, ticks, and numbers stay stable under a dir="rtl" document (DV-7).
   return (
-    <div dir='ltr'>
+    <div dir='ltr' role='img' aria-label={label}>
       <ChartContainer config={chartConfig} className='h-[250px] w-full'>
-        <LineChart data={lineData}>
+        <LineChart data={data} accessibilityLayer={false}>
           <CartesianGrid vertical={false} />
           <XAxis
             dataKey='month'

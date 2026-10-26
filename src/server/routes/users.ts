@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { t } from '../i18n'
 import { requireAdmin } from '../middleware/require-admin'
 
 /**
@@ -103,10 +104,10 @@ export const users = new Hono<{ Bindings: Env }>().get(
 
       return c.json({ users: rows })
     } catch {
-      // Never leak Clerk internals to the body (T-13-03). The raw error is
-      // server-logged by the app.onError convention; the client sees only the
-      // normalized envelope, mirroring index.ts lines 59/72.
-      return c.json({ error: 'Failed to list users', path: c.req.path }, 502)
+      // This catch swallows the error, so nothing reaches onError: the raw Clerk
+      // error is deliberately neither logged nor echoed (T-13-03). The client sees
+      // only the localized envelope.
+      return c.json({ error: t(c, 'upstream'), path: c.req.path }, 502)
     }
   }
 )

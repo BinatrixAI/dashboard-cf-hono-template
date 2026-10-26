@@ -1,12 +1,23 @@
 // ci-gates.test.mjs — Nyquist gap-fill for Phase 6 CICD-04 and CICD-05.
 // CICD-04: scripts/ci-sentinel-scan.mjs — exits 0 on a clean scaffold, 1 on a leftover sentinel.
 // CICD-05: scripts/secret-grep.sh — exits 1 on a secret shape in tracked files, 0 on clean.
+// SEC-09: every source file carrying a setup-substituted sentinel is in SUBSTITUTION_FILESET.
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { spawnSync } from 'node:child_process'
-import { cpSync, rmSync, mkdtempSync, writeFileSync, readFileSync, mkdirSync } from 'node:fs'
+import {
+  cpSync,
+  rmSync,
+  mkdtempSync,
+  writeFileSync,
+  readFileSync,
+  mkdirSync,
+  readdirSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+import { SUBSTITUTION_FILESET } from '../../setup.mjs'
 
 // Every test here copies the whole template to a tmpdir and spawns node several times, which
 // alone runs ~6s on a laptop — over vitest's 5s default. It only passed because the suite was
@@ -16,6 +27,10 @@ import { fileURLToPath } from 'node:url'
 vi.setConfig({ testTimeout: 60_000 })
 
 const templateRoot = fileURLToPath(new URL('../../', import.meta.url))
+
+// Template-only gate (SEC-09): blocks that run setup.mjs against a tree copy or assert un-setup
+// state only make sense before setup.mjs; it always rewrites this package.json sentinel.
+const IS_TEMPLATE = readFileSync(path.join(templateRoot, 'package.json'), 'utf8').includes('__PKG_NAME__')
 
 const EXCLUDE_TOP = new Set(['node_modules', '.git', '.planning', 'dist', '.wrangler', 'docs'])
 
@@ -71,7 +86,7 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 // CICD-04: ci-sentinel-scan.mjs
 // ---------------------------------------------------------------------------
-describe('CICD-04 — ci-sentinel-scan.mjs: sentinel gate', () => {
+describe.skipIf(!IS_TEMPLATE)('CICD-04 — ci-sentinel-scan.mjs: sentinel gate', () => {
   const sentinelScript = path.join(templateRoot, 'scripts', 'ci-sentinel-scan.mjs')
 
   it('exits 0 on a clean scaffold after setup.mjs --yes', () => {
@@ -126,7 +141,7 @@ describe('CICD-06 — ci-wrangler-coverage.mjs: wrangler.* coverage gate', () =>
     })
   }
 
-  it('exits 0 on the current tree (./wrangler.jsonc + ./cms/wrangler.jsonc both covered)', () => {
+  it('exits 0 on the current tree (./wrangler.jsonc covered)', () => {
     const r = runCoverage(templateRoot)
     expect(r.status, `expected 0; stdout: ${r.stdout}; stderr: ${r.stderr}`).toBe(0)
     expect(r.stdout).toMatch(/coverage clean/)
@@ -227,5 +242,31 @@ describe('CICD-05 — secret-grep.sh: secret gate (isolated git repo)', () => {
     const r = runSecretGrep(repoDir)
     expect(r.status, `expected 0; stdout: ${r.stdout}; stderr: ${r.stderr}`).toBe(0)
     expect(r.stdout).toMatch(/secret-grep: clean/)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// SEC-09: a fork's suite only passes after setup.mjs if every file that carries a token
+// substitute() rewrites is in SUBSTITUTION_FILESET (settings.test.ts was missed once).
+// ---------------------------------------------------------------------------
+describe('SEC-09 — substituted sentinels live only in SUBSTITUTION_FILESET', () => {
+  it('every src/**/*.ts(x) and test/*.ts file with a setup sentinel is in the fileset', () => {
+    // __QUEUE_BINDING__ / __DLQ_BINDING__ are the dormant async-layer names, renamed at
+    // activation per docs/async-layer.md, so they are intentionally outside setup.
+    const SETUP_TOKEN_RE = /__(PKG_NAME|APP_NAME|D1_BINDING|KV_BINDING)__/
+    // readdirSync recursive (Node 22 stdlib) works in a .git-less scratch copy, unlike git ls-files.
+    const srcFiles = readdirSync(path.join(templateRoot, 'src'), { recursive: true })
+      .filter((f) => /\.tsx?$/.test(f))
+      .map((f) => path.posix.join('src', f.split(path.sep).join('/')))
+    const testFiles = readdirSync(path.join(templateRoot, 'test'))
+      .filter((f) => f.endsWith('.ts'))
+      .map((f) => `test/${f}`)
+
+    const missing = [...srcFiles, ...testFiles].filter(
+      (rel) =>
+        SETUP_TOKEN_RE.test(readFileSync(path.join(templateRoot, rel), 'utf8')) &&
+        !SUBSTITUTION_FILESET.includes(rel),
+    )
+    expect(missing).toEqual([])
   })
 })

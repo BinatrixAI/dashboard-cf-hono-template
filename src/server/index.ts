@@ -1,6 +1,10 @@
 import { clerkMiddleware } from '@hono/clerk-auth'
 import { Hono } from 'hono'
+import { csrf } from 'hono/csrf'
 import { secureHeaders } from 'hono/secure-headers'
+import { parseAuthorizedParties } from './authorized-parties'
+import { onApiError } from './errors'
+import { t } from './i18n'
 import { requireAuth } from './middleware/require-auth'
 import { health } from './routes/health'
 import { items } from './routes/items'
@@ -23,6 +27,8 @@ import { users } from './routes/users'
  *
  * EDGE AUTH ORDERING (Phase 3, D-12/D-13/D-14, AUTH-02/03) — registration order IS
  * match order, so the sequence below is the security contract:
+ *   0.1 csrf()                    — foreign-origin form-type / no-type state changes get
+ *                                    a JSON 403 via onError (SEC-03, D-13). Adds no route.
  *   1. PUBLIC  health router       — registered FIRST, terminal handler; never reaches
  *                                    the gate (public-by-ordering, D-13/D-14).
  *   2. clerkMiddleware()           — POPULATES auth context from the same-origin
@@ -39,10 +45,22 @@ import { users } from './routes/users'
  */
 const app = new Hono<{ Bindings: Env }>()
 
-// 0) Security headers on every /api/* response (defaults only — no CSP; the SPA is
-//    served by the platform, not Hono). Registered before the health mount so the
-//    public route is covered too.
-app.use('/api/*', secureHeaders())
+// 0) Security headers on every /api/* response (no CSP; the SPA's headers come from
+//    public/_headers). HSTS is the same one year as public/_headers, without the
+//    includeSubDomains hono adds by default, so a fork's custom domain never forces HTTPS
+//    onto the owner's other subdomains (D-10). Everything else is hono defaults.
+//    Registered before the health mount so the public route is covered too.
+app.use(
+  '/api/*',
+  secureHeaders({ strictTransportSecurity: 'max-age=31536000' })
+)
+
+// 0.1) CSRF (SEC-03, D-13): an unsafe-method request whose Content-Type is form-type or
+//      missing is rejected unless Sec-Fetch-Site is same-origin or Origin equals the
+//      request's own origin (the same-origin SPA). The HTTPException(403) it throws is
+//      turned into the localized JSON envelope by onApiError. JSON bodies are left to
+//      the browser's CORS preflight (the API sends no CORS headers).
+app.use('/api/*', csrf())
 
 // 1) PUBLIC first (D-13/D-14) — matched before the gate, terminal handler, never
 //    reaches the auth middleware below.
@@ -50,10 +68,13 @@ app.route('/api/health', health)
 
 // 2) Populate Clerk auth context for everything below from the `__session` cookie
 //    (D-10/D-12). Needs env: CLERK_SECRET_KEY (secret) + CLERK_PUBLISHABLE_KEY (var).
-//    authorizedParties pins the accepted `azp` claim to this deployment's own origin
-//    (SPA and API are same-origin by design, so the request origin IS the authorized
-//    party — works unchanged on *.workers.dev, custom domains, and localhost dev).
-//    A session token minted for another app on the same Clerk instance is rejected.
+//    authorizedParties pins the accepted `azp` claim to the configured AUTHORIZED_PARTIES
+//    list (SEC-02, D-01): a session token whose azp names an unlisted origin is
+//    rejected. requireAuth (step 3) turns away every non-session token, and a token
+//    without azp is not origin-checked (docs/security.md). An empty, placeholder-only
+//    or non-origin list throws AuthorizedPartiesUnset (Clerk would skip the azp check
+//    on []), so every protected route answers 500 via onError while /api/health,
+//    mounted above, stays 200 (D-02 fail-closed).
 //    GOTCHA: passing ANY options object to clerkMiddleware() disables its env-based
 //    key fallback (`options || {env defaults}` in @hono/clerk-auth), so the keys MUST
 //    be passed explicitly — hence the per-request wrapper reading c.env.
@@ -61,7 +82,7 @@ app.use('/api/*', (c, next) =>
   clerkMiddleware({
     secretKey: c.env.CLERK_SECRET_KEY,
     publishableKey: c.env.CLERK_PUBLISHABLE_KEY,
-    authorizedParties: [new URL(c.req.url).origin],
+    authorizedParties: parseAuthorizedParties(c.env.AUTHORIZED_PARTIES),
   })(c, next)
 )
 
@@ -78,21 +99,15 @@ app.route('/api/users', users)
 // 5) Terminal /api/* catch-all — JSON 404, never HTML (ROUT-03). MUST stay last.
 //    (An UNauthenticated unknown /api/* path is short-circuited to 401 by requireAuth
 //    above; this 404 is only reached by an AUTHENTICATED request for an unknown path.)
-app.all('/api/*', (c) => c.json({ error: 'Not Found', path: c.req.path }, 404))
+app.all('/api/*', (c) =>
+  c.json({ error: t(c, 'notFound'), path: c.req.path }, 404)
+)
 
-// Terminal error handler (WR-03) — normalizes ANY uncaught throw to the same JSON
-// envelope as the 401/404 paths, instead of Hono's default text/plain 500. Without
-// this, an exception from clerkMiddleware() (e.g. missing/invalid CLERK_SECRET_KEY)
-// or getAuth(c) would break the documented "always-JSON-envelope { error, path }"
-// contract the Axios client expects. Fail-closed (no auth bypass); the error is
-// logged server-side and never echoed to the client body.
-app.onError((err, c) => {
-  // Intentional server-side log of the uncaught error (never echoed to the client
-  // body); the worker has no other observability sink at this seam.
-  // eslint-disable-next-line no-console
-  console.error(err)
-  return c.json({ error: 'Internal Server Error', path: c.req.path }, 500)
-})
+// Terminal error handler (WR-03, SEC-04): every uncaught throw becomes the localized
+// JSON envelope, HTTPExceptions keep their status, and the log is one
+// `<status> <METHOD> <path> <ErrorClass>` line. The old inline handler logged the whole
+// error object, which could carry query data (Drizzle bound params) into logs (D-10).
+app.onError(onApiError)
 
 export default app
 

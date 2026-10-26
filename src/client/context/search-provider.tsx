@@ -17,14 +17,27 @@ export function SearchProvider({ children }: SearchProviderProps) {
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+      if (e.key !== 'k' || !(e.metaKey || e.ctrlKey)) return
+      // Open palette: focus is in its own input, so always close (checked before the field guard).
+      if (open) {
         e.preventDefault()
-        setOpen((open) => !open)
+        setOpen(false)
+        return
       }
+      const el = e.target instanceof HTMLElement ? e.target : null
+      const typing =
+        !!el &&
+        (el.isContentEditable || !!el.closest('input, textarea, select'))
+      const otherDialog = !!document.querySelector(
+        '[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]'
+      )
+      if (typing || otherDialog) return
+      e.preventDefault()
+      setOpen(true)
     }
     document.addEventListener('keydown', down)
     return () => document.removeEventListener('keydown', down)
-  }, [])
+  }, [open])
 
   return (
     <SearchContext value={{ open, setOpen }}>

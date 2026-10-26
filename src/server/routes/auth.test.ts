@@ -1,6 +1,7 @@
-/// <reference types="@cloudflare/vitest-pool-workers/types" />
+/// <reference types="@cloudflare/vitest-plugin/types" />
 import { SELF } from 'cloudflare:test'
 import { describe, expect, it } from 'vitest'
+import { catalog } from '../i18n'
 
 /**
  * Hermetic edge-auth NEGATIVE/public proof (AUTH-02/AUTH-03, D-13/D-14/D-15).
@@ -51,14 +52,108 @@ describe('edge auth gate — unauthenticated protected requests (AUTH-03, D-15)'
     expect(body.error).toBe('Unauthorized')
     expect(body.path).toBe('/api/nope')
   })
+
+  it('dir=rtl cookie answers the 401 in Hebrew', async () => {
+    const res = await SELF.fetch(`${BASE}/api/items`, {
+      headers: { cookie: 'dir=rtl' },
+    })
+    expect(res.status).toBe(401)
+    const body = (await res.json()) as { error?: string; path?: string }
+    expect(body.error).toBe(catalog.he.unauthorized)
+    expect(body.path).toBe('/api/items')
+  })
+
+  it.each(['dir=xx', 'dir=RTL'])(
+    '%s cookie answers the 401 in English (exact-match rule)',
+    async (cookie) => {
+      const res = await SELF.fetch(`${BASE}/api/items`, { headers: { cookie } })
+      expect(res.status).toBe(401)
+      const body = (await res.json()) as { error?: string }
+      expect(body.error).toBe(catalog.en.unauthorized)
+    }
+  )
 })
 
 describe('public-by-ordering exception — /api/health (D-13/D-14)', () => {
+  it('GET /api/health carries the one-year HSTS without the subdomain flag (D-10)', async () => {
+    const res = await SELF.fetch(`${BASE}/api/health`)
+    expect(res.headers.get('strict-transport-security')).toBe(
+      'max-age=31536000'
+    )
+  })
+
   it('GET /api/health returns 200 { status:"ok" } with no session (matched before the gate)', async () => {
     const res = await SELF.fetch(`${BASE}/api/health`)
     expect(res.status).toBe(200)
     expect(res.headers.get('content-type')).toContain('application/json')
     const body = (await res.json()) as { status?: string }
     expect(body.status).toBe('ok')
+  })
+})
+
+describe('CSRF on /api/* (SEC-03, D-13)', () => {
+  const EVIL = 'https://evil.example'
+
+  it('foreign-origin text/plain POST -> 403 JSON envelope with secure headers', async () => {
+    const res = await SELF.fetch(`${BASE}/api/items`, {
+      method: 'POST',
+      headers: { origin: EVIL, 'content-type': 'text/plain' },
+      body: 'x',
+    })
+    expect(res.status).toBe(403)
+    expect(res.headers.get('content-type')).toContain('application/json')
+    expect(res.headers.get('x-content-type-options')).toBe('nosniff')
+    expect(res.headers.get('strict-transport-security')).toBe(
+      'max-age=31536000'
+    )
+    expect(await res.json()).toEqual({
+      error: catalog.en.forbidden,
+      path: '/api/items',
+    })
+  })
+
+  it('foreign-origin bodiless DELETE -> 403 JSON envelope', async () => {
+    const res = await SELF.fetch(`${BASE}/api/items/abc`, {
+      method: 'DELETE',
+      headers: { origin: EVIL },
+    })
+    expect(res.status).toBe(403)
+    expect(await res.json()).toEqual({
+      error: catalog.en.forbidden,
+      path: '/api/items/abc',
+    })
+  })
+
+  it('dir=rtl cookie localizes the csrf 403', async () => {
+    const res = await SELF.fetch(`${BASE}/api/items`, {
+      method: 'POST',
+      headers: {
+        origin: EVIL,
+        'content-type': 'text/plain',
+        cookie: 'dir=rtl',
+      },
+      body: 'x',
+    })
+    expect(res.status).toBe(403)
+    const body = (await res.json()) as { error?: string }
+    expect(body.error).toBe(catalog.he.forbidden)
+  })
+
+  it('same-origin text/plain POST passes csrf (then 401 unauthenticated)', async () => {
+    const res = await SELF.fetch(`${BASE}/api/items`, {
+      method: 'POST',
+      headers: { origin: BASE, 'content-type': 'text/plain' },
+      body: 'x',
+    })
+    expect(res.status).toBe(401)
+  })
+
+  it('foreign-origin application/json POST is left to CORS (401, Pitfall 5)', async () => {
+    const res = await SELF.fetch(`${BASE}/api/items`, {
+      method: 'POST',
+      headers: { origin: EVIL, 'content-type': 'application/json' },
+      body: '{}',
+    })
+    expect(res.status).toBe(401)
   })
 })

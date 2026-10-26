@@ -6,7 +6,6 @@ import { Link } from '@tanstack/react-router'
 import { type TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -21,6 +20,7 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
+import { Widget } from '@/components/widget'
 import {
   useSettings,
   useUpdateSettings,
@@ -56,15 +56,16 @@ function makeSchema(t: TFunction) {
 type NotificationsFormValues = z.infer<ReturnType<typeof makeSchema>>
 
 // Load gate (D-06 / Pitfall 2): never render or save hardcoded defaults before
-// the stored KV blob resolves. Mirrors the `items/index.tsx` isPending/isError
-// idiom — only the resolved-data branch mounts the editable form.
+// the stored KV blob resolves. Widget (DS-03) keeps the form on screen on a failed
+// refetch and shows the in-card error only when nothing has loaded.
 export function NotificationsForm() {
-  const { data, isPending, isError, refetch } = useSettings()
+  const query = useSettings()
 
-  if (isPending) return <NotificationsFormSkeleton />
-  if (isError) return <NotificationsFormError onRetry={() => refetch()} />
-
-  return <NotificationsFormFields data={data} />
+  return (
+    <Widget query={query} skeleton={<NotificationsFormSkeleton />}>
+      {(data) => <NotificationsFormFields data={data} />}
+    </Widget>
+  )
 }
 
 function NotificationsFormFields({ data }: { data: AppSettings }) {
@@ -288,23 +289,6 @@ function NotificationsFormSkeleton() {
         <Skeleton className='h-20 w-full' />
       </div>
       <Skeleton className='h-9 w-44' />
-    </div>
-  )
-}
-
-function NotificationsFormError({ onRetry }: { onRetry: () => void }) {
-  const { t } = useTranslation()
-  return (
-    <div className='space-y-3'>
-      <Alert variant='destructive'>
-        <AlertTitle>{t('settings.notifications.loadError')}</AlertTitle>
-        <AlertDescription>
-          {t('settings.common.loadErrorDesc')}
-        </AlertDescription>
-      </Alert>
-      <Button variant='outline' size='sm' onClick={onRetry}>
-        {t('settings.common.retry')}
-      </Button>
     </div>
   )
 }

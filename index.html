@@ -26,7 +26,10 @@
       href="/images/favicon_light.png"
       media="(prefers-color-scheme: dark)"
     />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
 
     <!-- Primary Meta Tags -->
     <title>__APP_NAME__</title>
@@ -62,15 +65,8 @@
       content="https://shadcn-admin.netlify.app/images/shadcn-admin.png"
     />
 
-    <!-- font family -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Manrope:wght@200..800&display=swap"
-      rel="stylesheet"
-    />
-
-    <meta name="theme-color" content="#fff" />
+    <!-- First paint only: ThemeProvider replaces it with the live --background token. -->
+    <meta name="theme-color" content="#eef3f9" />
   </head>
 
   <body>

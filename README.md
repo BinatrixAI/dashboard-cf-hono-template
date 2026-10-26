@@ -79,11 +79,20 @@ wrangler d1 create <your-d1-name>
 wrangler kv namespace create <your-kv-title>
 #    → replace REPLACE_WITH_YOUR_KV_ID in wrangler.jsonc
 
-# 3. Set the Clerk SECRET (never committed; .dev.vars leaves it empty)
+# Set BOTH Clerk secrets before the first deploy — secret put creates the Worker
+# if it does not exist yet (wrangler refuses to deploy with a required secret unset)
+# 3. paste your sk_… key (never committed; .dev.vars leaves it empty)
 wrangler secret put CLERK_SECRET_KEY
+# 4. setup.mjs prints this line with your key filled in
+echo <your pk_…> | wrangler secret put CLERK_PUBLISHABLE_KEY
 
-# 4. Regenerate the binding types from the filled bindings
+# Then regenerate the binding types, migrate the remote D1 and deploy
+# 5.
 pnpm cf-typegen
+# 6.
+pnpm db:migrate:remote
+# 7.
+pnpm run deploy
 ```
 
 Apply the database migration to each environment (they never sync — see
@@ -98,8 +107,10 @@ pnpm db:migrate:remote   # the real D1 — requires the real database_id first
 
 ```bash
 pnpm dev                 # SPA HMR + the Hono Worker in workerd (@cloudflare/vite-plugin)
-pnpm run deploy          # pnpm build && wrangler deploy → *.workers.dev URL
+pnpm run deploy          # gated: migrations → gate → build → live key → wrangler deploy → readback + smoke
 ```
+
+See [Gated deploy](#gated-deploy) for what each link refuses.
 
 ## Architecture overview
 
@@ -116,18 +127,12 @@ host:
   CRUD; KV holds the standalone app-settings blob. Both are declared in
   `wrangler.jsonc` with placeholder IDs. See [`docs/data-layer.md`](docs/data-layer.md).
 - **Clerk at the edge.** `@hono/clerk-auth` verifies the Clerk session in the Worker;
-  the SPA uses `@clerk/react`. The publishable key is a plaintext `var`; the secret
-  is a `wrangler secret`.
+  the SPA uses `@clerk/react`. Both the publishable and the secret key are
+  `wrangler secret`s.
 - **Dormant async layer.** A Cron → Queues → Resend path ships in `src/server/async/`
   (live + unit-tested); the platform wiring stays commented so a fresh fork deploys
   inert. Activate or remove it by following
   [`docs/async-layer.md`](docs/async-layer.md).
-- **Optional CMS Worker.** A second, self-contained SonicJS Worker lives in `cms/`
-  (its own D1/KV/R2, a Better-Auth `/admin`, a public-read `blog-posts` collection).
-  The dashboard reads its REST API cross-origin via `VITE_CMS_API_URL` (a signed-in
-  `/content` page + sidebar admin link) and Clerk-free `/blog` routes render published
-  content. `setup.mjs` parameterizes it; deploy `cms/` to enable it, or skip it
-  entirely. See [`docs/cms.md`](docs/cms.md).
 
 - **Bilingual UI (English ↔ Hebrew).** The LTR/RTL toggle is also the language
   switch — LTR renders English, RTL renders Hebrew — via `react-i18next` with both
@@ -160,7 +165,6 @@ one `src/`, built and deployed as one Worker:
 │   │   ├── db/                 # Drizzle schema + queries
 │   │   └── async/              # dormant Cron → Queues → Resend layer
 │   └── shared/                 # Zod schemas + types imported by both tiers
-├── cms/                        # OPTIONAL SonicJS CMS Worker — own D1/KV/R2 + wrangler.jsonc (docs/cms.md)
 ├── migrations/                 # Drizzle-generated D1 SQL (+ committed meta/)
 ├── public/                     # static files copied verbatim into the build
 ├── scripts/                    # CI hygiene helpers (secret-grep, sentinel scan, smoke)
@@ -216,10 +220,6 @@ Deep-dive guides live in [`docs/`](docs/):
 - **[`docs/async-layer.md`](docs/async-layer.md)** — the dormant Cron → Queues → Resend
   layer: activation (create queue + DLQ → uncomment wiring → `wrangler secret put
 RESEND_API_KEY` → deploy) and the removal note.
-- **[`docs/cms.md`](docs/cms.md)** — the optional SonicJS CMS Worker (`cms/`): the
-  no-500 deploy sequence (create D1/R2/KV → set `BETTER_AUTH_SECRET`/`JWT_SECRET` →
-  migrate → seed admin → deploy), admin bootstrap + rotation, registration hardening,
-  and the dashboard/public content seam.
 
 ## CI/CD + deploy
 
@@ -229,10 +229,16 @@ RESEND_API_KEY` → deploy) and the removal note.
 three parallel jobs and **holds no Cloudflare credentials — it never deploys**:
 
 - **quality-gate** — `cf-typegen` → `typecheck` (`tsc -b`) → `lint` → `format:check`
-  → `test` (Vitest workers pool against real D1/KV binding mocks). Runs green on the
-  un-`setup` template as-is.
+  → `test` (Vitest workers pool against real D1/KV binding mocks, the guard tests for
+  the design system, RTL icons, nav contract and CI config, and the jsdom
+  `client-dom` project for `*.dom.test.tsx` component tests) → `build` →
+  `node scripts/bundle-size.mjs`, which fails when gzipped initial or total JS grows
+  past `CEILINGS` (raise it on purpose). `cf-typegen` regenerates the `Env` types and
+  the job fails when the committed `worker-configuration.d.ts` is stale. Runs green on
+  the un-`setup` template as-is.
 - **secret-scan** — the MIT gitleaks binary (`.gitleaks.toml`) plus the auditable
-  `scripts/secret-grep.sh`.
+  `scripts/secret-grep.sh`, and `scripts/gitleaks-selftest.sh`, which proves the
+  gitleaks config still lets a `pk_` key pass and still fails an `sk_` key.
 - **sentinel-scan** — scaffolds a `setup.mjs --yes` copy of the tree into a temp dir,
   then runs `scripts/ci-sentinel-scan.mjs` against it (never the template tree
   directly — the template legitimately still contains sentinels).
@@ -246,26 +252,58 @@ a one-time manual step in the Cloudflare dashboard:
 1. In the Cloudflare dashboard, go to **Workers & Pages → your Worker → Settings →
    Builds** and connect your GitHub repo.
 2. Set the **build command** to `pnpm build` and the **deploy command** to
-   `wrangler deploy` (the `deploy` script — `pnpm build && wrangler deploy` —
-   already exists).
+   `wrangler deploy`. (The `deploy` package script is the gated chain below; Workers
+   Builds does not use it.)
 3. Ensure the **Worker name matches `wrangler.jsonc` `name`** (the value
    `setup.mjs` set from `--name`), or Workers Builds will create/deploy the wrong
    Worker.
 
 After this, a push to `main` builds and deploys automatically.
 
-### Manual deploy fallback
+> **Workers Builds skips every gate.** It runs `wrangler deploy` directly — no
+> migrations check, no quality gate, no live-key check, no readback. Before pushing to
+> a connected branch, run `pnpm run deploy` (or at least `pnpm run gate` and
+> `pnpm db:migrate:remote`).
 
-You can always deploy by hand — this is also how the template's Definition of Done is
-proven:
+### Gated deploy
+
+`pnpm run deploy` is the gated path, and how the template's Definition of Done is
+proven. Each link must pass before the next runs:
 
 ```bash
-pnpm run deploy          # pnpm build && wrangler deploy → *.workers.dev URL
+pnpm run deploy          # guard → migrations → gate → build → live key → wrangler deploy → readback + smoke
 ```
 
-Deploy order matters for the Clerk secret: `wrangler deploy` (creates the Worker) →
-`wrangler secret put CLERK_SECRET_KEY` → the secret applies live with no redeploy.
-The publishable key ships as a plaintext `var` already filled by `setup.mjs`.
+- **Guard** (`scripts/assert-run-deploy.mjs`) — refuses unless entered as
+  `pnpm run deploy`. The bare `pnpm deploy` is pnpm's own workspace command, not this
+  script, and would skip every gate.
+- **Migrations** (`scripts/assert-migrations-applied.sh`) — refuses when the remote D1
+  is missing a migration in `./migrations`, or when the remote state cannot be read.
+  Fix: `pnpm db:migrate:remote`, then deploy again.
+- **Gate** (`pnpm run gate`) — typecheck, lint, format:check, `scripts/secret-grep.sh`
+  and the tests, over the whole tree. Also run it on its own before a publish.
+- **Live key** (`scripts/assert-live-key.mjs`) — refuses a bundle that lacks your
+  `VITE_CLERK_PUBLISHABLE_KEY` or carries any other `pk_` key, and refuses a
+  `pk_test_` (development instance) key. To deploy a test instance on purpose:
+  `ALLOW_TEST_CLERK_KEY=1 pnpm run deploy`.
+- **Readback + smoke** (`scripts/deploy-verify.mjs`) — reads the live version back and
+  smoke-tests it. The base URL is `BASE_URL`, else the custom-domain route, else the
+  first `https` origin in `AUTHORIZED_PARTIES`. On failure it prints
+  `npx wrangler rollback <version> --name <worker>` and exits 1. It never rolls back
+  by itself, because a remote migration may already have run.
+
+The first deploy to a new custom domain can fail the smoke while DNS and the
+certificate settle. Wait a minute and re-run `node scripts/deploy-verify.mjs` before
+deciding to roll back.
+
+Set both Clerk secrets before the first deploy:
+`wrangler secret put CLERK_SECRET_KEY` and
+`echo <your pk_…> | wrangler secret put CLERK_PUBLISHABLE_KEY`. `secret put` creates
+the Worker if it does not exist yet.
+
+**Existing forks** that still carry `CLERK_PUBLISHABLE_KEY` as a plaintext `var`: run
+`wrangler secret put CLERK_PUBLISHABLE_KEY` before the next deploy; that deploy drops
+the old var.
 
 ## Troubleshooting
 
@@ -277,9 +315,18 @@ The publishable key ships as a plaintext `var` already filled by `setup.mjs`.
   `wrangler kv namespace create`, paste the returned `database_id` / `id` into
   `wrangler.jsonc`, then `pnpm cf-typegen`. (The placeholder is fine for all
   `--local` dev, tests, and CI — only `--remote`/production needs the real ID.)
-- **401 / auth fails after deploy.** The Clerk secret isn't set. Run
-  `wrangler secret put CLERK_SECRET_KEY`. The publishable key (`CLERK_PUBLISHABLE_KEY`)
-  is a plaintext `var` set by `setup.mjs --clerk-pk` and ships with the deploy.
+- **401 / auth fails after deploy.** Both Clerk keys are Worker secrets. Check
+  `wrangler secret list` shows `CLERK_SECRET_KEY` and `CLERK_PUBLISHABLE_KEY`; set a
+  missing one with `wrangler secret put <name>`.
+- **Deploy refused at the migrations gate.** "MISSING migrations" → run
+  `pnpm db:migrate:remote`, then `pnpm run deploy`. "could not read the remote
+  migration state" → fix the read: `wrangler login`, the network, or the real
+  `database_id` in `wrangler.jsonc`.
+- **Deploy refused at the live-key gate.** Put your project's `pk_live_…` key in
+  `VITE_CLERK_PUBLISHABLE_KEY` (`.env.local` or `.env.production.local`; the shell env
+  wins) and deploy again. A `pk_test_` key ships only with
+  `ALLOW_TEST_CLERK_KEY=1 pnpm run deploy`. "carries another pk_ key" means vite read a
+  different env file than you expect.
 - **A row written in dev is "missing" in production.** `--local` and `--remote` D1 are
   two databases that never sync — run `pnpm db:migrate:remote` (after filling the real
   `database_id`). See [`docs/data-layer.md`](docs/data-layer.md).

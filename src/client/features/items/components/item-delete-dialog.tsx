@@ -64,12 +64,12 @@ export function ItemDeleteDialog({
           {/* Focus lands on Cancel by default (less destructive option). */}
           <AlertDialogCancel>{t('items.delete.cancel')}</AlertDialogCancel>
           <AlertDialogAction
-            className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+            variant='destructive'
             disabled={deleteItem.isPending}
             onClick={handleDelete}
           >
             {deleteItem.isPending ? (
-              <Loader2 className='mr-2 size-4 animate-spin' />
+              <Loader2 className='size-4 animate-spin' />
             ) : null}
             {deleteItem.isPending
               ? t('items.delete.deleting')

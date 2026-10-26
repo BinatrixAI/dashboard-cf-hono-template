@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { CheckIcon, PlusCircledIcon } from '@radix-ui/react-icons'
-import { type Column } from '@tanstack/react-table'
+import { type RowData, type Column } from '@tanstack/react-table'
 import { type TranslationKey } from '@/i18n'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
@@ -21,9 +21,10 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { Separator } from '@/components/ui/separator'
+import { type DataTableFeatures } from '@/components/data-table/features'
 
-type DataTableFacetedFilterProps<TData, TValue> = {
-  column?: Column<TData, TValue>
+type DataTableFacetedFilterProps<TData extends RowData, TValue> = {
+  column?: Column<DataTableFeatures, TData, TValue>
   // title + option labels are translation KEYS, resolved via t() at render (G2)
   title?: TranslationKey
   options: {
@@ -33,7 +34,7 @@ type DataTableFacetedFilterProps<TData, TValue> = {
   }[]
 }
 
-export function DataTableFacetedFilter<TData, TValue>({
+export function DataTableFacetedFilter<TData extends RowData, TValue>({
   column,
   title,
   options,

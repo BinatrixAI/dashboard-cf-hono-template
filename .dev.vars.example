@@ -24,9 +24,21 @@ CLERK_SECRET_KEY=
 # `authenticateRequest()` needs the publishable key too (to derive the FAPI URL and
 # dev/prod mode) — NOT just the secret. This is the SAME `pk_…` value as
 # VITE_CLERK_PUBLISHABLE_KEY above, but WITHOUT the `VITE_` prefix so it stays on the
-# Worker and never enters the client bundle. Non-secret; mirrored as a `vars` sentinel
-# in wrangler.jsonc. Leave empty here.
+# Worker and never enters the client bundle. Public by design, but declared in wrangler.jsonc
+# `secrets.required` (D-01) so config and types carry no per-project value. In production run
+# `wrangler secret put CLERK_PUBLISHABLE_KEY` (setup.mjs prints it prefilled); setup.mjs fills
+# this line for local dev.
 CLERK_PUBLISHABLE_KEY=
+#
+# Accepted origins for Clerk session tokens (Phase 21, SEC-02/D-03). Comma-separated list of
+# origins whose session tokens the Worker accepts (the `azp` check). Non-secret. setup.mjs
+# writes `<prod origin>,http://localhost:5173` here; the deployed value lives in wrangler.jsonc
+# `vars.AUTHORIZED_PARTIES` and lists only real origins.
+# Known limits: (1) Vite moves to 5174 when 5173 is busy — that origin is not listed, so the
+# API returns 401 and the app signs you out once; free 5173 or add the port here.
+# (2) `pnpm preview` runs with the shipped wrangler.jsonc value, because preview copies only
+# the secrets.required keys from this file.
+AUTHORIZED_PARTIES=
 #
 # Resend API key for the DORMANT async layer (Phase 7, ASYNC-03). Mirrors
 # CLERK_SECRET_KEY: a server-only secret, NEVER VITE_-prefixed, NEVER committed with a

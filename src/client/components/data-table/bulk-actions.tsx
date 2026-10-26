@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { type Table } from '@tanstack/react-table'
+import { type RowData, type Table } from '@tanstack/react-table'
 import { X } from 'lucide-react'
+import { Direction } from 'radix-ui'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
@@ -11,9 +12,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { type DataTableFeatures } from '@/components/data-table/features'
 
-type DataTableBulkActionsProps<TData> = {
-  table: Table<TData>
+type DataTableBulkActionsProps<TData extends RowData> = {
+  table: Table<DataTableFeatures, TData>
   entityName: string
   children: React.ReactNode
 }
@@ -23,17 +25,18 @@ type DataTableBulkActionsProps<TData> = {
  *
  * @template TData The type of data in the table.
  * @param {object} props The component props.
- * @param {Table<TData>} props.table The react-table instance.
+ * @param {Table<DataTableFeatures, TData>} props.table The react-table instance.
  * @param {string} props.entityName The name of the entity being acted upon (e.g., "task", "user").
  * @param {React.ReactNode} props.children The action buttons to be rendered inside the toolbar.
  * @returns {React.ReactNode | null} The rendered component or null if no rows are selected.
  */
-export function DataTableBulkActions<TData>({
+export function DataTableBulkActions<TData extends RowData>({
   table,
   entityName,
   children,
 }: DataTableBulkActionsProps<TData>): React.ReactNode | null {
   const { t } = useTranslation()
+  const dir = Direction.useDirection()
   const selectedRows = table.getFilteredSelectedRowModel().rows
   const selectedCount = selectedRows.length
   const toolbarRef = useRef<HTMLDivElement>(null)
@@ -67,6 +70,12 @@ export function DataTableBulkActions<TData>({
   }
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
+    // RTL: ArrowLeft points toward inline-end, so the two arrows swap meaning
+    const flip: Record<string, string> = {
+      ArrowLeft: 'ArrowRight',
+      ArrowRight: 'ArrowLeft',
+    }
+    const key = dir === 'rtl' ? (flip[event.key] ?? event.key) : event.key
     const buttons = toolbarRef.current?.querySelectorAll('button')
     if (!buttons) return
 
@@ -74,7 +83,7 @@ export function DataTableBulkActions<TData>({
       (button) => button === document.activeElement
     )
 
-    switch (event.key) {
+    switch (key) {
       case 'ArrowRight': {
         event.preventDefault()
         const nextIndex = (currentIndex + 1) % buttons.length
@@ -155,7 +164,8 @@ export function DataTableBulkActions<TData>({
         tabIndex={-1}
         onKeyDown={handleKeyDown}
         className={cn(
-          'fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-xl',
+          // left-1/2 + -translate-x-1/2 is symmetric centring: direction-neutral, so it stays physical (RTL contract)
+          'fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-xl max-md:bottom-[calc(104px+env(safe-area-inset-bottom))]',
           'transition-all delay-100 duration-300 ease-out hover:scale-105',
           'focus-visible:ring-ring/50 focus-visible:ring-2 focus-visible:outline-none'
         )}

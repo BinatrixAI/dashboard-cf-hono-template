@@ -1,11 +1,13 @@
 import { getAuth } from '@hono/clerk-auth'
 import type { MiddlewareHandler } from 'hono'
+import { t } from '../i18n'
 
 /**
  * Role gate (authorization) — the AUTHZ counterpart to `require-auth.ts`'s
  * authentication-only gate. Allows only callers whose Clerk
  * `publicMetadata.role` is one of ADMIN_ROLES; everyone else gets the same
- * normalized `{ error, path }` envelope as the 401/404 paths, with a 403.
+ * normalized `{ error, path }` envelope as the 401/404 paths, with a 403
+ * (message localized by the `dir` cookie, D-06).
  *
  * Role source: the SAME `publicMetadata.role` field the /api/users Row mapping
  * already displays (users.ts `coerceRole`). Users default to no role
@@ -35,7 +37,7 @@ export const requireAdmin: MiddlewareHandler = async (c, next) => {
   const caller = await c.get('clerk').users.getUser(userId)
   const role = caller.publicMetadata?.role
   if (!(ADMIN_ROLES as readonly string[]).includes(role as string)) {
-    return c.json({ error: 'Forbidden', path: c.req.path }, 403)
+    return c.json({ error: t(c, 'forbidden'), path: c.req.path }, 403)
   }
   await next()
 }

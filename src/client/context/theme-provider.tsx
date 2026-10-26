@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useState, useMemo } from 'react'
-import { getCookie, setCookie, removeCookie } from '@/lib/cookies'
+import { getCookieOf, setCookie, removeCookie } from '@/lib/cookies'
 
-type Theme = 'dark' | 'light' | 'system'
+const THEMES = ['dark', 'light', 'system'] as const
+type Theme = (typeof THEMES)[number]
 type ResolvedTheme = Exclude<Theme, 'system'>
 
 const DEFAULT_THEME = 'system'
@@ -38,8 +39,8 @@ export function ThemeProvider({
   storageKey = THEME_COOKIE_NAME,
   ...props
 }: ThemeProviderProps) {
-  const [theme, _setTheme] = useState<Theme>(
-    () => (getCookie(storageKey) as Theme) || defaultTheme
+  const [theme, _setTheme] = useState<Theme>(() =>
+    getCookieOf(storageKey, THEMES, defaultTheme)
   )
 
   // Optimized: Memoize the resolved theme calculation to prevent unnecessary re-computations
@@ -59,6 +60,13 @@ export function ThemeProvider({
     const applyTheme = (currentResolvedTheme: ResolvedTheme) => {
       root.classList.remove('light', 'dark') // Remove existing theme classes
       root.classList.add(currentResolvedTheme) // Add the new theme class
+      // Browser chrome follows the live --background token, so a tweakcn re-skin carries over.
+      document
+        .querySelector("meta[name='theme-color']")
+        ?.setAttribute(
+          'content',
+          getComputedStyle(root).getPropertyValue('--background').trim()
+        )
     }
 
     const handleChange = () => {

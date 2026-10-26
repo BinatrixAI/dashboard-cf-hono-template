@@ -1,8 +1,8 @@
 // Node-environment Vitest suite for the build-time `setup.mjs` parameterization CLI.
 //
 // WHY node, not workerd: setup.mjs uses node:fs / node:readline/promises /
-// node:child_process / global fetch and rewrites tracked config on disk. None of that
-// runs (or behaves identically) inside @cloudflare/vitest-pool-workers, so this suite
+// global fetch and rewrites tracked config on disk. None of that
+// runs (or behaves identically) inside @cloudflare/vitest-plugin, so this suite
 // is registered as the 'setup' project (environment: 'node') in vitest.config.ts,
 // separate from the workers-pool API suite.
 //
@@ -31,11 +31,16 @@ import {
   SUBSTITUTION_FILESET,
   HARD_FAIL_RE,
   isValidCustomDomain,
+  fapiHostFromPk,
   computeSlugRewrites,
   substitute,
 } from '../../setup.mjs'
 
 const templateRoot = fileURLToPath(new URL('../../', import.meta.url))
+
+// Template-only gate (SEC-09): blocks that run setup.mjs against a tree copy or assert un-setup
+// state only make sense before setup.mjs; it always rewrites this package.json sentinel.
+const IS_TEMPLATE = readFileSync(path.join(templateRoot, 'package.json'), 'utf8').includes('__PKG_NAME__')
 
 // Top-level dirs never copied into the sandbox (huge / irrelevant / would recurse state).
 const EXCLUDE_TOP = new Set(['node_modules', '.git', '.planning', 'dist', '.wrangler', 'docs'])
@@ -61,7 +66,7 @@ function makeTmpCopy() {
       if (!rel) return true
       const segs = rel.split(path.sep)
       if (EXCLUDE_TOP.has(segs[0])) return false
-      // Skip node_modules at ANY depth (e.g. cms/node_modules — 369M). setup.mjs only
+      // Skip node_modules at ANY depth (nested packages included). setup.mjs only
       // rewrites tracked config, so no test needs installed deps; copying them made every
       // sandbox copy slow enough to blow the default per-test timeout on multi-run cases.
       if (segs.includes('node_modules')) return false
@@ -72,10 +77,11 @@ function makeTmpCopy() {
   return dir
 }
 
-function runSetup(dir, args) {
+function runSetup(dir, args, env = {}) {
   // stdin: 'ignore' => process.stdin.isTTY is undefined (non-TTY headless path).
   return spawnSync('node', ['setup.mjs', ...args], {
     cwd: dir,
+    env: { ...process.env, ...env },
     stdio: ['ignore', 'pipe', 'pipe'],
     encoding: 'utf8',
     timeout: 30000,
@@ -83,6 +89,10 @@ function runSetup(dir, args) {
 }
 
 const read = (dir, rel) => readFileSync(path.join(dir, rel), 'utf8')
+
+// Strip full-line `//` comments so assertions see code-bearing lines only: a commented routes
+// line must NOT count as an active key, and the remainder of wrangler.jsonc parses as JSON.
+const codeLines = (s) => s.split('\n').filter((line) => !/^\s*\/\//.test(line)).join('\n')
 
 afterEach(() => {
   while (sandboxes.length) {
@@ -173,6 +183,23 @@ describe('isValidCustomDomain (D-09)', () => {
   })
 })
 
+describe('fapiHostFromPk (D-09)', () => {
+  it('decodes the Clerk Frontend API host from valid keys', () => {
+    expect(fapiHostFromPk(PK)).toBe('example.clerk.accounts.dev')
+    expect(fapiHostFromPk('pk_test_Y2ktdGVzdC5jbGVyay5hY2NvdW50cy5kZXYk')).toBe('ci-test.clerk.accounts.dev')
+    expect(fapiHostFromPk('pk_live_Y2xlcmsuZXhhbXBsZS5jb20k')).toBe('clerk.example.com')
+  })
+
+  it('rejects bodies that decode to a non-hostname (Pitfall 6)', () => {
+    expect(fapiHostFromPk('pk_test_YWINClNldC1Db29raWU6IHgk')).toBeNull() // CR/LF header injection
+    expect(fapiHostFromPk('pk_test_ZXZpbC5leGFtcGxlLmNvbQok')).toBeNull() // trailing newline
+    expect(fapiHostFromPk('pk_test_ZXZpbF9ob3N0LmV4YW1wbGUk')).toBeNull() // underscore
+    expect(fapiHostFromPk('pk_test_YWJjLmV4YW1wbGUuY29t')).toBeNull() // no trailing $
+    expect(fapiHostFromPk('')).toBeNull()
+    expect(fapiHostFromPk('not-a-key')).toBeNull()
+  })
+})
+
 describe('computeSlugRewrites (D-11)', () => {
   it('emits a rewrite where slugify(raw) differs from raw', () => {
     expect(
@@ -193,7 +220,7 @@ describe('computeSlugRewrites (D-11)', () => {
   })
 })
 
-describe('setup.mjs end-to-end substitution', () => {
+describe.skipIf(!IS_TEMPLATE)('setup.mjs end-to-end substitution', () => {
   it('replaces every identifier sentinel across the substitution file-set', () => {
     const dir = makeTmpCopy()
     const r = runSetup(dir, FLAGS)
@@ -215,7 +242,7 @@ describe('setup.mjs end-to-end substitution', () => {
     }
   })
 
-  it('disambiguates the two wrangler.jsonc positions and fills the Clerk pub key', () => {
+  it('disambiguates the two wrangler.jsonc positions and keeps the Clerk pub key out of config (D-01)', () => {
     const dir = makeTmpCopy()
     expect(runSetup(dir, FLAGS).status).toBe(0)
     const wj = read(dir, 'wrangler.jsonc')
@@ -224,7 +251,11 @@ describe('setup.mjs end-to-end substitution', () => {
     expect(wj).toMatch(/"database_name":\s*"acme-db"/)
     expect(wj).toMatch(/"binding":\s*"CACHE"/)
     expect(wj).toMatch(/"name":\s*"acme-dash"/)
-    expect(wj).toMatch(new RegExp(`"CLERK_PUBLISHABLE_KEY":\\s*"${PK}"`))
+    // D-01: both Clerk keys are required secrets; the pk is never written into wrangler.jsonc.
+    const cfg = JSON.parse(codeLines(wj))
+    expect(cfg.secrets.required).toEqual(['CLERK_SECRET_KEY', 'CLERK_PUBLISHABLE_KEY'])
+    expect(cfg.vars).not.toHaveProperty('CLERK_PUBLISHABLE_KEY')
+    expect(wj).not.toContain(PK)
 
     // database_name and binding were NOT collapsed to a single value.
     expect(wj).not.toMatch(/"database_name":\s*"DB"/)
@@ -294,7 +325,7 @@ describe('setup.mjs end-to-end substitution', () => {
   })
 })
 
-describe('setup.mjs idempotency guard (.setup-complete)', () => {
+describe.skipIf(!IS_TEMPLATE)('setup.mjs idempotency guard (.setup-complete)', () => {
   it('refuses a second run without --force and allows it with --force', () => {
     const dir = makeTmpCopy()
     expect(runSetup(dir, FLAGS).status).toBe(0)
@@ -315,7 +346,7 @@ describe('setup.mjs idempotency guard (.setup-complete)', () => {
   })
 })
 
-describe('setup.mjs blocking leftover-sentinel scan', () => {
+describe.skipIf(!IS_TEMPLATE)('setup.mjs blocking leftover-sentinel scan', () => {
   it('exits non-zero and reports file:line when a stray identifier sentinel remains', () => {
     const dir = makeTmpCopy()
     // Inject a stray sentinel into a NON-comment position of a scoped file.
@@ -333,7 +364,7 @@ describe('setup.mjs blocking leftover-sentinel scan', () => {
   })
 })
 
-describe('setup.mjs .dev.vars generation (SETUP-02)', () => {
+describe.skipIf(!IS_TEMPLATE)('setup.mjs .dev.vars generation (SETUP-02)', () => {
   it('fills the publishable key into BOTH publishable assignments and leaves the secret empty', () => {
     const dir = makeTmpCopy()
     // Start from a clean slate so this asserts a fresh generation, not a re-fill.
@@ -348,6 +379,8 @@ describe('setup.mjs .dev.vars generation (SETUP-02)', () => {
     expect(dv).toMatch(/^CLERK_SECRET_KEY=$/m)
     // No sk_-prefixed secret value ever lands in the generated file.
     expect(dv).not.toMatch(/sk_(test|live)_/)
+    // No origin given: only the local Vite dev origin is accepted (D-03).
+    expect(dv).toMatch(/^AUTHORIZED_PARTIES=http:\/\/localhost:5173$/m)
   })
 
   it('generateDevVars() (unit) fills both pub keys, keeps secret empty', async () => {
@@ -406,7 +439,7 @@ describe('setup.mjs .dev.vars generation (SETUP-02)', () => {
   })
 })
 
-describe('setup.mjs .env.local generation (AUTH-04 / SETUP-02, Item 1)', () => {
+describe.skipIf(!IS_TEMPLATE)('setup.mjs .env.local generation (AUTH-04 / SETUP-02, Item 1)', () => {
   it('generateEnvLocal() writes ONLY the VITE publishable key — never a secret (T-08-01)', async () => {
     const dir = makeTmpCopy()
     // Clean slate so this asserts a fresh generation, not a re-fill.
@@ -460,7 +493,7 @@ describe('setup.mjs .env.local generation (AUTH-04 / SETUP-02, Item 1)', () => {
   })
 })
 
-describe('setup.mjs per-account creation checklist (SETUP-02)', () => {
+describe.skipIf(!IS_TEMPLATE)('setup.mjs per-account creation checklist (SETUP-02)', () => {
   it('prints copy-pasteable wrangler commands with the chosen names interpolated', () => {
     const dir = makeTmpCopy()
     const r = runSetup(dir, FLAGS)
@@ -472,6 +505,29 @@ describe('setup.mjs per-account creation checklist (SETUP-02)', () => {
     expect(r.stdout).toContain('pnpm cf-typegen')
     // The outstanding REPLACE_WITH_YOUR_* fill step is surfaced to the user.
     expect(r.stdout).toMatch(/REPLACE_WITH_YOUR_/)
+  })
+
+  it('prints both Clerk secret commands (pk prefilled) before the first deploy (D-02)', () => {
+    const r = runSetup(makeTmpCopy(), FLAGS)
+    expect(r.status, r.stderr).toBe(0)
+    const pkCmd = `echo ${PK} | wrangler secret put CLERK_PUBLISHABLE_KEY`
+    expect(r.stdout).toContain(pkCmd)
+    const deploy = r.stdout.indexOf('pnpm run deploy')
+    expect(deploy).toBeGreaterThan(-1)
+    expect(r.stdout.indexOf('wrangler secret put CLERK_SECRET_KEY')).toBeLessThan(deploy)
+    expect(r.stdout.indexOf(pkCmd)).toBeLessThan(deploy)
+    expect(r.stdout.indexOf('pnpm db:migrate:remote')).toBeLessThan(deploy)
+  })
+
+  it('no pk: prints the interactive pk secret put, never an empty echo (D-02)', () => {
+    const r = runSetup(
+      makeTmpCopy(),
+      FLAGS.filter((f) => !f.startsWith('--clerk-pk')),
+      { SETUP_CLERK_PK: '' },
+    )
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.stdout).toContain('wrangler secret put CLERK_PUBLISHABLE_KEY')
+    expect(r.stdout).not.toMatch(/echo\s*\|/)
   })
 
   // IN-02: a --dry-run preview must surface the outstanding REPLACE_WITH_YOUR_* placeholders
@@ -543,7 +599,7 @@ describe('setup.mjs per-account creation checklist (SETUP-02)', () => {
   })
 })
 
-describe('setup.mjs module-toggle record (.setup-config.json, SETUP-03)', () => {
+describe.skipIf(!IS_TEMPLATE)('setup.mjs module-toggle record (.setup-config.json, SETUP-03)', () => {
   const readConfig = (dir) => JSON.parse(read(dir, '.setup-config.json'))
 
   it('records the locked schema with BOTH toggles false after a --yes run', () => {
@@ -618,7 +674,7 @@ describe('setup.mjs module-toggle record (.setup-config.json, SETUP-03)', () => 
   })
 })
 
-describe('setup.mjs headless (non-TTY) safety', () => {
+describe.skipIf(!IS_TEMPLATE)('setup.mjs headless (non-TTY) safety', () => {
   it('completes without hanging when stdin is not a TTY', () => {
     const dir = makeTmpCopy()
     const r = runSetup(dir, FLAGS)
@@ -636,7 +692,7 @@ describe('setup.mjs headless (non-TTY) safety', () => {
   })
 })
 
-describe('setup.mjs --require-theme (SETUP-06)', () => {
+describe.skipIf(!IS_TEMPLATE)('setup.mjs --require-theme (SETUP-06)', () => {
   // A blocked-host URL fails the SSRF allow-list BEFORE any fetch (Pitfall 5) — so every
   // case here is offline-deterministic: no network is ever touched. host-not-allowed →
   // outcome 'fallback' → the loud block + (under --require-theme) a non-zero exit.
@@ -663,12 +719,8 @@ describe('setup.mjs --require-theme (SETUP-06)', () => {
   })
 })
 
-describe('setup.mjs --custom-domain (SETUP-08)', () => {
-  // Strip full-line `//` comments so we assert against code-bearing lines only (mirrors the
-  // async-block test): a commented routes line must NOT count as an active "routes" key.
-  const codeLines = (s) => s.split('\n').filter((line) => !/^\s*\/\//.test(line)).join('\n')
-
-  it('--custom-domain=app.example.com writes an ACTIVE routes line + a comma after "vars" (D-07)', () => {
+describe.skipIf(!IS_TEMPLATE)('setup.mjs --custom-domain (SETUP-08)', () => {
+  it('--custom-domain=app.example.com writes an ACTIVE routes line with workers.dev/preview off + a comma after "vars" (D-07/D-11)', () => {
     const dir = makeTmpCopy()
     const r = runSetup(dir, [...FLAGS, '--custom-domain=app.example.com'])
     expect(r.status, r.stderr).toBe(0)
@@ -679,12 +731,18 @@ describe('setup.mjs --custom-domain (SETUP-08)', () => {
       /"routes":\s*\[\{\s*"pattern":\s*"app\.example\.com"\s*,\s*"custom_domain":\s*true\s*\}\]/,
     )
     // the "vars" line now ends with a trailing comma.
-    expect(wj).toMatch(/"vars":\s*\{\s*"CLERK_PUBLISHABLE_KEY":\s*"[^"\n]*"\s*\},/)
-    // routes[] only — never workers_dev (D-08).
-    expect(wj).not.toContain('workers_dev')
+    expect(wj).toMatch(/"vars":\s*\{[^\n}]*"AUTHORIZED_PARTIES":\s*"[^"\n]*"\s*\},/)
+    // D-11 (supersedes D-08): workers.dev and preview URLs switched off on the routes line.
+    expect(codeLines(wj)).toMatch(
+      /"routes":\s*\[\{\s*"pattern":\s*"app\.example\.com"\s*,\s*"custom_domain":\s*true\s*\}\], "workers_dev": false, "preview_urls": false$/m,
+    )
+    const cfg = JSON.parse(codeLines(wj))
+    expect(cfg.workers_dev).toBe(false)
+    expect(cfg.preview_urls).toBe(false)
+    expect(cfg.routes[0].pattern).toBe('app.example.com')
   })
 
-  it('no --custom-domain: routes line stays commented, scan clean, workers_dev absent (D-07/D-08)', () => {
+  it('no --custom-domain: routes line stays commented, scan clean, workers_dev/preview_urls inactive (D-07/D-11)', () => {
     const dir = makeTmpCopy()
     const r = runSetup(dir, FLAGS)
     expect(r.status, r.stderr).toBe(0)
@@ -693,7 +751,8 @@ describe('setup.mjs --custom-domain (SETUP-08)', () => {
     // the routes placeholder appears ONLY behind a leading `//` comment.
     expect(wj).toMatch(/^\s*\/\/\s*"routes":/m)
     expect(codeLines(wj)).not.toMatch(/"routes"/)
-    expect(wj).not.toContain('workers_dev')
+    // Code lines only: the comments now mention both keys.
+    expect(codeLines(wj)).not.toMatch(/workers_dev|preview_urls/)
 
     // the dormant placeholder is invisible to the sentinel scan (neither hard-fail nor outstanding).
     const { hardFails, outstanding } = scanForSentinels(dir)
@@ -757,79 +816,140 @@ describe('setup.mjs --custom-domain (SETUP-08)', () => {
   })
 })
 
-describe('setup.mjs CMS Worker parameterization (SETUP-09)', () => {
-  it('rewrites cms/wrangler.jsonc name/database_name/bucket_name to derived ${slug}-cms* values (D-01)', () => {
+describe.skipIf(!IS_TEMPLATE)('setup.mjs --origin (SEC-02, D-02/D-03)', () => {
+  const ORIGIN_LINE = /"AUTHORIZED_PARTIES":\s*"([^"\n]*)"/
+  const outstandingOrigin = (dir) =>
+    scanForSentinels(dir).outstanding.filter((o) => o.includes('REPLACE_WITH_YOUR_ORIGIN'))
+
+  it('normalizes and writes the origin to wrangler.jsonc and .dev.vars; the Env type stays string', () => {
     const dir = makeTmpCopy()
-    const r = runSetup(dir, FLAGS)
+    const r = runSetup(dir, [...FLAGS, '--origin=https://App.Example.com/x/'])
     expect(r.status, r.stderr).toBe(0)
 
-    const cw = read(dir, 'cms/wrangler.jsonc')
-    expect(cw).toMatch(/"name":\s*"acme-dash-cms"/)
-    expect(cw).toMatch(/"database_name":\s*"acme-dash-cms-db"/)
-    expect(cw).toMatch(/"bucket_name":\s*"acme-dash-cms-media"/)
-  })
-
-  it('keeps the three CMS binding identifiers literal (exactly one each) + retains the *_ID placeholders (D-03)', () => {
-    const dir = makeTmpCopy()
-    expect(runSetup(dir, FLAGS).status).toBe(0)
-    const cw = read(dir, 'cms/wrangler.jsonc')
-
-    const count = (s, sub) => s.split(sub).length - 1
-    expect(count(cw, '"binding": "DB"')).toBe(1)
-    expect(count(cw, '"binding": "MEDIA_BUCKET"')).toBe(1)
-    expect(count(cw, '"binding": "CACHE_KV"')).toBe(1)
-
-    // Resource-ID placeholders stay for the user to fill after `wrangler … create`.
-    expect(cw).toContain('REPLACE_WITH_YOUR_CMS_D1_ID')
-    expect(cw).toContain('REPLACE_WITH_YOUR_CMS_KV_ID')
-    // The parameterized name / database_name / bucket_name placeholders are gone.
-    expect(cw).not.toContain('REPLACE_WITH_YOUR_CMS_D1_NAME')
-    expect(cw).not.toContain('REPLACE_WITH_YOUR_CMS_R2_BUCKET')
-    expect(cw).not.toContain('dashboard-cf-hono-template-cms')
-  })
-
-  it('leaves CORS_ORIGINS "" without --cms-cors-origin and fills it with the exact origin when supplied (D-05)', () => {
-    const without = makeTmpCopy()
-    expect(runSetup(without, FLAGS).status).toBe(0)
-    expect(read(without, 'cms/wrangler.jsonc')).toMatch(/"CORS_ORIGINS":\s*""/)
-
-    const withFlag = makeTmpCopy()
-    expect(
-      runSetup(withFlag, [...FLAGS, '--cms-cors-origin=https://acme.example.com']).status,
-    ).toBe(0)
-    expect(read(withFlag, 'cms/wrangler.jsonc')).toMatch(
-      /"CORS_ORIGINS":\s*"https:\/\/acme\.example\.com"/,
+    expect(read(dir, 'wrangler.jsonc').match(ORIGIN_LINE)?.[1]).toBe('https://app.example.com')
+    // D-12: cf-typegen runs with --strict-vars=false, so the var is typed string, not a literal.
+    expect(read(dir, 'worker-configuration.d.ts')).toContain('AUTHORIZED_PARTIES: string;')
+    expect(outstandingOrigin(dir)).toEqual([])
+    expect(read(dir, '.dev.vars')).toMatch(
+      /^AUTHORIZED_PARTIES=https:\/\/app\.example\.com,http:\/\/localhost:5173$/m,
     )
   })
 
-  it('leaves BETTER_AUTH_URL "" without --cms-api-url and fills it with the origin when supplied (login fix)', () => {
-    const without = makeTmpCopy()
-    expect(runSetup(without, FLAGS).status).toBe(0)
-    expect(read(without, 'cms/wrangler.jsonc')).toMatch(/"BETTER_AUTH_URL":\s*""/)
-
-    // Fills from the ORIGIN of --cms-api-url (a path/query is dropped — Better Auth wants the origin).
-    const withFlag = makeTmpCopy()
-    expect(
-      runSetup(withFlag, [...FLAGS, '--cms-api-url=https://acme-cms.example.com']).status,
-    ).toBe(0)
-    expect(read(withFlag, 'cms/wrangler.jsonc')).toMatch(
-      /"BETTER_AUTH_URL":\s*"https:\/\/acme-cms\.example\.com"/,
-    )
+  it('accepts localhost with a port unchanged', () => {
+    const dir = makeTmpCopy()
+    const r = runSetup(dir, [...FLAGS, '--origin=http://localhost:8787'])
+    expect(r.status, r.stderr).toBe(0)
+    expect(read(dir, 'wrangler.jsonc').match(ORIGIN_LINE)?.[1]).toBe('http://localhost:8787')
   })
 
-  it('prints the CMS resource checklist: R2 create, both CMS secrets, rotate-admin warning, post-deploy VITE_CMS_API_URL (D-04)', () => {
+  it('reads SETUP_ORIGIN when no flag is given', () => {
+    const dir = makeTmpCopy()
+    const r = runSetup(dir, FLAGS, { SETUP_ORIGIN: 'https://env.example.com' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(read(dir, 'wrangler.jsonc').match(ORIGIN_LINE)?.[1]).toBe('https://env.example.com')
+  })
+
+  it('no origin: keeps the fail-closed placeholder, lists it as outstanding, .dev.vars gets only the dev origin', () => {
+    const dir = makeTmpCopy()
+    const r = runSetup(dir, FLAGS, { SETUP_ORIGIN: '' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(read(dir, 'wrangler.jsonc').match(ORIGIN_LINE)?.[1]).toBe('REPLACE_WITH_YOUR_ORIGIN')
+    expect(outstandingOrigin(dir).length).toBeGreaterThan(0)
+    expect(read(dir, '.dev.vars')).toMatch(/^AUTHORIZED_PARTIES=http:\/\/localhost:5173$/m)
+  })
+
+  it('rejects an invalid origin before any write', () => {
+    for (const bad of [
+      'ftp://app.example.com',
+      'https://user:pw@app.example.com',
+      'https://a.example.com,https://b.example.com',
+      'not a url',
+      'https://app',
+    ]) {
+      const dir = makeTmpCopy()
+      const r = runSetup(dir, [...FLAGS, `--origin=${bad}`])
+      expect(r.status, `origin "${bad}" should be rejected`).not.toBe(0)
+      expect(read(dir, 'wrangler.jsonc').match(ORIGIN_LINE)?.[1]).toBe('REPLACE_WITH_YOUR_ORIGIN')
+    }
+  })
+
+  it('combines with --custom-domain: routes stays active, workers.dev/preview off, the vars line keeps its comma (D-11)', () => {
+    const dir = makeTmpCopy()
+    const r = runSetup(dir, [
+      ...FLAGS,
+      '--origin=https://app.example.com',
+      '--custom-domain=app.example.com',
+    ])
+    expect(r.status, r.stderr).toBe(0)
+    const wj = read(dir, 'wrangler.jsonc')
+    expect(wj).toMatch(/"vars":\s*\{[^\n}]*"AUTHORIZED_PARTIES":\s*"https:\/\/app\.example\.com"\s*\},/)
+    expect(wj).toMatch(/^\s*"routes":\s*\[\{\s*"pattern":\s*"app\.example\.com"/m)
+    const cfg = JSON.parse(codeLines(wj))
+    expect(cfg.workers_dev).toBe(false)
+    expect(cfg.preview_urls).toBe(false)
+    expect(cfg.vars.AUTHORIZED_PARTIES).toBe('https://app.example.com')
+  })
+
+  it('normalizeOrigin / isValidOrigin (unit): trailing slash and case collapse to one origin', async () => {
+    const { normalizeOrigin, isValidOrigin } = await import('../../setup.mjs')
+    expect(normalizeOrigin('https://a.example/')).toBe(normalizeOrigin('https://a.example'))
+    expect(normalizeOrigin('  HTTPS://A.Example:443/p?q#h ')).toBe('https://a.example')
+    expect(normalizeOrigin('')).toBe('')
+    expect(isValidOrigin('https://a.example')).toBe(true)
+    expect(isValidOrigin('http://localhost:5173')).toBe(true)
+    // Credentials and non-http(s) schemes survive normalization so validation rejects them.
+    expect(isValidOrigin(normalizeOrigin('https://u:p@a.example'))).toBe(false)
+    expect(isValidOrigin(normalizeOrigin('ftp://a.example'))).toBe(false)
+    expect(isValidOrigin('https://a.example/')).toBe(false)
+  })
+})
+
+// D-02 prohibition: setup.mjs prints the wrangler commands, it never runs them. Reads the source
+// only, so it also runs in a fork (outside the template-only blocks).
+describe.skipIf(!IS_TEMPLATE)('setup.mjs public/_headers CSP host (D-09)', () => {
+  const PLACEHOLDER = 'REPLACE_WITH_YOUR_CLERK_FAPI_HOST'
+  const outstandingHeaders = (dir) =>
+    scanForSentinels(dir).outstanding.filter((o) => o.startsWith('public/_headers:'))
+
+  it('fills the CSP with the host decoded from the pk', () => {
     const dir = makeTmpCopy()
     const r = runSetup(dir, FLAGS)
     expect(r.status, r.stderr).toBe(0)
+    const h = read(dir, 'public/_headers')
+    expect(h).toMatch(/^\s*Content-Security-Policy:.*https:\/\/example\.clerk\.accounts\.dev[ ;]/m)
+    expect(h).not.toContain(PLACEHOLDER)
+    expect(outstandingHeaders(dir)).toEqual([])
+  })
 
-    // printLoudBlock emits via console.warn (stderr) — assert against the combined stream.
-    const out = `${r.stdout}${r.stderr}`
-    expect(out).toContain('wrangler d1 create acme-dash-cms-db')
-    expect(out).toContain('wrangler r2 bucket create acme-dash-cms-media') // NEW vs. main worker
-    expect(out).toContain('wrangler kv namespace create acme-dash-cms-cache')
-    expect(out).toContain('BETTER_AUTH_SECRET')
-    expect(out).toContain('JWT_SECRET')
-    expect(out).toMatch(/rotate .*admin/i)
-    expect(out).toContain('VITE_CMS_API_URL')
+  it('keeps the placeholder, listed as outstanding, when no pk is given', () => {
+    const dir = makeTmpCopy()
+    const r = runSetup(
+      dir,
+      FLAGS.filter((f) => !f.startsWith('--clerk-pk')),
+      { SETUP_CLERK_PK: '' },
+    )
+    expect(r.status, r.stderr).toBe(0)
+    expect(read(dir, 'public/_headers')).toContain(PLACEHOLDER)
+    expect(outstandingHeaders(dir).join('\n')).toContain(PLACEHOLDER)
+  })
+
+  it('rejects a pk that decodes to a header-injection payload before writing anything', () => {
+    const dir = makeTmpCopy()
+    const r = runSetup(dir, [
+      ...FLAGS.filter((f) => !f.startsWith('--clerk-pk')),
+      '--clerk-pk=pk_test_YWINClNldC1Db29raWU6IHgk',
+    ])
+    expect(r.status).not.toBe(0)
+    expect(read(dir, 'public/_headers')).toBe(read(templateRoot, 'public/_headers'))
+  })
+})
+
+describe('setup.mjs never spawns a child process (D-02)', () => {
+  it('has no child_process import and no exec/spawn call', () => {
+    const src = readFileSync(path.join(templateRoot, 'setup.mjs'), 'utf8')
+    expect(src).not.toContain('node:child_process')
+    for (const call of ['execFile', 'execSync', 'spawn(', 'spawnSync(']) {
+      expect(src, `setup.mjs must not call ${call}`).not.toContain(call)
+    }
   })
 })

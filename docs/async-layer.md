@@ -72,7 +72,9 @@ wrangler queues create <your-queue>-dlq   # matches __DLQ_BINDING__ (dead-letter
   > fork.
 
 - **`wrangler.jsonc`** — uncomment the `triggers.crons`, `queues.producers`, and
-  `queues.consumers` (incl. `dead_letter_queue`) blocks. They ship pinned to:
+  `queues.consumers` (incl. `dead_letter_queue`) blocks. Before uncommenting, add
+  a comma after the last active line above them (the `vars` line, or the `routes`
+  line when `setup.mjs --custom-domain` ran). They ship pinned to:
 
   ```jsonc
   "triggers": {

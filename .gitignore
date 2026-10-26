@@ -39,6 +39,7 @@ setup.env
 .agents/
 .claude/skills/*
 !.claude/skills/dashboard-dev/
+!.claude/skills/integration-api/
 skills-lock.json
 
 # Local-only operator notes / setup guides (never shipped in the template)

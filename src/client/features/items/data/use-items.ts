@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { HttpError, toHttpError } from '@/lib/http-error'
 import {
   type CreateItemInput,
   type Item,
@@ -17,7 +18,7 @@ export const itemsQueryKey = ['items'] as const
 async function fetchItems(): Promise<Item[]> {
   const res = await fetch('/api/items')
   if (!res.ok) {
-    throw new Error(`Failed to load items (${res.status})`)
+    throw new HttpError(res.status, `Failed to load items (${res.status})`)
   }
   const data = (await res.json()) as { items: Item[] }
   return data.items
@@ -36,7 +37,8 @@ async function createItem(input: CreateItemInput): Promise<Item> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   })
-  if (!res.ok) throw new Error(`Failed to create item (${res.status})`)
+  if (!res.ok)
+    throw await toHttpError(res, `Failed to create item (${res.status})`)
   const data = (await res.json()) as { item: Item }
   return data.item
 }
@@ -47,14 +49,16 @@ async function updateItem(id: string, input: UpdateItemInput): Promise<Item> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   })
-  if (!res.ok) throw new Error(`Failed to update item (${res.status})`)
+  if (!res.ok)
+    throw await toHttpError(res, `Failed to update item (${res.status})`)
   const data = (await res.json()) as { item: Item }
   return data.item
 }
 
 async function deleteItem(id: string): Promise<void> {
   const res = await fetch(`/api/items/${id}`, { method: 'DELETE' })
-  if (!res.ok) throw new Error(`Failed to delete item (${res.status})`)
+  if (!res.ok)
+    throw await toHttpError(res, `Failed to delete item (${res.status})`)
 }
 
 export function useCreateItem() {

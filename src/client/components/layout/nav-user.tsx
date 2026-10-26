@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { useUser } from '@clerk/react'
 // CreditCard + Sparkles dropped with the removed Billing / Upgrade-to-Pro rows (D-07).
 import { BadgeCheck, Bell, ChevronsUpDown, LogOut } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { initialsFromUser } from '@/lib/initials'
 import useDialogState from '@/hooks/use-dialog-state'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -25,6 +26,7 @@ import { SignOutDialog } from '@/components/sign-out-dialog'
 export function NavUser() {
   const { user: clerkUser } = useUser()
   const { isMobile } = useSidebar()
+  const { t } = useTranslation()
   const [open, setOpen] = useDialogState()
 
   // Source the shell identity from Clerk (D-08) while keeping the existing
@@ -54,8 +56,18 @@ export function NavUser() {
                   </AvatarFallback>
                 </Avatar>
                 <div className='grid flex-1 text-start text-sm leading-tight'>
-                  <span className='truncate font-semibold'>{user.name}</span>
-                  <span className='truncate text-xs'>{user.email}</span>
+                  <span
+                    dir='auto'
+                    className='truncate [text-align:match-parent] font-semibold'
+                  >
+                    {user.name}
+                  </span>
+                  <span
+                    dir='auto'
+                    className='truncate [text-align:match-parent] text-xs'
+                  >
+                    {user.email}
+                  </span>
                 </div>
                 <ChevronsUpDown className='ms-auto size-4' />
               </SidebarMenuButton>
@@ -75,8 +87,18 @@ export function NavUser() {
                     </AvatarFallback>
                   </Avatar>
                   <div className='grid flex-1 text-start text-sm leading-tight'>
-                    <span className='truncate font-semibold'>{user.name}</span>
-                    <span className='truncate text-xs'>{user.email}</span>
+                    <span
+                      dir='auto'
+                      className='truncate [text-align:match-parent] font-semibold'
+                    >
+                      {user.name}
+                    </span>
+                    <span
+                      dir='auto'
+                      className='truncate [text-align:match-parent] text-xs'
+                    >
+                      {user.email}
+                    </span>
                   </div>
                 </div>
               </DropdownMenuLabel>
@@ -96,7 +118,7 @@ export function NavUser() {
                 <DropdownMenuItem asChild>
                   <Link to='/settings'>
                     <BadgeCheck />
-                    Manage account
+                    {t('profileDropdown.manageAccount')}
                   </Link>
                 </DropdownMenuItem>
                 {/* TODO(forker): re-enable Billing once a real billing route exists (D-07).
@@ -110,7 +132,7 @@ export function NavUser() {
                 <DropdownMenuItem asChild>
                   <Link to='/settings/notifications'>
                     <Bell />
-                    Notifications
+                    {t('sidebar.nav.notifications')}
                   </Link>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
@@ -120,7 +142,7 @@ export function NavUser() {
                 onClick={() => setOpen(true)}
               >
                 <LogOut />
-                Sign out
+                {t('profileDropdown.signOut')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

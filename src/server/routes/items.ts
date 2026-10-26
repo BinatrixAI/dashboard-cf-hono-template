@@ -1,4 +1,3 @@
-import { zValidator } from '@hono/zod-validator'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 import { Hono } from 'hono'
@@ -9,11 +8,13 @@ import {
 } from '../../shared/types'
 import { paginate, paginationQuerySchema } from '../db/queries'
 import { items as itemsTable } from '../db/schema'
+import { t } from '../i18n'
+import { v } from '../validator'
 
 /**
  * D1-backed `/api/items` CRUD router (Plan 02 / DATA-03). This is the Phase-1
  * in-memory store swapped for REAL D1 storage behind the SAME route surface +
- * response envelopes ({ items } / { item } / { success: true } / { error }) — a
+ * response envelopes ({ items } / { item } / { success: true } / { error, path }) — a
  * backend swap, NOT a UI rewrite (the D-04 seam: `use-items.ts` is unchanged).
  *
  * Two invariants this file must keep:
@@ -34,12 +35,12 @@ const client = (c: { env: Env }) =>
 
 export const items = new Hono<{ Bindings: Env }>()
   // GET / — newest-first, with validated + capped ?limit/?offset pagination (DATA-05).
-  .get('/', zValidator('query', paginationQuerySchema), async (c) => {
+  .get('/', v('query', paginationQuerySchema), async (c) => {
     const db = client(c)
     const rows = await paginate(db, itemsTable, c.req.valid('query'))
     return c.json({ items: rows })
   })
-  .post('/', zValidator('json', createItemSchema), async (c) => {
+  .post('/', v('json', createItemSchema), async (c) => {
     const db = client(c)
     const body = c.req.valid('json')
     const ts = new Date().toISOString()
@@ -60,9 +61,11 @@ export const items = new Hono<{ Bindings: Env }>()
       .from(itemsTable)
       .where(eq(itemsTable.id, c.req.param('id')))
       .all()
-    return item ? c.json({ item }) : c.json({ error: 'Not Found' }, 404)
+    return item
+      ? c.json({ item })
+      : c.json({ error: t(c, 'notFound'), path: c.req.path }, 404)
   })
-  .put('/:id', zValidator('json', updateItemSchema), async (c) => {
+  .put('/:id', v('json', updateItemSchema), async (c) => {
     const db = client(c)
     const id = c.req.param('id')
     const [current] = await db
@@ -70,7 +73,8 @@ export const items = new Hono<{ Bindings: Env }>()
       .from(itemsTable)
       .where(eq(itemsTable.id, id))
       .all()
-    if (!current) return c.json({ error: 'Not Found' }, 404)
+    if (!current)
+      return c.json({ error: t(c, 'notFound'), path: c.req.path }, 404)
     const body = c.req.valid('json')
     // Assign only provided fields so a partial update never clobbers an existing value.
     const updated: Item = {

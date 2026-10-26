@@ -1,14 +1,15 @@
 import { Cross2Icon } from '@radix-ui/react-icons'
-import { type Table } from '@tanstack/react-table'
+import { type ReactTable, type RowData } from '@tanstack/react-table'
 import { type TranslationKey } from '@/i18n'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { type DataTableFeatures } from '@/components/data-table/features'
 import { DataTableFacetedFilter } from './faceted-filter'
 import { DataTableViewOptions } from './view-options'
 
-type DataTableToolbarProps<TData> = {
-  table: Table<TData>
+type DataTableToolbarProps<TData extends RowData> = {
+  table: ReactTable<DataTableFeatures, TData>
   // searchPlaceholder + filter title/labels are translation KEYS (G2)
   searchPlaceholder?: TranslationKey
   searchKey?: string
@@ -23,7 +24,7 @@ type DataTableToolbarProps<TData> = {
   }[]
 }
 
-export function DataTableToolbar<TData>({
+export function DataTableToolbar<TData extends RowData>({
   table,
   searchPlaceholder,
   searchKey,
@@ -33,8 +34,12 @@ export function DataTableToolbar<TData>({
   const placeholder = searchPlaceholder
     ? t(searchPlaceholder)
     : t('dataTable.filterPlaceholder')
+  // Reset shows when anything differs from the default view; column visibility and page size are preferences (D-12)
   const isFiltered =
-    table.getState().columnFilters.length > 0 || table.getState().globalFilter
+    table.state.columnFilters.length > 0 ||
+    !!table.state.globalFilter ||
+    table.state.sorting.length > 0 ||
+    table.state.pagination.pageIndex > 0
 
   return (
     <div className='flex items-center justify-between'>
@@ -53,7 +58,7 @@ export function DataTableToolbar<TData>({
         ) : (
           <Input
             placeholder={placeholder}
-            value={table.getState().globalFilter ?? ''}
+            value={table.state.globalFilter ?? ''}
             onChange={(event) => table.setGlobalFilter(event.target.value)}
             className='h-8 w-[150px] lg:w-[250px]'
           />
@@ -78,6 +83,8 @@ export function DataTableToolbar<TData>({
             onClick={() => {
               table.resetColumnFilters()
               table.setGlobalFilter('')
+              table.resetSorting(true)
+              table.resetPageIndex(true)
             }}
             className='h-8 px-2 lg:px-3'
           >

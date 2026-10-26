@@ -1,20 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getRouteApi } from '@tanstack/react-router'
 import {
+  type ColumnVisibilityState,
   type SortingState,
-  type VisibilityState,
   flexRender,
-  getCoreRowModel,
-  getFacetedRowModel,
-  getFacetedUniqueValues,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
+  useTable,
 } from '@tanstack/react-table'
 import { useTranslation } from 'react-i18next'
+import { titleClipped } from '@/lib/clip-title'
 import { cn } from '@/lib/utils'
 import { useTableUrlState } from '@/hooks/use-table-url-state'
+import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -24,6 +20,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { DataTablePagination, DataTableToolbar } from '@/components/data-table'
+import { dataTableFeatures } from '@/components/data-table/features'
 import { priorities, statuses } from '../data/data'
 import { type Task } from '../data/schema'
 import { DataTableBulkActions } from './data-table-bulk-actions'
@@ -41,7 +38,8 @@ export function TasksTable({ data }: DataTableProps) {
   // Local UI-only states
   const [rowSelection, setRowSelection] = useState({})
   const [sorting, setSorting] = useState<SortingState>([])
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
+  const [columnVisibility, setColumnVisibility] =
+    useState<ColumnVisibilityState>({})
 
   // Local state management for table (uncomment to use local-only state, not synced with URL)
   // const [globalFilter, onGlobalFilterChange] = useState('')
@@ -68,8 +66,8 @@ export function TasksTable({ data }: DataTableProps) {
     ],
   })
 
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const table = useReactTable({
+  const table = useTable({
+    features: dataTableFeatures,
     data,
     columns,
     state: {
@@ -91,12 +89,6 @@ export function TasksTable({ data }: DataTableProps) {
 
       return id.includes(searchValue) || title.includes(searchValue)
     },
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFacetedRowModel: getFacetedRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues(),
     onPaginationChange,
     onGlobalFilterChange,
     onColumnFiltersChange,
@@ -157,7 +149,7 @@ export function TasksTable({ data }: DataTableProps) {
               </TableRow>
             ))}
           </TableHeader>
-          <TableBody>
+          <TableBody onMouseOver={titleClipped} onFocus={titleClipped}>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow
@@ -186,7 +178,19 @@ export function TasksTable({ data }: DataTableProps) {
                   colSpan={columns.length}
                   className='h-24 text-center'
                 >
-                  {t('tasks.noResults')}
+                  <div className='flex flex-col items-center gap-3'>
+                    {t('tasks.noResults')}
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={() => {
+                        table.resetColumnFilters()
+                        table.setGlobalFilter('')
+                      }}
+                    >
+                      {t('dataTable.clearFilters')}
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             )}

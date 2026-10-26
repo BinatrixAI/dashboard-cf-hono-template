@@ -6,9 +6,8 @@
 // plus the migrations array, so `applyD1Migrations(env.__D1_BINDING__, env.TEST_MIGRATIONS)`
 // in test/apply-migrations.ts type-checks.
 //
-// [A1] `D1Migration` is imported from the package ROOT — the documented `/config`
-// subpath does not exist in the installed @cloudflare/vitest-pool-workers 0.16.20.
-import type { D1Migration } from '@cloudflare/vitest-pool-workers'
+// [A1] `D1Migration` is exported from the package root of @cloudflare/vitest-plugin.
+import type { D1Migration } from '@cloudflare/vitest-plugin'
 
 declare module 'cloudflare:test' {
   interface ProvidedEnv extends Env {

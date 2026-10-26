@@ -49,7 +49,7 @@ export function CommandMenu() {
                       }}
                     >
                       <div className='flex size-4 items-center justify-center'>
-                        <ArrowRight className='text-muted-foreground/80 size-2' />
+                        <ArrowRight className='text-muted-foreground/80 size-2 rtl:rotate-180' />
                       </div>
                       {t(navItem.title)}
                     </CommandItem>
@@ -58,15 +58,18 @@ export function CommandMenu() {
                 return navItem.items?.map((subItem, i) => (
                   <CommandItem
                     key={`${navItem.title}-${subItem.url}-${i}`}
-                    value={`${t(navItem.title)}-${subItem.url}`}
+                    // Visible (translated) sub-title is searchable in every language; the url keeps the value unique.
+                    value={`${t(navItem.title)} ${t(subItem.title)} ${subItem.url}`}
                     onSelect={() => {
                       runCommand(() => navigate({ to: subItem.url }))
                     }}
                   >
                     <div className='flex size-4 items-center justify-center'>
-                      <ArrowRight className='text-muted-foreground/80 size-2' />
+                      <ArrowRight className='text-muted-foreground/80 size-2 rtl:rotate-180' />
                     </div>
-                    {t(navItem.title)} <ChevronRight /> {t(subItem.title)}
+                    {t(navItem.title)}{' '}
+                    <ChevronRight className='rtl:rotate-180' />{' '}
+                    {t(subItem.title)}
                   </CommandItem>
                 ))
               })}

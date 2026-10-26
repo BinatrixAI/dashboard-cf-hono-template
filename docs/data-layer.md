@@ -138,16 +138,18 @@ const stored = await c.env.__KV_BINDING__.get(SETTINGS_KEY, 'json')
 const parsed = settingsSchema.safeParse(stored)
 return c.json({ settings: parsed.success ? parsed.data : defaultSettings })
 
-// write — body validated by zValidator('json', settingsSchema)
+// write — body validated by v('json', settingsSchema) from src/server/validator.ts
 await c.env.__KV_BINDING__.put(SETTINGS_KEY, JSON.stringify(next))
 return c.json({ settings: next })
 ```
 
 - `GET /api/settings` returns `{ settings }`. On first load (empty KV) it returns
   `defaultSettings`, never `null` or an error.
-- `PUT /api/settings` validates the body with Zod (`zValidator`) — an invalid blob
-  (e.g. `theme: 'neon'`) returns `400` and persists nothing — then writes the whole
-  document and echoes it back.
+- `PUT /api/settings` validates the body with Zod through `v` — an invalid blob
+  (e.g. `theme: 'neon'`), malformed JSON, or a non-JSON Content-Type returns the
+  localized `400 { error, path }` and persists nothing — then writes the whole
+  document and echoes it back. PUT replaces the whole document, not a merge: a
+  valid JSON body missing a section, even `{}`, stores that section's defaults.
 
 ### Validate stored JSON on read
 

@@ -4,8 +4,8 @@
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" }
   ],
+  // TODO(deps): typescript held at ~6.0.3. typescript-eslint peers typescript <6.1.0 and refuses TS 7 (https://github.com/typescript-eslint/typescript-eslint/issues/10940). Bump to the latest major once typescript-eslint supports it.
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/client/*"]
     }

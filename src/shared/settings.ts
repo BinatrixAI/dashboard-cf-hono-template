@@ -26,18 +26,10 @@ import { z } from 'zod'
 // The fixed KV key the settings blob lives under (D-14). One key, one JSON document.
 export const SETTINGS_KEY = 'app:settings'
 
-// Font enum (A3): the tuple is inlined here — kept in sync with the source of truth at
-// `src/client/config/fonts.ts` (['inter','manrope','system']). It is NOT imported from
-// there: `src/shared/settings.ts` compiles into the Worker bundle, and a shared→client
-// import would drag a client path (and the `@/` alias) into the server build, breaking
-// the shared/server boundary.
-const fonts = ['inter', 'manrope', 'system'] as const
-
 export const settingsSchema = z.object({
   appearance: z
     .object({
       theme: z.enum(['light', 'dark', 'system']).default('system'), // D-13: includes 'system'
-      font: z.enum(fonts).default('inter'),
     })
     .prefault({}),
   notifications: z

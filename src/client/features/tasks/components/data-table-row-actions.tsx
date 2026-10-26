@@ -1,5 +1,5 @@
 import { DotsHorizontalIcon } from '@radix-ui/react-icons'
-import { type Row } from '@tanstack/react-table'
+import { type RowData, type Row } from '@tanstack/react-table'
 import { Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
@@ -16,15 +16,16 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { type DataTableFeatures } from '@/components/data-table/features'
 import { labels } from '../data/data'
 import { taskSchema } from '../data/schema'
 import { useTasks } from './tasks-provider'
 
-type DataTableRowActionsProps<TData> = {
-  row: Row<TData>
+type DataTableRowActionsProps<TData extends RowData> = {
+  row: Row<DataTableFeatures, TData>
 }
 
-export function DataTableRowActions<TData>({
+export function DataTableRowActions<TData extends RowData>({
   row,
 }: DataTableRowActionsProps<TData>) {
   const { t } = useTranslation()

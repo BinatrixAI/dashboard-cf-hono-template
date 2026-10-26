@@ -17,7 +17,6 @@
     "jsx": "react-jsx",
 
     /* Alias */
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/client/*"]
     },
@@ -34,7 +33,7 @@
   // Plan 02/03 routes declare `new Hono<{ Bindings: Env }>()` (Pitfall 4).
   "include": ["src", "worker-configuration.d.ts"],
   // Worker tests import the virtual `cloudflare:test` module, which only resolves inside
-  // the @cloudflare/vitest-pool-workers runtime (vitest runs them via esbuild, no tsc gate).
+  // the @cloudflare/vitest-plugin runtime (vitest runs them via esbuild, no tsc gate).
   // Excluding them keeps the SPA/app build (DOM libs) clean. Phase 6 adds a dedicated
   // worker-test tsconfig if CI needs to type-check tests.
   "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]

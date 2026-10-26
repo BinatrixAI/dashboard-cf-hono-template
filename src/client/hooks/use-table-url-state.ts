@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type {
   ColumnFiltersState,
   OnChangeFn,
@@ -7,12 +7,25 @@ import type {
 
 type SearchRecord = Record<string, unknown>
 
+export const PAGE_SIZES = [10, 20, 30, 40, 50] as const
+
+/** Nearest allowed page size (ties go to the smaller); non-finite input uses the fallback. */
+export function snapPageSize(raw: unknown, fallback: number): number {
+  const n = typeof raw === 'number' && Number.isFinite(raw) ? raw : fallback
+  let best: number = PAGE_SIZES[0]
+  for (const size of PAGE_SIZES) {
+    if (Math.abs(size - n) < Math.abs(best - n)) best = size
+  }
+  return best
+}
+
 export type NavigateFn = (opts: {
   search:
     | true
     | SearchRecord
     | ((prev: SearchRecord) => Partial<SearchRecord> | SearchRecord)
   replace?: boolean
+  resetScroll?: boolean
 }) => void
 
 type UseTableUrlStateParams = {
@@ -110,20 +123,39 @@ export function useTableUrlState(
   const [columnFilters, setColumnFilters] =
     useState<ColumnFiltersState>(initialColumnFilters)
 
+  const rawPageSize = (search as SearchRecord)[pageSizeKey]
+
   const pagination: PaginationState = useMemo(() => {
     const rawPage = (search as SearchRecord)[pageKey]
-    const rawPageSize = (search as SearchRecord)[pageSizeKey]
     const pageNum = typeof rawPage === 'number' ? rawPage : defaultPage
-    const pageSizeNum =
-      typeof rawPageSize === 'number' ? rawPageSize : defaultPageSize
-    return { pageIndex: Math.max(0, pageNum - 1), pageSize: pageSizeNum }
-  }, [search, pageKey, pageSizeKey, defaultPage, defaultPageSize])
+    return {
+      pageIndex: Math.max(0, pageNum - 1),
+      pageSize: snapPageSize(rawPageSize, defaultPageSize),
+    }
+  }, [search, pageKey, rawPageSize, defaultPage, defaultPageSize])
+
+  // An off-list page size in the URL is corrected in place (no history entry).
+  useEffect(() => {
+    if (rawPageSize === undefined || rawPageSize === pagination.pageSize) return
+    navigate({
+      replace: true,
+      search: (prev) => ({
+        ...(prev as SearchRecord),
+        [pageSizeKey]:
+          pagination.pageSize === defaultPageSize
+            ? undefined
+            : pagination.pageSize,
+      }),
+    })
+  }, [rawPageSize, pagination.pageSize, pageSizeKey, defaultPageSize, navigate])
 
   const onPaginationChange: OnChangeFn<PaginationState> = (updater) => {
     const next = typeof updater === 'function' ? updater(pagination) : updater
     const nextPage = next.pageIndex + 1
     const nextPageSize = next.pageSize
     navigate({
+      // The router's default scroll-to-top would undo the pagination's scroll to the table card (D-14).
+      resetScroll: false,
       search: (prev) => ({
         ...(prev as SearchRecord),
         [pageKey]: nextPage <= defaultPage ? undefined : nextPage,

@@ -80,11 +80,20 @@ wrangler d1 create <your-d1-name>
 wrangler kv namespace create <your-kv-title>
 #    → замените REPLACE_WITH_YOUR_KV_ID в wrangler.jsonc
 
-# 3. Задайте СЕКРЕТ Clerk (никогда не коммитится; .dev.vars оставляет его пустым)
+# Задайте ОБА секрета Clerk до первого деплоя — secret put создаёт Worker,
+# если его ещё нет (wrangler отказывается деплоить с незаданным обязательным секретом)
+# 3. вставьте свой ключ sk_… (никогда не коммитится; .dev.vars оставляет его пустым)
 wrangler secret put CLERK_SECRET_KEY
+# 4. setup.mjs печатает эту строку с уже подставленным вашим ключом
+echo <your pk_…> | wrangler secret put CLERK_PUBLISHABLE_KEY
 
-# 4. Перегенерируйте типы биндингов из заполненных биндингов
+# Затем перегенерируйте типы биндингов, мигрируйте удалённый D1 и задеплойте
+# 5.
 pnpm cf-typegen
+# 6.
+pnpm db:migrate:remote
+# 7.
+pnpm run deploy
 ```
 
 Примените миграцию базы данных к каждому окружению (они никогда не синхронизируются —
@@ -99,8 +108,10 @@ pnpm db:migrate:remote   # реальный D1 — сначала требует
 
 ```bash
 pnpm dev                 # HMR для SPA + Hono Worker в workerd (@cloudflare/vite-plugin)
-pnpm run deploy          # pnpm build && wrangler deploy → URL *.workers.dev
+pnpm run deploy          # с гейтами: миграции → gate → сборка → live-ключ → wrangler deploy → readback + smoke
 ```
+
+Что отклоняет каждое звено — см. [Деплой с гейтами](#деплой-с-гейтами).
 
 ## Обзор архитектуры
 
@@ -116,19 +127,12 @@ pnpm run deploy          # pnpm build && wrangler deploy → URL *.workers.dev
   KV хранит отдельный blob настроек приложения. Оба объявлены в `wrangler.jsonc` с
   заглушками ID. См. [`docs/data-layer.md`](docs/data-layer.md).
 - **Clerk на краю сети.** `@hono/clerk-auth` проверяет сессию Clerk внутри Worker; SPA
-  использует `@clerk/react`. Publishable-ключ — это открытый `var`; секрет — это
+  использует `@clerk/react`. И publishable-, и секретный ключ — это
   `wrangler secret`.
 - **Спящий асинхронный слой.** Путь Cron → Queues → Resend поставляется в
   `src/server/async/` (рабочий и покрытый юнит-тестами); обвязка платформы остаётся
   закомментированной, так что свежий форк деплоится инертным. Активируйте или удалите
   его по инструкции [`docs/async-layer.md`](docs/async-layer.md).
-- **Опциональный CMS-Worker.** Второй, самодостаточный SonicJS-Worker живёт в `cms/`
-  (собственные D1/KV/R2, Better-Auth `/admin`, публично читаемая коллекция
-  `blog-posts`). Дашборд читает его REST API cross-origin через `VITE_CMS_API_URL`
-  (страница `/content` под авторизацией + ссылка на админку в сайдбаре), а
-  Clerk-независимые маршруты `/blog` отображают опубликованный контент. `setup.mjs`
-  параметризует его; задеплойте `cms/`, чтобы включить, или пропустите целиком.
-  См. [`docs/cms.md`](docs/cms.md).
 
 - **Двуязычный интерфейс (английский ↔ иврит).** Переключатель LTR/RTL заодно
   переключает язык — LTR отображает английский, RTL — иврит — через `react-i18next`
@@ -161,7 +165,6 @@ pnpm run deploy          # pnpm build && wrangler deploy → URL *.workers.dev
 │   │   ├── db/                 # схема и запросы Drizzle
 │   │   └── async/              # спящий слой Cron → Queues → Resend
 │   └── shared/                 # Zod-схемы + типы, импортируемые обоими слоями
-├── cms/                        # ОПЦИОНАЛЬНЫЙ SonicJS CMS-Worker — свои D1/KV/R2 + wrangler.jsonc (docs/cms.md)
 ├── migrations/                 # сгенерированный Drizzle SQL для D1 (+ закоммиченный meta/)
 ├── public/                     # статические файлы, копируемые в сборку как есть
 ├── scripts/                    # CI-помощники гигиены (secret-grep, sentinel scan, smoke)
@@ -219,10 +222,6 @@ pnpm run deploy          # pnpm build && wrangler deploy → URL *.workers.dev
 - **[`docs/async-layer.md`](docs/async-layer.md)** — спящий слой Cron → Queues → Resend:
   активация (создать очередь + DLQ → раскомментировать обвязку → `wrangler secret put
   RESEND_API_KEY` → деплой) и заметка об удалении.
-- **[`docs/cms.md`](docs/cms.md)** — опциональный SonicJS CMS-Worker (`cms/`):
-  последовательность деплоя без 500 (создать D1/R2/KV → задать `BETTER_AUTH_SECRET`/
-  `JWT_SECRET` → миграции → сид админа → деплой), первичная настройка + ротация админа,
-  усиление регистрации и связка контента дашборд/публичные страницы.
 
 ## CI/CD + деплой
 
@@ -233,10 +232,16 @@ pnpm run deploy          # pnpm build && wrangler deploy → URL *.workers.dev
 деплоят**:
 
 - **quality-gate** — `cf-typegen` → `typecheck` (`tsc -b`) → `lint` → `format:check` →
-  `test` (Vitest workers pool против реальных моков биндингов D1/KV). Проходит зелёным на
-  шаблоне без `setup` как есть.
+  `test` (Vitest workers pool против реальных моков биндингов D1/KV, guard-тесты
+  дизайн-системы, RTL-иконок, nav-контракта и CI-конфига, и jsdom-проект `client-dom`
+  для компонентных тестов `*.dom.test.tsx`) → `build` → `node scripts/bundle-size.mjs`,
+  который падает, если gzip-размер начального или всего JS превышает `CEILINGS`
+  (поднимайте его осознанно). `cf-typegen` перегенерирует типы `Env`, и задание падает,
+  если закоммиченный `worker-configuration.d.ts` устарел. Проходит зелёным на шаблоне без
+  `setup` как есть.
 - **secret-scan** — MIT-бинарник gitleaks (`.gitleaks.toml`) плюс проверяемый
-  `scripts/secret-grep.sh`.
+  `scripts/secret-grep.sh` и `scripts/gitleaks-selftest.sh`, который доказывает, что
+  конфиг gitleaks по-прежнему пропускает ключ `pk_` и валит ключ `sk_`.
 - **sentinel-scan** — разворачивает копию дерева через `setup.mjs --yes` во временный
   каталог, затем запускает `scripts/ci-sentinel-scan.mjs` против неё (никогда напрямую по
   дереву шаблона — шаблон законно всё ещё содержит сентинелы).
@@ -249,24 +254,56 @@ Workers Builds делается один раз вручную в дашборд
 
 1. В дашборде Cloudflare перейдите в **Workers & Pages → ваш Worker → Settings →
    Builds** и подключите свой репозиторий GitHub.
-2. Задайте **build command** `pnpm build` и **deploy command** `wrangler deploy` (скрипт
-   `deploy` — `pnpm build && wrangler deploy` — уже существует).
+2. Задайте **build command** `pnpm build` и **deploy command** `wrangler deploy`.
+   (Скрипт пакета `deploy` — это цепочка с гейтами ниже; Workers Builds его не использует.)
 3. Убедитесь, что **имя Worker совпадает с `name` в `wrangler.jsonc`** (значение, которое
    `setup.mjs` задал из `--name`), иначе Workers Builds создаст/задеплоит не тот Worker.
 
 После этого push в `main` собирает и деплоит автоматически.
 
-### Ручной деплой (запасной путь)
+> **Workers Builds пропускает все гейты.** Он запускает `wrangler deploy` напрямую — без
+> проверки миграций, гейта качества, проверки live-ключа и readback. Перед push в
+> подключённую ветку запустите `pnpm run deploy` (или хотя бы `pnpm run gate` и
+> `pnpm db:migrate:remote`).
 
-Вы всегда можете задеплоить вручную — именно так доказывается Definition of Done шаблона:
+### Деплой с гейтами
+
+`pnpm run deploy` — путь с гейтами; именно так доказывается Definition of Done шаблона.
+Каждое звено должно пройти, прежде чем запустится следующее:
 
 ```bash
-pnpm run deploy          # pnpm build && wrangler deploy → URL *.workers.dev
+pnpm run deploy          # guard → миграции → gate → сборка → live-ключ → wrangler deploy → readback + smoke
 ```
 
-Порядок деплоя важен для секрета Clerk: `wrangler deploy` (создаёт Worker) →
-`wrangler secret put CLERK_SECRET_KEY` → секрет применяется вживую без повторного деплоя.
-Publishable-ключ поставляется как открытый `var`, уже заполненный `setup.mjs`.
+- **Guard** (`scripts/assert-run-deploy.mjs`) — отказывает, если цепочка запущена не как
+  `pnpm run deploy`. Голый `pnpm deploy` — это собственная workspace-команда pnpm, а не
+  этот скрипт, и она пропустила бы все гейты.
+- **Миграции** (`scripts/assert-migrations-applied.sh`) — отказывает, если в удалённом D1
+  не хватает миграции из `./migrations` или если удалённое состояние не удаётся прочитать.
+  Исправление: `pnpm db:migrate:remote`, затем деплой снова.
+- **Gate** (`pnpm run gate`) — typecheck, lint, format:check, `scripts/secret-grep.sh` и
+  тесты по всему дереву. Запускайте его и отдельно перед публикацией.
+- **Live-ключ** (`scripts/assert-live-key.mjs`) — отказывает, если в бандле нет вашего
+  `VITE_CLERK_PUBLISHABLE_KEY` или есть любой другой ключ `pk_`, а также отказывает
+  ключу `pk_test_` (development-инстанс). Чтобы намеренно задеплоить тестовый инстанс:
+  `ALLOW_TEST_CLERK_KEY=1 pnpm run deploy`.
+- **Readback + smoke** (`scripts/deploy-verify.mjs`) — читает обратно живую версию и
+  делает smoke-тест. Базовый URL — `BASE_URL`, иначе маршрут кастомного домена, иначе
+  первый `https`-origin из `AUTHORIZED_PARTIES`. При сбое печатает
+  `npx wrangler rollback <version> --name <worker>` и завершается с кодом 1. Сам он
+  никогда не откатывает, потому что удалённая миграция могла уже выполниться.
+
+Первый деплой на новый кастомный домен может провалить smoke, пока DNS и сертификат
+устанавливаются. Подождите минуту и перезапустите `node scripts/deploy-verify.mjs`,
+прежде чем решать об откате.
+
+Задайте оба секрета Clerk до первого деплоя: `wrangler secret put CLERK_SECRET_KEY` и
+`echo <your pk_…> | wrangler secret put CLERK_PUBLISHABLE_KEY`. `secret put` создаёт
+Worker, если его ещё нет.
+
+**Существующие форки**, у которых `CLERK_PUBLISHABLE_KEY` всё ещё открытый `var`:
+запустите `wrangler secret put CLERK_PUBLISHABLE_KEY` перед следующим деплоем; этот деплой
+удалит старый var.
 
 ## Устранение неполадок
 
@@ -279,9 +316,18 @@ Publishable-ключ поставляется как открытый `var`, у�
   `wrangler kv namespace create`, вставьте возвращённые `database_id` / `id` в
   `wrangler.jsonc`, затем `pnpm cf-typegen`. (Заглушка подходит для всей `--local`
   разработки, тестов и CI — реальный ID нужен только для `--remote`/продакшена.)
-- **401 / аутентификация падает после деплоя.** Не задан секрет Clerk. Запустите
-  `wrangler secret put CLERK_SECRET_KEY`. Publishable-ключ (`CLERK_PUBLISHABLE_KEY`) —
-  это открытый `var`, заданный `setup.mjs --clerk-pk`, и он уезжает вместе с деплоем.
+- **401 / аутентификация падает после деплоя.** Оба ключа Clerk — секреты Worker.
+  Проверьте, что `wrangler secret list` показывает `CLERK_SECRET_KEY` и
+  `CLERK_PUBLISHABLE_KEY`; недостающий задайте через `wrangler secret put <name>`.
+- **Деплой отклонён на гейте миграций.** «MISSING migrations» → запустите
+  `pnpm db:migrate:remote`, затем `pnpm run deploy`. «could not read the remote migration
+  state» → почините чтение: `wrangler login`, сеть или реальный `database_id` в
+  `wrangler.jsonc`.
+- **Деплой отклонён на гейте live-ключа.** Положите ключ `pk_live_…` своего проекта в
+  `VITE_CLERK_PUBLISHABLE_KEY` (`.env.local` или `.env.production.local`; переменная
+  окружения shell имеет приоритет) и задеплойте снова. Ключ `pk_test_` уезжает только с
+  `ALLOW_TEST_CLERK_KEY=1 pnpm run deploy`. «carries another pk_ key» значит, что vite
+  прочитал не тот env-файл, который вы ожидаете.
 - **Строка, записанная в dev, «пропала» в продакшене.** `--local` и `--remote` D1 — это
   две базы, которые никогда не синхронизируются; запустите `pnpm db:migrate:remote`
   (после заполнения реального `database_id`). См. [`docs/data-layer.md`](docs/data-layer.md).

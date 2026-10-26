@@ -16,9 +16,10 @@ import { Separator } from '@/components/ui/separator'
 import { ConfigDrawer } from '@/components/config-drawer'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
+import { PageHeader } from '@/components/layout/page-header'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
-import { ThemeSwitch } from '@/components/theme-switch'
+import { ThemeMenu } from '@/components/theme-menu'
 import { apps } from './data/apps'
 
 const route = getRouteApi('/_authenticated/apps/')
@@ -91,7 +92,7 @@ export function Apps() {
       <Header>
         <Search />
         <div className='ms-auto flex items-center gap-4'>
-          <ThemeSwitch />
+          <ThemeMenu />
           <ConfigDrawer />
           <ProfileDropdown />
         </div>
@@ -99,12 +100,7 @@ export function Apps() {
 
       {/* ===== Content ===== */}
       <Main fixed>
-        <div>
-          <h1 className='text-2xl font-bold tracking-tight'>
-            {t('apps.title')}
-          </h1>
-          <p className='text-muted-foreground'>{t('apps.subtitle')}</p>
-        </div>
+        <PageHeader title={t('apps.title')} subtitle={t('apps.subtitle')} />
         <div className='my-4 flex items-end justify-between sm:my-0 sm:items-center'>
           <div className='flex flex-col gap-4 sm:my-4 sm:flex-row'>
             <Input
@@ -130,7 +126,7 @@ export function Apps() {
           </div>
 
           <Select value={sort} onValueChange={handleSortChange}>
-            <SelectTrigger className='w-16'>
+            <SelectTrigger className='w-16' aria-label={t('apps.sort')}>
               <SelectValue>
                 <SlidersHorizontal size={18} />
               </SelectValue>
@@ -167,14 +163,16 @@ export function Apps() {
                 <Button
                   variant='outline'
                   size='sm'
-                  className={`${app.connected ? 'border border-blue-300 bg-blue-50 hover:bg-blue-100 dark:border-blue-700 dark:bg-blue-950 dark:hover:bg-blue-900' : ''}`}
+                  className={`${app.connected ? 'border-brand/40 bg-brand-soft hover:bg-brand-soft/80 border' : ''}`}
                 >
                   {app.connected ? t('apps.connected') : t('apps.connect')}
                 </Button>
               </div>
               <div>
                 <h2 className='mb-1 font-semibold'>{app.name}</h2>
-                <p className='line-clamp-2 text-gray-500'>{t(app.desc)}</p>
+                <p className='text-muted-foreground line-clamp-2'>
+                  {t(app.desc)}
+                </p>
               </div>
             </li>
           ))}

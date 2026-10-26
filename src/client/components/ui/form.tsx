@@ -8,9 +8,9 @@ import {
   type FieldPath,
   type FieldValues,
 } from 'react-hook-form'
-import * as LabelPrimitive from '@radix-ui/react-label'
-import { Slot } from '@radix-ui/react-slot'
-import { cn } from '@/lib/utils'
+import { cn } from 'cn'
+import type { Label as LabelPrimitive } from 'radix-ui'
+import { Slot } from 'radix-ui'
 import { Label } from '@/components/ui/label'
 
 const Form = FormProvider
@@ -101,11 +101,11 @@ function FormLabel({
   )
 }
 
-function FormControl({ ...props }: React.ComponentProps<typeof Slot>) {
+function FormControl({ ...props }: React.ComponentProps<typeof Slot.Root>) {
   const { error, formItemId, formDescriptionId, formMessageId } = useFormField()
 
   return (
-    <Slot
+    <Slot.Root
       data-slot='form-control'
       id={formItemId}
       aria-describedby={

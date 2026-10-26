@@ -87,6 +87,21 @@ sign-in required.
    add `{ title: 'Reports', url: '/reports', icon: FileText }` to a `navGroups`
    item list (import the `lucide-react` icon at the top).
 
+   **External link:** a sidebar item can point off-site instead of at a route:
+
+   ```ts
+   { title: 'sidebar.nav.docs', url: 'https://docs.example.com', icon: ExternalLink, external: true }
+   ```
+
+   `sidebar.nav.docs` is an illustrative key that does not exist yet: add it to
+   BOTH `src/client/i18n/locales/en.json` and `he.json` (the i18n parity test
+   enforces it), and import `ExternalLink` from `lucide-react`. `nav-group.tsx`
+   renders the item as an anchor with `target="_blank"` and
+   `rel="noopener noreferrer"` plus a trailing external-link icon, and never
+   marks it active. Only top-level `navGroups` items honour `external`;
+   collapsible sub-items and the collapsed-sidebar dropdown always use the
+   router `Link`.
+
 The `_authenticated/route.tsx` `beforeLoad` redirects unauthenticated visitors
 to sign-in, so any route nested under `_authenticated/` inherits the guard.
 
@@ -116,9 +131,12 @@ patterns exactly:
 - **Per-request Drizzle client** — build `drizzle(c.env.__D1_BINDING__, …)`
   inside each handler. The binding only exists at request time; a module-scope
   client is a runtime error.
-- **`zValidator('json', schema)`** to validate bodies (no over-posting).
+- **`v('json', schema)`** from `../validator` to validate bodies (no
+  over-posting). A bad, malformed or non-JSON body gets the localized
+  `{ error, path }` 400. ESLint blocks importing `@hono/zod-validator` directly.
 - **Response envelopes** — `{ items }` / `{ item }` / `{ success: true }` /
-  `{ error }`, matching the rest of the API.
+  `{ error, path }`, matching the rest of the API (messages from
+  `t(c, key)` in `src/server/i18n.ts`).
 
 ```ts
 export const reports = new Hono<{ Bindings: Env }>().get('/', async (c) => {
@@ -148,7 +166,8 @@ Registration order **is** the security contract (see §7). Mounting after
 API route gets a test.
 
 **f. Client hook** — `src/client/features/reports/data/use-reports.ts`, copying
-`use-items.ts`: a plain `fetch('/api/reports')` in a `useQuery`, with a shared
+`use-items.ts`: a plain `fetch('/api/reports')` in a `useQuery` that throws
+`new HttpError(res.status, …)` (from `@/lib/http-error`) on `!res.ok`, with a shared
 `queryKey` that each mutation invalidates so the list re-fetches authoritative
 server state.
 

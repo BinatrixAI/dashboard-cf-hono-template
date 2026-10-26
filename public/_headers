@@ -1,0 +1,13 @@
+# Security headers for the SPA (Workers Static Assets). See docs/security.md.
+# - setup.mjs fills the Clerk Frontend API host in the CSP from your publishable key (D-09).
+#   Re-run setup or edit the script-src/connect-src hosts by hand if the key changes.
+# - These rules apply to static assets and the SPA HTML only. /api/* headers come from
+#   Hono secureHeaders in src/server/index.ts.
+# - pnpm dev does not apply this file; check it with pnpm preview.
+# - To allow a new third-party origin, add it to the matching CSP directive.
+# - HSTS subdomain/preload flags are a per-fork opt-in: change them here and in
+#   src/server/index.ts together (D-10).
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://REPLACE_WITH_YOUR_CLERK_FAPI_HOST https://challenges.cloudflare.com https://*.protect.clerk.com; connect-src 'self' https://REPLACE_WITH_YOUR_CLERK_FAPI_HOST https://*.protect.clerk.com:* https://clerk-telemetry.com; img-src 'self' data: https://img.clerk.com; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src 'self' https://challenges.cloudflare.com https://*.protect.clerk.com; worker-src 'self' blob:; form-action 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'
+  Strict-Transport-Security: max-age=31536000
+  X-Frame-Options: DENY

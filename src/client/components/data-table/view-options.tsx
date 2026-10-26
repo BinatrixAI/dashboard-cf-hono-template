@@ -1,6 +1,6 @@
-import { DropdownMenuTrigger } from '@radix-ui/react-dropdown-menu'
 import { MixerHorizontalIcon } from '@radix-ui/react-icons'
-import { type Table } from '@tanstack/react-table'
+import { type RowData, type Table } from '@tanstack/react-table'
+import { DropdownMenu as DropdownMenuPrimitive } from 'radix-ui'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import {
@@ -10,18 +10,19 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
+import { type DataTableFeatures } from '@/components/data-table/features'
 
-type DataTableViewOptionsProps<TData> = {
-  table: Table<TData>
+type DataTableViewOptionsProps<TData extends RowData> = {
+  table: Table<DataTableFeatures, TData>
 }
 
-export function DataTableViewOptions<TData>({
+export function DataTableViewOptions<TData extends RowData>({
   table,
 }: DataTableViewOptionsProps<TData>) {
   const { t } = useTranslation()
   return (
     <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
+      <DropdownMenuPrimitive.Trigger asChild>
         <Button
           variant='outline'
           size='sm'
@@ -30,7 +31,7 @@ export function DataTableViewOptions<TData>({
           <MixerHorizontalIcon className='size-4' />
           {t('dataTable.view')}
         </Button>
-      </DropdownMenuTrigger>
+      </DropdownMenuPrimitive.Trigger>
       <DropdownMenuContent align='end' className='w-[150px]'>
         <DropdownMenuLabel>{t('dataTable.toggleColumns')}</DropdownMenuLabel>
         <DropdownMenuSeparator />

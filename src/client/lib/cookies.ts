@@ -21,6 +21,20 @@ export function getCookie(name: string): string | undefined {
 }
 
 /**
+ * Get a cookie value only if it is one of the allowed values, else the fallback.
+ * UI-preference cookies are client-writable and must never be cast straight into
+ * state (SEC-08). Missing, empty, duplicate and unknown values all fall back.
+ */
+export function getCookieOf<T extends string>(
+  name: string,
+  allowed: readonly T[],
+  fallback: T
+): T {
+  const value = getCookie(name)
+  return allowed.includes(value as T) ? (value as T) : fallback
+}
+
+/**
  * Set a cookie with name, value, and optional max age
  */
 export function setCookie(

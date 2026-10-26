@@ -1,6 +1,5 @@
 import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
-import { AxiosError } from 'axios'
 import {
   QueryCache,
   QueryClient,
@@ -13,8 +12,10 @@ import { shadcn } from '@clerk/themes'
 import { toast } from 'sonner'
 import { getCookie } from '@/lib/cookies'
 import { handleServerError } from '@/lib/handle-server-error'
+import { statusOf } from '@/lib/http-error'
+import { leavesForErrorPage, shouldRetry } from '@/lib/query-error'
+import { endSession, sessionEnding } from '@/lib/session'
 import { DirectionProvider } from './context/direction-provider'
-import { FontProvider } from './context/font-provider'
 import { ThemeProvider } from './context/theme-provider'
 // i18next — init side effect + imperative t() for non-component toasts. Must load
 // before render so the initial language matches the `dir` cookie.
@@ -29,6 +30,22 @@ import './styles/index.css'
 // never cross into `dist/` from here (AUTH-04 / D-16).
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
+// A server 401 means the Worker no longer accepts the Clerk session, even if
+// Clerk's client still says signed-in. Navigating to /sign-in would bounce
+// straight back (the 401 loop), so end the session through Clerk instead —
+// once per page load, however many queries fail at the same time (D-07).
+function signOutOnce() {
+  if (!sessionEnding()) toast.error(i18n.t('common.sessionExpired'))
+  const auth = router.options.context.auth
+  if (!auth) return
+  // Return target is a RELATIVE same-origin path + query, never the absolute
+  // `window.location.href`, so the sign-in `redirect` param is same-origin.
+  void endSession(
+    auth.signOut,
+    window.location.pathname + window.location.search
+  )
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -37,56 +54,38 @@ const queryClient = new QueryClient({
         if (import.meta.env.DEV) console.log({ failureCount, error })
 
         if (failureCount >= 0 && import.meta.env.DEV) return false
-        if (failureCount > 3 && import.meta.env.PROD) return false
-
-        return !(
-          error instanceof AxiosError &&
-          [401, 403].includes(error.response?.status ?? 0)
-        )
+        return shouldRetry(failureCount, error)
       },
       refetchOnWindowFocus: import.meta.env.PROD,
       staleTime: 10 * 1000, // 10s
     },
     mutations: {
       onError: (error) => {
-        handleServerError(error)
+        if (statusOf(error) === 401) return signOutOnce()
 
-        if (error instanceof AxiosError) {
-          if (error.response?.status === 304) {
-            toast.error(i18n.t('common.contentNotModified'))
-          }
-        }
+        handleServerError(error)
       },
     },
   },
   queryCache: new QueryCache({
-    onError: (error) => {
-      if (error instanceof AxiosError) {
-        if (error.response?.status === 401) {
-          toast.error(i18n.t('common.sessionExpired'))
-          // An edge 401 means the Clerk session is no longer valid — send the
-          // user to /sign-in (preserving where they were) so an expired session
-          // can't leave them on an authed-looking screen (D-11 / T-03-09).
-          router.navigate({
-            to: '/sign-in',
-            // Store a RELATIVE same-origin target (path + query), never the
-            // absolute `window.location.href`, so the value handed to the
-            // sign-in `redirect` param is already same-origin (WR-01).
-            search: {
-              redirect: window.location.pathname + window.location.search,
-            },
-          })
-        }
-        if (error.response?.status === 500) {
-          toast.error(i18n.t('common.internalServerError'))
-          // Only navigate to error page in production to avoid disrupting HMR in development
-          if (import.meta.env.PROD) {
-            router.navigate({ to: '/500' })
-          }
-        }
-        if (error.response?.status === 403) {
-          // router.navigate("/forbidden", { replace: true });
-        }
+    onError: (error, query) => {
+      const status = statusOf(error)
+      if (status === 401) return signOutOnce()
+
+      // No status = network error / timeout / non-HTTP throw. Other 4xx are the
+      // page's own business (403 state, inline error), so no toast for those.
+      if (status === undefined || status >= 500) {
+        toast.error(i18n.t('common.internalServerError'))
+      }
+      // A failed refetch over data already on screen keeps the screen (D-08);
+      // only a 5xx with nothing to show leaves for /500, and only in production.
+      if (
+        import.meta.env.PROD &&
+        status !== undefined &&
+        status >= 500 &&
+        leavesForErrorPage(query)
+      ) {
+        router.navigate({ to: '/500' })
       }
     },
   }),
@@ -141,20 +140,16 @@ if (!rootElement.innerHTML) {
             signUpFallbackRedirectUrl='/dashboard'
           >
             <ThemeProvider>
-              <FontProvider>
-                <DirectionProvider>
-                  <InnerApp />
-                </DirectionProvider>
-              </FontProvider>
+              <DirectionProvider>
+                <InnerApp />
+              </DirectionProvider>
             </ThemeProvider>
           </ClerkProvider>
         ) : (
           <ThemeProvider>
-            <FontProvider>
-              <DirectionProvider>
-                <MissingClerkPubKey />
-              </DirectionProvider>
-            </FontProvider>
+            <DirectionProvider>
+              <MissingClerkPubKey />
+            </DirectionProvider>
           </ThemeProvider>
         )}
       </QueryClientProvider>
@@ -191,7 +186,7 @@ function MissingClerkPubKey() {
           <code className={codeBlock}>.env*</code>, not{' '}
           <code className={codeBlock}>.dev.vars</code>):
         </p>
-        <pre className='overflow-auto rounded bg-slate-950 px-3 py-2 text-xs text-slate-200'>
+        <pre className='bg-muted text-foreground overflow-auto rounded px-3 py-2 text-xs'>
           <code>VITE_CLERK_PUBLISHABLE_KEY=pk_test_...</code>
         </pre>
         <p className='text-foreground/60 text-sm'>

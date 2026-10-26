@@ -1,12 +1,12 @@
 import path from 'node:path'
-import { defineConfig } from 'vitest/config'
-import { cloudflareTest, readD1Migrations } from '@cloudflare/vitest-pool-workers'
+import { configDefaults, defineConfig } from 'vitest/config'
+import { cloudflareTest, readD1Migrations } from '@cloudflare/vitest-plugin'
 
-// Vitest 4 multi-project config (`test.projects`). The repo now runs TWO suites under
+// Vitest multi-project config (`test.projects`). The repo runs FOUR suites under
 // one `pnpm test`, because they need different runtimes:
 //
 //  1. project 'workers' — API/Worker tests run INSIDE workerd via
-//     @cloudflare/vitest-pool-workers, bound to the real single-Worker config
+//     @cloudflare/vitest-plugin, bound to the real single-Worker config
 //     (wrangler.jsonc -> main: src/server/index.ts). `wrangler.configPath` makes the
 //     pool boot the actual Hono entry, so `SELF.fetch` exercises the same routing
 //     precedence the deployed Worker uses. This is the original (pre-Phase-5) config,
@@ -20,15 +20,22 @@ import { cloudflareTest, readD1Migrations } from '@cloudflare/vitest-pool-worker
 //     with no plugins and no setupFiles. (Mirrors test/apply-migrations.ts's discipline
 //     of documenting WHY a suite runs where it does.)
 //
-// NOTE: the locked vitest@4 ships pool-workers 0.16.20, whose public API replaced the
-// old `defineWorkersConfig` (from `@cloudflare/vitest-pool-workers/config`) with the
-// `cloudflareTest` Vite plugin — its `configureVitest` hook installs the workers pool
-// runner. We KEEP `wrangler.configPath` (dropping it stops the pool booting the real
-// Worker and breaks `SELF.fetch`, Pitfall 7) and the existing `test.include` glob.
+//  3. project 'client' — pure client helpers (src/client/**), plain node with the `@`
+//     alias and no jsdom. Phase 21 Plans 21-03, 21-04 and 21-08 add its tests.
+//     It excludes `*.dom.test.tsx`, so no DOM test runs here (and none runs twice).
 //
-// [A1] In the installed 0.16.20, `readD1Migrations` (and the `D1Migration` type) are
-// re-exported from the package ROOT — the documented `/config` subpath does not exist
-// in this version, so we import from `@cloudflare/vitest-pool-workers`.
+//  4. project 'client-dom' — client components that need a real DOM (clicks, focus,
+//     Escape) run in jsdom with @testing-library. Only `*.dom.test.tsx` files, so the
+//     node project above stays as it is. test/dom-setup.ts adds the jest-dom matchers,
+//     RTL cleanup (no `globals: true`, so RTL can't register it itself) and matchMedia.
+//
+// NOTE: @cloudflare/vitest-plugin (the renamed successor of the deprecated pool package)
+// exposes the `cloudflareTest` Vite plugin — its `configureVitest` hook installs the
+// workers pool runner. We KEEP `wrangler.configPath` (dropping it stops the pool booting
+// the real Worker and breaks `SELF.fetch`, Pitfall 7) and the existing `test.include` glob.
+//
+// [A1] `cloudflareTest`, `readD1Migrations` and the `D1Migration` type are all exported
+// from the package root, so everything is imported from `@cloudflare/vitest-plugin`.
 export default defineConfig({
   test: {
     projects: [
@@ -50,6 +57,9 @@ export default defineConfig({
                   // Phase-6 secret scanner never flags this test config (it is not a realistic key).
                   CLERK_PUBLISHABLE_KEY: 'pk_test_cGxhY2Vob2xkZXIuY2xlcmsuYWNjb3VudHMuZGV2JA==',
                   CLERK_SECRET_KEY: 'dummy-clerk-test-secret-not-a-real-key',
+                  // wrangler.jsonc ships the placeholder, which fails closed (D-02): without this
+                  // override every auth.test.ts 401 would become a 500 (RESEARCH Pitfall 3).
+                  AUTHORIZED_PARTIES: 'http://localhost',
                 },
               },
             }
@@ -70,14 +80,24 @@ export default defineConfig({
         },
       },
       {
-        // Plain node — client-side unit tests for pure URL/string/JSON helpers
-        // (e.g. src/client/lib/cms-client.ts). These functions have no worker or
-        // DOM dependency, so loading the workers pool (or a jsdom env) would be
-        // wrong overhead; like `setup`, this project documents WHY it runs in node.
+        // Plain node, no jsdom — pure client helpers only (Plans 21-03, 21-04, 21-08).
+        resolve: { alias: { '@': path.resolve(__dirname, 'src/client') } },
         test: {
           name: 'client',
           environment: 'node',
-          include: ['src/client/**/*.test.ts'],
+          include: ['src/client/**/*.test.{ts,tsx}'],
+          // Setting exclude replaces the defaults, so spread them back in.
+          exclude: [...configDefaults.exclude, 'src/client/**/*.dom.test.tsx'],
+        },
+      },
+      {
+        // jsdom — component tests that click, focus or press keys (CICD-08).
+        resolve: { alias: { '@': path.resolve(__dirname, 'src/client') } },
+        test: {
+          name: 'client-dom',
+          environment: 'jsdom',
+          include: ['src/client/**/*.dom.test.tsx'],
+          setupFiles: ['./test/dom-setup.ts'],
         },
       },
     ],

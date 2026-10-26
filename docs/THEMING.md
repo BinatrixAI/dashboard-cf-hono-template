@@ -1,6 +1,6 @@
 # Theming — tweakcn + Tailwind v4
 
-This template ships **theme-agnostic**: a neutral-slate `theme.css` built entirely
+This template ships **theme-agnostic**: a navy default `theme.css` built entirely
 from **Tailwind v4 `@theme inline` oklch CSS variables**, with **no
 `tailwind.config.js` and no `postcss.config.js`** committed anywhere. There is no
 locked brand color — rebranding is a per-project *swap*, not a rebuild.
@@ -14,12 +14,13 @@ are mapped to utilities via `@theme inline` (see `src/client/styles/theme.css`).
 
 | Artifact | Role | Committed? |
 | -------- | ---- | ---------- |
-| `src/client/styles/theme.css` | Live oklch tokens (`:root` / `.dark` / `@theme inline`) | Yes — neutral-slate default |
+| `src/client/styles/theme.css` | Live oklch tokens (`:root` / `.dark` / `@theme inline`) | Yes — navy default, generated from the preset |
 | `src/client/styles/tweakcn-preset.json` | shadcn `registry:style` preset mirroring `theme.css` | Yes — the Phase-5 swap target |
+| `src/client/styles/tokens.css` | Derived + fixed tokens, `focus-ring` (see below) | Yes — hand-owned, never regenerated |
 
-> The committed default is the **neutral slate** palette. A brand theme is a
+> The committed default is the **navy** palette (light page, navy sidebar in both modes). A brand theme is a
 > per-project swap (Phase 5 `setup.mjs`), never committed as the template default.
-> The shipped `tweakcn-preset.json` mirrors the current `theme.css` slate values, so
+> The shipped `tweakcn-preset.json` mirrors the current `theme.css` values, so
 > a project that *does not* swap renders identically to one that re-applies the
 > default preset.
 
@@ -88,10 +89,10 @@ curl -s https://tweakcn.com/r/themes/<theme-id>.json \
 // src/client/styles/tweakcn-preset.json (shape — keys are bare, no `--` prefix)
 {
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
-  "name": "default-slate",
+  "name": "default-navy",
   "type": "registry:style",
   "cssVars": {
-    "theme": { "radius": "0.625rem", "font-inter": "'Inter', 'sans-serif'" },
+    "theme": { "radius": "0.75rem", "font-sans": "'Inter Variable', 'Heebo Variable', system-ui, sans-serif" },
     "light": { "background": "oklch(1 0 0)", "primary": "oklch(0.208 0.042 265.755)" },
     "dark":  { "background": "oklch(0.129 0.042 264.695)", "primary": "oklch(0.929 0.013 255.508)" }
   }
@@ -107,12 +108,12 @@ curl -s https://tweakcn.com/r/themes/<theme-id>.json \
 > - **Path:** `src/client/styles/tweakcn-preset.json`
 > - **Schema:** shadcn `registry:style` (`"type": "registry:style"`) with a
 >   `cssVars` object exposing `theme`, `light`, and `dark` sub-objects.
-> - **Colors:** color tokens are **oklch literals**, except the `sidebar*` tokens,
->   which are `var(--<token>)` indirections that inherit from their base tokens.
->   `setup.mjs` must pass `var(--*)` values through verbatim and only oklch-parse
->   literal values. Keys are **bare** token names with the leading `--` stripped
+> - **Colors:** color tokens are **oklch literals**. The shipped preset's `sidebar*`
+>   tokens are literals too (a navy sidebar in both modes); a re-skin may still use
+>   `var(--<token>)` indirections for them, which `setup.mjs` passes through verbatim
+>   (it only oklch-parses literal values). Keys are **bare** token names with the leading `--` stripped
 >   (`background`, not `--background`).
-> - **Default = current `theme.css`:** the shipped preset mirrors the live slate
+> - **Default = current `theme.css`:** the shipped preset mirrors the live
 >   tokens, so `setup.mjs` re-applying the default is a no-op against the shipped
 >   stylesheet.
 >
@@ -121,7 +122,7 @@ curl -s https://tweakcn.com/r/themes/<theme-id>.json \
 >
 > - `:root` is written from `cssVars.light`, `.dark` from `cssVars.dark`, and the
 >   `@theme inline` `font-*` declarations plus the base `--radius` from
->   `cssVars.theme` (which carries **only** `radius`, `font-inter`, `font-manrope`).
+>   `cssVars.theme` (which carries **only** `radius`, `font-sans`, `font-display`).
 > - The rest of `@theme inline` is **not** sourced from `cssVars`. The
 >   `--radius-{sm,md,lg,xl}` scale is templated as `calc(var(--radius) ± Npx)`, and
 >   the ~30 `--color-*: var(--*)` utility mappings are generated **mechanically**,
@@ -148,13 +149,45 @@ only one half leaves the other mode on the previous palette. Both `cssVars.light
 `cssVars.dark` are therefore required in the preset.
 
 The two sets need **not** be key-symmetric, however. The `sidebar*` tokens are
-intentionally mode-agnostic `var(--<token>)` indirections defined once (in
-`cssVars.light`, mirroring `theme.css`'s `:root`) and resolved at runtime against
-the base tokens, which each mode overrides. The shipped default therefore defines
-the eight `sidebar*` keys only in `cssVars.light`, and `cssVars.dark` omits them by
-design — the dark sidebar still tracks the dark palette through those `var()`
-references. `setup.mjs` must **not** assume light/dark key symmetry or treat a
+defined once, in `cssVars.light` (mirroring `theme.css`'s `:root`), and
+`cssVars.dark` omits them by design. The shipped default makes them oklch
+literals, so the sidebar is the same navy in both modes. A re-skin may instead
+make them `var(--<token>)` indirections, which resolve at runtime against the base
+tokens each mode overrides, so the dark sidebar then tracks the dark palette. `setup.mjs` must **not** assume light/dark key symmetry or treat a
 missing dark `sidebar*` key as an error.
+
+## Derived and fixed tokens (`tokens.css`)
+
+`src/client/styles/tokens.css` is **hand-owned**: `setup.mjs --theme` never touches
+it, and `index.css` imports it right after `theme.css`. It holds two kinds of token.
+
+**Derived tokens** hang off standard tweakcn keys through `var()` / `color-mix()`,
+so any re-skin carries them with no extra step:
+
+| Token | Hangs off |
+| ----- | --------- |
+| `--brand` (and `--brand-soft`) | `--ring` |
+| `--brand-deep`, `--glow-1`, `--sidebar-glow` | `--sidebar-ring` |
+| `--brand-fg` | `--brand-deep` (light) / `--brand` (dark) |
+| `--glow-2` | `--chart-3` (light) / `--chart-2` (dark) |
+| `--track`, `--cardsh` (card shadow) | `--foreground` |
+| `--sidebar-label` | `--sidebar-foreground` |
+| `--radius-card` (`rounded-card`) | `--radius` |
+
+**Status tokens** (`--success`, `--warn`, `--danger` and their `-soft` / `-fg`
+shades) are fixed oklch literals for light and dark, on purpose: a brand re-skin
+must never change what a status colour means.
+
+`src/client/styles/contrast.test.ts` checks WCAG AA (4.5:1) for the text/surface
+pairs against whatever `theme.css` and `tokens.css` you ship, in light and dark. It
+fails loudly (`unparseable colour`) on an hsl or hex export: re-export from tweakcn
+as oklch.
+
+**Fonts** are self-hosted fontsource packages (Inter, Inter Tight, and Heebo for
+Hebrew), bundled by Vite and served from the app's own origin; there is no runtime
+font picker. If your preset sets its own `font-sans` / `font-display`, keep
+`'Heebo Variable'` in the stack before `system-ui`, or Hebrew text falls back to
+the system font.
 
 ## Clerk auth pages inherit the theme
 

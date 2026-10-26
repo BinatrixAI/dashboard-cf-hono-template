@@ -1,5 +1,6 @@
 import { Pencil, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { titleClipped } from '@/lib/clip-title'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -33,10 +34,17 @@ export function ItemsTable({ items, onEdit, onDelete }: ItemsTableProps) {
           </TableHead>
         </TableRow>
       </TableHeader>
-      <TableBody>
+      <TableBody onMouseOver={titleClipped} onFocus={titleClipped}>
         {items.map((item) => (
           <TableRow key={item.id}>
-            <TableCell className='text-sm font-medium'>{item.name}</TableCell>
+            <TableCell className='text-sm font-medium'>
+              <span
+                dir='auto'
+                className='block max-w-[200px] truncate [text-align:match-parent]'
+              >
+                {item.name}
+              </span>
+            </TableCell>
             <TableCell className='text-muted-foreground text-sm'>
               <span className='block max-w-[320px] truncate'>
                 {item.description}

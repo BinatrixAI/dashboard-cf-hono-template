@@ -2,8 +2,13 @@
   "common": {
     "sessionExpired": "פג תוקף החיבור!",
     "internalServerError": "שגיאת שרת פנימית!",
-    "contentNotModified": "התוכן לא השתנה!",
-    "learnMore": "מידע נוסף"
+    "requestFailed": "הבקשה נכשלה!",
+    "skipToContent": "דילוג לתוכן הראשי",
+    "close": "סגירה",
+    "toggleSidebar": "פתיחה או סגירה של סרגל הצד",
+    "cancel": "ביטול",
+    "continue": "המשך",
+    "signOutDesc": "האם להתנתק? כדי לגשת שוב לחשבון יש להתחבר מחדש."
   },
   "landing": {
     "welcome": "ברוכים הבאים",
@@ -11,15 +16,13 @@
     "signIn": "התחברות",
     "goToDashboard": "מעבר לדשבורד"
   },
-  "authShell": {
-    "welcome": "ברוכים הבאים לעמוד ההתחברות.",
-    "backTo": "חזרה אל",
-    "dashboard": "הדשבורד"
+  "languageSwitch": {
+    "label": "החלפת שפה",
+    "target": "English"
   },
   "sidebar": {
     "groups": {
       "general": "כללי",
-      "content": "תוכן",
       "other": "אחר"
     },
     "nav": {
@@ -29,8 +32,6 @@
       "apps": "אפליקציות",
       "chats": "צ׳אטים",
       "users": "משתמשים",
-      "content": "תוכן",
-      "cmsAdmin": "ניהול CMS",
       "settings": "הגדרות",
       "profile": "פרופיל",
       "account": "חשבון",
@@ -134,10 +135,6 @@
       "display": "תצוגה",
       "selectPlaceholder": "מקטע"
     },
-    "common": {
-      "retry": "נסה שוב",
-      "loadErrorDesc": "בדוק את החיבור שלך ונסה שוב."
-    },
     "profile": {
       "title": "פרופיל",
       "desc": "כך אחרים יראו אותך באתר."
@@ -145,16 +142,11 @@
     "appearance": {
       "title": "מראה",
       "desc": "התאם אישית את מראה האפליקציה. החלף אוטומטית בין ערכת נושא של יום ולילה.",
-      "fontLabel": "גופן",
-      "fontDesc": "הגדר את הגופן שברצונך להשתמש בו בלוח הבקרה.",
       "themeLabel": "ערכת נושא",
       "themeDesc": "בחר את ערכת הנושא של לוח הבקרה.",
       "light": "בהיר",
       "dark": "כהה",
-      "system": "מערכת",
-      "submit": "עדכן העדפות",
-      "loadError": "לא ניתן לטעון את הגדרות המראה",
-      "updated": "ההעדפות עודכנו"
+      "system": "מערכת"
     },
     "notifications": {
       "title": "התראות",
@@ -178,7 +170,6 @@
       "mobileDescLink": "הגדרות הנייד",
       "mobileDescSuffix": ".",
       "submit": "עדכן התראות",
-      "loadError": "לא ניתן לטעון את הגדרות ההתראות",
       "updated": "ההעדפות עודכנו"
     },
     "display": {
@@ -188,7 +179,6 @@
       "sidebarDesc": "בחר את הפריטים שברצונך להציג בסרגל הצד.",
       "minOne": "עליך לבחור לפחות פריט אחד.",
       "submit": "עדכן תצוגה",
-      "loadError": "לא ניתן לטעון את הגדרות התצוגה",
       "updated": "התצוגה עודכנה",
       "items": {
         "recents": "אחרונים",
@@ -205,7 +195,7 @@
     "subtitle": "הנה רשימת המשימות שלך לחודש זה!",
     "entity": "משימה",
     "searchPlaceholder": "סינון לפי כותרת או מזהה...",
-    "noResults": "אין תוצאות.",
+    "noResults": "אין שורות שתואמות את המסננים.",
     "selectAll": "בחר הכל",
     "selectRow": "בחר שורה",
     "columns": {
@@ -234,7 +224,7 @@
     },
     "buttons": {
       "import": "ייבוא",
-      "create": "יצירה"
+      "create": "יצירת משימה"
     },
     "rowActions": {
       "openMenu": "פתח תפריט",
@@ -305,18 +295,18 @@
       "priorityUpdated": "העדיפות עודכנה ל-\"{{priority}}\" עבור {{count}} משימות.",
       "exported": "יוצאו {{count}} משימות ל-CSV.",
       "error": "שגיאה"
+    },
+    "empty": {
+      "title": "אין עדיין משימות",
+      "body": "משימות שתיצרו יופיעו כאן."
     }
   },
   "users": {
     "title": "רשימת משתמשים",
     "subtitle": "המשתמשים במופע Clerk זה, עם הסטטוס והתפקיד שלהם.",
-    "loadError": "לא ניתן לטעון משתמשים",
-    "loadErrorDescPrefix": "הבקשה ",
-    "loadErrorDescSuffix": " נכשלה. ודא שמפתח הסוד של Clerk מוגדר, ואז רענן.",
     "forbidden": "אין הרשאה לצפייה במשתמשים",
     "forbiddenDesc": "לחשבון שלך אין תפקיד מנהל הנדרש לצפייה ברשימת המשתמשים. מנהל מערכת יכול להעניק אותו בלוח הבקרה של Clerk.",
-    "refresh": "רענון",
-    "noResults": "אין תוצאות.",
+    "noResults": "אין שורות שתואמות את המסננים.",
     "searchPlaceholder": "סינון משתמשים...",
     "selectAll": "בחר הכל",
     "selectRow": "בחר שורה",
@@ -339,47 +329,10 @@
       "admin": "מנהל",
       "manager": "אחראי",
       "cashier": "קופאי"
-    }
-  },
-  "content": {
-    "title": "תוכן",
-    "subtitle": "פוסטים שפורסמו מה-CMS, לקריאה בלבד. העריכה מתבצעת בממשק הניהול של ה-CMS.",
-    "searchPlaceholder": "סינון פוסטים...",
-    "noResults": "אין תוצאות.",
-    "unpublished": "לא פורסם",
-    "retry": "נסה שוב",
-    "columns": {
-      "title": "כותרת",
-      "status": "סטטוס",
-      "published": "פורסם"
     },
-    "notConfigured": {
-      "title": "חבר את ה-CMS שלך",
-      "body1a": "לא הוגדר ",
-      "body1b": ", כך שאין עדיין CMS לקרוא ממנו פוסטים. הפנה אותו למקור ה-Worker של SonicJS CMS שלך (לדוגמה ",
-      "body1c": ") בקובץ ",
-      "body1d": " שלך, ואז טען מחדש.",
-      "body2a": "ראה ",
-      "body2b": " להתקנה המלאה ולרשימת בדיקת ה-CORS."
-    },
-    "error": {
-      "title": "לא ניתן להגיע ל-CMS",
-      "descA": "הבקשה ל-CMS נכשלה. ייתכן שהוא מושבת, או ש-",
-      "descB": " שלו אינו כולל את מקור לוח הבקרה הזה. בדוק את ",
-      "descC": ", ואז נסה שוב."
-    },
-    "detail": {
-      "errorTitle": "לא ניתן להגיע ל-CMS",
-      "errorDesc": "הבקשה עבור פוסט זה נכשלה. ייתכן שה-CMS מושבת או לא נגיש ממקור זה."
-    },
-    "public": {
-      "emptyTitle": "אין עדיין פוסטים",
-      "emptyBody": "בדוק שוב בקרוב.",
-      "errorTitle": "לא ניתן לטעון פוסטים",
-      "errorBody": "משהו השתבש בטעינת הבלוג. אנא נסה שוב.",
-      "notFoundTitle": "הפוסט לא נמצא",
-      "notFoundBody": "ייתכן שהפוסט הזה הועבר או שפרסומו בוטל.",
-      "back": "← חזרה לכל הפוסטים"
+    "empty": {
+      "title": "אין עדיין משתמשים",
+      "body": "משתמשים יופיעו כאן אחרי שיירשמו."
     }
   },
   "apps": {
@@ -408,7 +361,8 @@
       "gitlab": "נהל ביעילות פרויקטי קוד עם אינטגרציית GitLab.",
       "discord": "התחבר ל-Discord לתקשורת צוותית חלקה.",
       "whatsapp": "שלב בקלות את WhatsApp להודעות ישירות."
-    }
+    },
+    "sort": "מיון אפליקציות"
   },
   "dashboard": {
     "title": "לוח בקרה",
@@ -424,19 +378,28 @@
     "comparisonDesc": "הכנסות, רווח והוצאות מחודש לחודש.",
     "stats": {
       "revenueTitle": "סך ההכנסות",
-      "revenueDelta": "+20.1% מהחודש שעבר",
+      "revenueDelta": "\u2066+20.1%\u2069 מהחודש שעבר",
       "subscriptionsTitle": "מנויים",
-      "subscriptionsDelta": "+180.1% מהחודש שעבר",
+      "subscriptionsDelta": "\u2066+180.1%\u2069 מהחודש שעבר",
       "salesTitle": "מכירות",
-      "salesDelta": "+19% מהחודש שעבר",
+      "salesDelta": "\u2066+19%\u2069 מהחודש שעבר",
       "activeTitle": "פעילים כעת",
-      "activeDelta": "+201 מהשעה האחרונה"
+      "activeDelta": "\u2066+201\u2069 מהשעה האחרונה"
+    },
+    "subtitle": "המספרים המרכזיים שלך במבט אחד. נתוני דוגמה.",
+    "kpiEmpty": "עדיין לא נרשמו נתונים",
+    "empty": {
+      "overviewTitle": "אין עדיין הכנסות",
+      "overviewBody": "ההכנסות החודשיות יופיעו כאן כשיירשמו מכירות.",
+      "salesTitle": "אין עדיין מכירות",
+      "salesBody": "מכירות חדשות יופיעו כאן כשייכנסו.",
+      "chartTitle": "אין עדיין נתונים עבור {{title}}",
+      "chartBody": "הגרף יתמלא כשתירשם פעילות."
     }
   },
   "items": {
     "title": "פריטים",
     "newItem": "פריט חדש",
-    "refresh": "רענון",
     "columns": {
       "name": "שם",
       "description": "תיאור",
@@ -447,8 +410,6 @@
       "title": "אין עדיין פריטים",
       "body": "צור את הפריט הראשון שלך כדי להתחיל."
     },
-    "loadError": "לא ניתן לטעון פריטים",
-    "loadErrorDesc": "בדוק את החיבור שלך ורענן את הדף.",
     "editAria": "עריכת {{name}}",
     "deleteAria": "מחיקת {{name}}",
     "form": {
@@ -490,31 +451,53 @@
     "to": "אל:",
     "searchPeople": "חיפוש אנשים...",
     "noPeople": "לא נמצאו אנשים.",
-    "chat": "צ'אט"
+    "chat": "צ'אט",
+    "back": "חזרה לצ'אטים",
+    "videoCall": "שיחת וידאו",
+    "call": "שיחה",
+    "moreOptions": "אפשרויות נוספות",
+    "add": "הוספה",
+    "addImage": "הוספת תמונה",
+    "attachFile": "צירוף קובץ"
   },
   "errors": {
-    "goBack": "חזור",
+    "goBack": "חזרה לדף הקודם",
     "backToHome": "חזרה לדף הבית",
-    "learnMore": "מידע נוסף",
     "forbidden": {
       "title": "הגישה אסורה",
       "body": "אין לך הרשאה נדרשת לצפייה במשאב זה."
     },
     "serverError": {
-      "title": "אופס! משהו השתבש :')",
-      "body": "אנו מתנצלים על אי הנוחות. אנא נסה שוב מאוחר יותר."
+      "title": "משהו השתבש",
+      "body": "נסו שוב בעוד רגע. אם זה חוזר, טענו מחדש את הדף."
     },
     "maintenance": {
       "title": "האתר בתחזוקה!",
       "body": "האתר אינו זמין כרגע. נחזור לפעילות בקרוב."
     },
     "notFound": {
-      "title": "אופס! הדף לא נמצא!",
-      "body": "נראה שהדף שאתה מחפש אינו קיים או שהוסר."
+      "title": "הדף לא נמצא",
+      "body": "הדף שחיפשת לא קיים או שהועבר."
     },
     "unauthorized": {
       "title": "גישה לא מורשית",
       "body": "אנא התחבר עם האישורים המתאימים כדי לגשת למשאב זה."
     }
+  },
+  "widget": {
+    "loadError": "לא ניתן לטעון את הכרטיס",
+    "reload": "טעינה מחדש של הכרטיס",
+    "loading": "טוען",
+    "chartLabel": "{{title}}, תרשים",
+    "chartLabelWithDesc": "{{title}}, תרשים. {{description}}"
+  },
+  "infoTip": {
+    "label": "מידע נוסף"
+  },
+  "tabBar": {
+    "label": "ניווט ראשי",
+    "more": "עוד",
+    "moreActivity": "פעילות חדשה",
+    "preferences": "העדפות"
   }
 }

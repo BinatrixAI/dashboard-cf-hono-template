@@ -1,19 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
+  type ColumnVisibilityState,
   type SortingState,
-  type VisibilityState,
   flexRender,
-  getCoreRowModel,
-  getFacetedRowModel,
-  getFacetedUniqueValues,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
+  useTable,
 } from '@tanstack/react-table'
 import { useTranslation } from 'react-i18next'
+import { titleClipped } from '@/lib/clip-title'
 import { cn } from '@/lib/utils'
 import { type NavigateFn, useTableUrlState } from '@/hooks/use-table-url-state'
+import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -23,6 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { DataTablePagination, DataTableToolbar } from '@/components/data-table'
+import { dataTableFeatures } from '@/components/data-table/features'
 import { roles } from '../data/data'
 import { type User } from '../data/schema'
 import { getUsersColumns } from './users-columns'
@@ -38,7 +35,8 @@ export function UsersTable({ data, search, navigate }: DataTableProps) {
   const columns = useMemo(() => getUsersColumns(t), [t])
   // Local UI-only states
   const [rowSelection, setRowSelection] = useState({})
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
+  const [columnVisibility, setColumnVisibility] =
+    useState<ColumnVisibilityState>({})
   const [sorting, setSorting] = useState<SortingState>([])
 
   // Local state management for table (uncomment to use local-only state, not synced with URL)
@@ -65,8 +63,8 @@ export function UsersTable({ data, search, navigate }: DataTableProps) {
     ],
   })
 
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const table = useReactTable({
+  const table = useTable({
+    features: dataTableFeatures,
     data,
     columns,
     state: {
@@ -82,12 +80,6 @@ export function UsersTable({ data, search, navigate }: DataTableProps) {
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
     onColumnVisibilityChange: setColumnVisibility,
-    getPaginationRowModel: getPaginationRowModel(),
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFacetedRowModel: getFacetedRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues(),
   })
 
   useEffect(() => {
@@ -151,7 +143,7 @@ export function UsersTable({ data, search, navigate }: DataTableProps) {
               </TableRow>
             ))}
           </TableHeader>
-          <TableBody>
+          <TableBody onMouseOver={titleClipped} onFocus={titleClipped}>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow
@@ -182,7 +174,19 @@ export function UsersTable({ data, search, navigate }: DataTableProps) {
                   colSpan={columns.length}
                   className='h-24 text-center'
                 >
-                  {t('users.noResults')}
+                  <div className='flex flex-col items-center gap-3'>
+                    {t('users.noResults')}
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={() => {
+                        table.resetColumnFilters()
+                        table.setGlobalFilter('')
+                      }}
+                    >
+                      {t('dataTable.clearFilters')}
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             )}

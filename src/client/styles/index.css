@@ -1,7 +1,25 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/inter-tight';
 @import './theme.css';
+@import './tokens.css';
 @import '@clerk/themes/shadcn.css';
+
+/* Planning markdown is not source: never generate classes from it. */
+@source not '../../../.planning';
+
+/* Hebrew subset only (D-05); the other Heebo subsets are never referenced. */
+@font-face {
+  font-family: 'Heebo Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('@fontsource-variable/heebo/files/heebo-hebrew-wght-normal.woff2')
+    format('woff2-variations');
+  unicode-range:
+    U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
 
 @custom-variant dark (&:is(.dark *));
 
@@ -17,20 +35,48 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
   }
   html {
     @apply overflow-x-hidden;
+    scrollbar-gutter: stable;
+  }
+  /* One keyboard focus ring for everything (UX-03); components drawing their own ring keep
+     outline-none, which lives in the utilities layer and wins. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
   }
   body {
     @apply bg-background text-foreground has-[div[data-variant='inset']]:bg-sidebar min-h-svh w-full;
   }
 
-  /* Override Radix scroll locking for sticky headers */
+  /* Radix locks scroll in JS (react-remove-scroll blocks wheel/touch). Its CSS half would make body a
+     scroll container (sticky <Header fixed> jumps off-screen) and add a scrollbar-width margin (RTL shift). */
   body[data-scroll-locked] {
-    overflow: unset !important;
+    overflow: visible !important;
+    margin-right: 0 !important;
+  }
+
+  /* Phone: the last row and any focused element clear the tab bar (D-05). */
+  @media (width < 48rem) {
+    html {
+      scroll-padding-bottom: calc(104px + env(safe-area-inset-bottom));
+    }
+  }
+
+  /* D-13. 0.01ms, not 0, so animationend/transitionend still fire and closing overlays unmount. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 
   /* Cursor pointer for buttons */
@@ -47,11 +93,100 @@
       font-size: 16px !important;
     }
   }
+
+  /* Navy sidebar glow; desktop sidebar and the mobile Sheet share the data-sidebar attribute. */
+  [data-sidebar='sidebar'] {
+    background-image: radial-gradient(
+      420px 360px at 50% 110%,
+      var(--sidebar-glow),
+      transparent 70%
+    );
+  }
+}
+
+/* Print the page content only: no shell chrome, no overlays, flat cards. The app top bar is
+   matched by its sidebar trigger so a page's own <header> still prints. */
+@media print {
+  [data-slot='sidebar'],
+  [data-slot='tab-bar'],
+  header:has([data-slot='sidebar-trigger']),
+  [data-sonner-toaster],
+  [data-radix-popper-content-wrapper] {
+    display: none !important;
+  }
+  [data-slot='sidebar-wrapper'],
+  [data-slot='sidebar-inset'] {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+  [data-slot='card'] {
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
 }
 
 @utility container {
   margin-inline: auto;
   padding-inline: 2rem;
+}
+
+/* Dominant app background: base colour + two radial glows, mirrored under RTL (DS-07). */
+@utility app-bg {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(900px 520px at 88% -8%, var(--glow-1), transparent 70%),
+    radial-gradient(700px 480px at 30% 105%, var(--glow-2), transparent 70%);
+  background-attachment: fixed;
+  [dir='rtl'] & {
+    background-image:
+      radial-gradient(900px 520px at 12% -8%, var(--glow-1), transparent 70%),
+      radial-gradient(700px 480px at 70% 105%, var(--glow-2), transparent 70%);
+  }
+}
+
+/* A >=24px pointer target (WCAG 2.5.8) without changing the visual box. No effect under an
+   overflow-hidden ancestor: the ::before is clipped to that ancestor's box. */
+@utility hit-24 {
+  position: relative;
+  /* symmetric centring is direction-neutral, so physical left/top are fine under RTL */
+  &::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+    width: max(100%, 24px);
+    height: max(100%, 24px);
+  }
+}
+
+/* A >=44px phone touch target (UX-05), same trick as hit-24 and clipped the same way under an
+   overflow-hidden ancestor; symmetric centring is direction-neutral, so physical left/top stay. */
+@utility hit-44 {
+  @media (width < 48rem) {
+    position: relative;
+    &::before {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      translate: -50% -50%;
+      width: max(100%, 44px);
+      height: max(100%, 44px);
+    }
+  }
+}
+
+/* Below 768px a horizontally scrolling block fades out over its trailing 16px. A mask (the
+   hex is a mask stop, not a colour token), so it stays right on glass cards. */
+@utility edge-fade {
+  @media (width < 48rem) {
+    mask-image: linear-gradient(to right, #000 calc(100% - 16px), transparent);
+    [dir='rtl'] & {
+      mask-image: linear-gradient(to left, #000 calc(100% - 16px), transparent);
+    }
+  }
 }
 
 @utility no-scrollbar {

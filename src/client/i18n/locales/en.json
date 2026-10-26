@@ -2,8 +2,13 @@
   "common": {
     "sessionExpired": "Session expired!",
     "internalServerError": "Internal Server Error!",
-    "contentNotModified": "Content not modified!",
-    "learnMore": "Learn more"
+    "requestFailed": "Request failed!",
+    "skipToContent": "Skip to main content",
+    "close": "Close",
+    "toggleSidebar": "Toggle sidebar",
+    "cancel": "Cancel",
+    "continue": "Continue",
+    "signOutDesc": "Are you sure you want to sign out? You will need to sign in again to access your account."
   },
   "landing": {
     "welcome": "Welcome",
@@ -11,15 +16,13 @@
     "signIn": "Sign in",
     "goToDashboard": "Go to dashboard"
   },
-  "authShell": {
-    "welcome": "Welcome to the sign-in page.",
-    "backTo": "Back to",
-    "dashboard": "Dashboard"
+  "languageSwitch": {
+    "label": "Switch language",
+    "target": "עברית"
   },
   "sidebar": {
     "groups": {
       "general": "General",
-      "content": "Content",
       "other": "Other"
     },
     "nav": {
@@ -29,8 +32,6 @@
       "apps": "Apps",
       "chats": "Chats",
       "users": "Users",
-      "content": "Content",
-      "cmsAdmin": "CMS Admin",
       "settings": "Settings",
       "profile": "Profile",
       "account": "Account",
@@ -134,10 +135,6 @@
       "display": "Display",
       "selectPlaceholder": "Section"
     },
-    "common": {
-      "retry": "Retry",
-      "loadErrorDesc": "Check your connection and try again."
-    },
     "profile": {
       "title": "Profile",
       "desc": "This is how others will see you on the site."
@@ -145,16 +142,11 @@
     "appearance": {
       "title": "Appearance",
       "desc": "Customize the appearance of the app. Automatically switch between day and night themes.",
-      "fontLabel": "Font",
-      "fontDesc": "Set the font you want to use in the dashboard.",
       "themeLabel": "Theme",
       "themeDesc": "Select the theme for the dashboard.",
       "light": "Light",
       "dark": "Dark",
-      "system": "System",
-      "submit": "Update preferences",
-      "loadError": "Could not load appearance settings",
-      "updated": "Preferences updated"
+      "system": "System"
     },
     "notifications": {
       "title": "Notifications",
@@ -178,7 +170,6 @@
       "mobileDescLink": "mobile settings",
       "mobileDescSuffix": " page.",
       "submit": "Update notifications",
-      "loadError": "Could not load notification settings",
       "updated": "Preferences updated"
     },
     "display": {
@@ -188,7 +179,6 @@
       "sidebarDesc": "Select the items you want to display in the sidebar.",
       "minOne": "You have to select at least one item.",
       "submit": "Update display",
-      "loadError": "Could not load display settings",
       "updated": "Display updated",
       "items": {
         "recents": "Recents",
@@ -205,7 +195,7 @@
     "subtitle": "Here's a list of your tasks for this month!",
     "entity": "task",
     "searchPlaceholder": "Filter by title or ID...",
-    "noResults": "No results.",
+    "noResults": "No rows match your filters.",
     "selectAll": "Select all",
     "selectRow": "Select row",
     "columns": {
@@ -234,7 +224,7 @@
     },
     "buttons": {
       "import": "Import",
-      "create": "Create"
+      "create": "Create Task"
     },
     "rowActions": {
       "openMenu": "Open menu",
@@ -305,18 +295,18 @@
       "priorityUpdated": "Priority updated to \"{{priority}}\" for {{count}} tasks.",
       "exported": "Exported {{count}} tasks to CSV.",
       "error": "Error"
+    },
+    "empty": {
+      "title": "No tasks yet",
+      "body": "Tasks you create will appear here."
     }
   },
   "users": {
     "title": "User List",
     "subtitle": "The users in this Clerk instance, with their status and role.",
-    "loadError": "Could not load users",
-    "loadErrorDescPrefix": "The ",
-    "loadErrorDescSuffix": " request failed. Confirm the Clerk secret key is configured, then refresh.",
     "forbidden": "No permission to view users",
     "forbiddenDesc": "Your account does not have the admin role required to view the user list. An administrator can grant it in the Clerk dashboard.",
-    "refresh": "Refresh",
-    "noResults": "No results.",
+    "noResults": "No rows match your filters.",
     "searchPlaceholder": "Filter users...",
     "selectAll": "Select all",
     "selectRow": "Select row",
@@ -339,47 +329,10 @@
       "admin": "Admin",
       "manager": "Manager",
       "cashier": "Cashier"
-    }
-  },
-  "content": {
-    "title": "Content",
-    "subtitle": "Published posts from the CMS, read-only. Editing lives in the CMS admin.",
-    "searchPlaceholder": "Filter posts...",
-    "noResults": "No results.",
-    "unpublished": "Unpublished",
-    "retry": "Retry",
-    "columns": {
-      "title": "Title",
-      "status": "Status",
-      "published": "Published"
     },
-    "notConfigured": {
-      "title": "Connect your CMS",
-      "body1a": "No ",
-      "body1b": " is set, so there is no CMS to read posts from yet. Point it at your SonicJS CMS Worker origin (for example ",
-      "body1c": ") in your ",
-      "body1d": ", then reload.",
-      "body2a": "See ",
-      "body2b": " for the full setup and CORS checklist."
-    },
-    "error": {
-      "title": "Couldn't reach the CMS",
-      "descA": "The request to the CMS failed. It may be down, or its ",
-      "descB": " may not include this dashboard's origin. Check ",
-      "descC": ", then retry."
-    },
-    "detail": {
-      "errorTitle": "Couldn't reach the CMS",
-      "errorDesc": "The request for this post failed. The CMS may be down or unreachable from this origin."
-    },
-    "public": {
-      "emptyTitle": "No posts yet",
-      "emptyBody": "Check back soon.",
-      "errorTitle": "Couldn't load posts",
-      "errorBody": "Something went wrong loading the blog. Please try again.",
-      "notFoundTitle": "Post not found",
-      "notFoundBody": "This post may have been moved or unpublished.",
-      "back": "← Back to all posts"
+    "empty": {
+      "title": "No users yet",
+      "body": "People appear here after they sign up."
     }
   },
   "apps": {
@@ -408,7 +361,8 @@
       "gitlab": "Efficiently manage code projects with GitLab integration.",
       "discord": "Connect with Discord for seamless team communication.",
       "whatsapp": "Easily integrate WhatsApp for direct messaging."
-    }
+    },
+    "sort": "Sort apps"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -431,12 +385,21 @@
       "salesDelta": "+19% from last month",
       "activeTitle": "Active Now",
       "activeDelta": "+201 since last hour"
+    },
+    "subtitle": "Your key numbers at a glance. Sample data.",
+    "kpiEmpty": "No data recorded yet",
+    "empty": {
+      "overviewTitle": "No revenue yet",
+      "overviewBody": "Monthly revenue appears here once sales are recorded.",
+      "salesTitle": "No sales yet",
+      "salesBody": "New sales appear here as they come in.",
+      "chartTitle": "No data for {{title}} yet",
+      "chartBody": "This chart fills in once activity is recorded."
     }
   },
   "items": {
     "title": "Items",
     "newItem": "New Item",
-    "refresh": "Refresh",
     "columns": {
       "name": "Name",
       "description": "Description",
@@ -447,8 +410,6 @@
       "title": "No items yet",
       "body": "Create your first item to get started."
     },
-    "loadError": "Could not load items",
-    "loadErrorDesc": "Check your connection and refresh the page.",
     "editAria": "Edit {{name}}",
     "deleteAria": "Delete {{name}}",
     "form": {
@@ -490,31 +451,53 @@
     "to": "To:",
     "searchPeople": "Search people...",
     "noPeople": "No people found.",
-    "chat": "Chat"
+    "chat": "Chat",
+    "back": "Back to chats",
+    "videoCall": "Video call",
+    "call": "Call",
+    "moreOptions": "More options",
+    "add": "Add",
+    "addImage": "Add image",
+    "attachFile": "Attach file"
   },
   "errors": {
-    "goBack": "Go Back",
-    "backToHome": "Back to Home",
-    "learnMore": "Learn more",
+    "goBack": "Go to previous page",
+    "backToHome": "Back to home",
     "forbidden": {
       "title": "Access Forbidden",
       "body": "You don't have necessary permission to view this resource."
     },
     "serverError": {
-      "title": "Oops! Something went wrong :')",
-      "body": "We apologize for the inconvenience. Please try again later."
+      "title": "Something went wrong",
+      "body": "Try again in a moment. If it keeps happening, reload the page."
     },
     "maintenance": {
       "title": "Website is under maintenance!",
       "body": "The site is not available at the moment. We'll be back online shortly."
     },
     "notFound": {
-      "title": "Oops! Page Not Found!",
-      "body": "It seems like the page you're looking for does not exist or might have been removed."
+      "title": "Page not found",
+      "body": "The page you're looking for doesn't exist or was moved."
     },
     "unauthorized": {
       "title": "Unauthorized Access",
       "body": "Please log in with the appropriate credentials to access this resource."
     }
+  },
+  "widget": {
+    "loadError": "Couldn't load this card",
+    "reload": "Reload card",
+    "loading": "Loading",
+    "chartLabel": "{{title}}, chart",
+    "chartLabelWithDesc": "{{title}}, chart. {{description}}"
+  },
+  "infoTip": {
+    "label": "More info"
+  },
+  "tabBar": {
+    "label": "Main navigation",
+    "more": "More",
+    "moreActivity": "New activity",
+    "preferences": "Preferences"
   }
 }
