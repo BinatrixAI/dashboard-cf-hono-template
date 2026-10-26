@@ -1,4 +1,6 @@
-# dashboard-cf-hono-template
+<p align="center">
+  <img src="./assets/readme/hero.webp" width="100%" alt="Новый дашборд в Cloudflare за минуты: dashboard-cf-hono-template. Тёмный десктопный дашборд с KPI-карточками и графиком, светлая мобильная раскладка и страница задач на иврите (RTL) на телефоне.">
+</p>
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/release/BinatrixAI/dashboard-cf-hono-template.svg?size=sm&amp;mode=dark"><img alt="Release" src="https://www.shieldcn.dev/github/release/BinatrixAI/dashboard-cf-hono-template.svg?size=sm&amp;mode=light"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/ci/BinatrixAI/dashboard-cf-hono-template.svg?variant=secondary&amp;size=sm&amp;mode=dark"><img alt="CI" src="https://www.shieldcn.dev/github/ci/BinatrixAI/dashboard-cf-hono-template.svg?variant=secondary&amp;size=sm&amp;mode=light"></picture>
@@ -23,6 +25,31 @@ Cloudflare Worker отдаёт **Vite + React SPA** (TanStack Router, shadcn/ui,
 > `REPLACE_WITH_YOUR_*` — **никакие реальные секреты или ID аккаунтов не закоммичены**.
 > `setup.mjs` подставит имена за вас; ID ресурсов вы вписываете после создания ресурсов
 > D1/KV.
+
+## Как выглядит форк
+
+<p align="center">
+  <img src="./assets/readme/screens/dashboard-light.webp" width="100%" alt="Светлый дашборд: четыре KPI-карточки со спарклайнами, график Overview и Recent Sales">
+</p>
+<p align="center">
+  <img src="./assets/readme/screens/tasks-dark.webp" width="49%" alt="Тёмная страница задач: таблица с фильтрами, сортировкой и пагинацией">
+  <img src="./assets/readme/screens/dashboard-rtl.webp" width="49%" alt="Дашборд на иврите справа налево: сайдбар справа, зеркальная раскладка">
+</p>
+<p align="center">
+  <img src="./assets/readme/screens/phone-light.webp" width="240" alt="Мобильная раскладка с нижней панелью вкладок">
+  &nbsp;&nbsp;
+  <img src="./assets/readme/screens/phone-rtl-dark.webp" width="240" alt="Страница задач на иврите на телефоне, тёмная тема">
+</p>
+
+Скриншоты демо-страниц шаблона после того, как `setup.mjs` назвал проект «Northwind Ops». Все цифры — демо-данные.
+
+## Что вы получаете
+
+- **Дизайн-система, а не пустая оболочка.** Тёмно-синий пресет tweakcn с KPI-карточками, спарклайнами и `Widget`, который показывает скелетон, ошибку внутри карточки и пустое состояние. Светлая, тёмная и системная темы. `setup.mjs --theme` перекрашивает всё под ваш бренд.
+- **Английский ↔ иврит.** Переключатель LTR/RTL заодно меняет язык. Раскладка использует только логические CSS-свойства, а guard-тест валит сборку на физическом классе направления.
+- **Мобильная оболочка.** Уже 768px сайдбар превращается в нижнюю панель вкладок с листом «Ещё» и зонами нажатия 44px.
+- **Аутентификация на краю сети.** Worker проверяет сессию Clerk на каждом вызове `/api/*`, принимает только сессионные токены с ваших origin и закрывается, если список пуст.
+- **Деплой, который не пропустит сломанный релиз.** `pnpm run deploy` останавливается на непримененных миграциях, проваленном quality gate или неверном ключе Clerk, затем читает живую версию и прогоняет smoke-тест.
 
 ## Требования
 
@@ -114,6 +141,10 @@ pnpm run deploy          # с гейтами: миграции → gate → сб
 Что отклоняет каждое звено — см. [Деплой с гейтами](#деплой-с-гейтами).
 
 ## Обзор архитектуры
+
+<p align="center">
+  <img src="./assets/readme/architecture.svg" width="100%" alt="Схема: браузер обращается к одному Cloudflare Worker. /api/* сначала попадает в Hono API, который проверяет сессию Clerk и читает D1 и KV; все остальные пути отдаются из Static Assets. Слой Cron, Queues и Resend поставляется спящим.">
+</p>
 
 **Один Worker** — это весь артефакт деплоя; отдельного хоста для фронтенда нет:
 

@@ -1,4 +1,6 @@
-# dashboard-cf-hono-template
+<p align="center">
+  <img src="./assets/readme/hero.webp" width="100%" alt="A new dashboard, live on Cloudflare in minutes: dashboard-cf-hono-template. The dark desktop dashboard with KPI cards and a bar chart, the light phone layout, and the Hebrew right-to-left Tasks page on a phone.">
+</p>
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/release/BinatrixAI/dashboard-cf-hono-template.svg?size=sm&amp;mode=dark"><img alt="Release" src="https://www.shieldcn.dev/github/release/BinatrixAI/dashboard-cf-hono-template.svg?size=sm&amp;mode=light"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/ci/BinatrixAI/dashboard-cf-hono-template.svg?variant=secondary&amp;size=sm&amp;mode=dark"><img alt="CI" src="https://www.shieldcn.dev/github/ci/BinatrixAI/dashboard-cf-hono-template.svg?variant=secondary&amp;size=sm&amp;mode=light"></picture>
@@ -23,6 +25,31 @@ dashboard to Cloudflare in minutes.
 > resource-ID placeholders — **no real secrets or account IDs are committed**.
 > `setup.mjs` resolves the names for you; you fill the resource IDs after creating
 > the D1/KV resources.
+
+## What a fork looks like
+
+<p align="center">
+  <img src="./assets/readme/screens/dashboard-light.webp" width="100%" alt="Light dashboard: four KPI cards with sparklines, an Overview bar chart and Recent Sales">
+</p>
+<p align="center">
+  <img src="./assets/readme/screens/tasks-dark.webp" width="49%" alt="Dark Tasks page: filterable, sortable data table with pagination">
+  <img src="./assets/readme/screens/dashboard-rtl.webp" width="49%" alt="Hebrew right-to-left dashboard: sidebar on the right, mirrored layout">
+</p>
+<p align="center">
+  <img src="./assets/readme/screens/phone-light.webp" width="240" alt="Phone layout with the bottom tab bar">
+  &nbsp;&nbsp;
+  <img src="./assets/readme/screens/phone-rtl-dark.webp" width="240" alt="Hebrew Tasks page on a phone, dark theme">
+</p>
+
+Screenshots of the template's demo pages after `setup.mjs` named the project "Northwind Ops". All numbers are sample data.
+
+## What you get
+
+- **A design system, not a blank shell.** A navy tweakcn preset with KPI cards, sparklines and a `Widget` that handles skeleton, in-card error and empty states. Light, dark and system themes. `setup.mjs --theme` re-skins it for your brand.
+- **English ↔ Hebrew.** The LTR/RTL toggle also switches the language. Layout uses logical CSS properties only, and a guard test fails the build on a physical-direction class.
+- **A phone shell.** Below 768px the sidebar becomes a bottom tab bar with a More sheet and 44px touch targets.
+- **Auth checked at the edge.** The Worker verifies the Clerk session on every `/api/*` call, accepts only session tokens from your own origins, and fails closed when that list is empty.
+- **A deploy that refuses broken releases.** `pnpm run deploy` stops on unapplied migrations, a failing quality gate or the wrong Clerk key, then reads the live version back and smoke-tests it.
 
 ## Prerequisites
 
@@ -113,6 +140,10 @@ pnpm run deploy          # gated: migrations → gate → build → live key →
 See [Gated deploy](#gated-deploy) for what each link refuses.
 
 ## Architecture overview
+
+<p align="center">
+  <img src="./assets/readme/architecture.svg" width="100%" alt="Diagram: the browser calls one Cloudflare Worker. /api/* runs the Hono API first, which checks the Clerk session and reads D1 and KV; every other path is served from Static Assets. A Cron, Queues and Resend layer ships dormant.">
+</p>
 
 A **single Worker** is the whole deploy artifact — there is no separate frontend
 host:
