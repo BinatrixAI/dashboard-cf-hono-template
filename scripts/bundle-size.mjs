@@ -13,7 +13,9 @@ import { fileURLToPath } from 'node:url'
 
 // Raise on purpose: edit here and say why in the commit (D-08).
 // Baseline 2026-10-26 (measure() on a fresh build): initial 268,284 B, total 668,998 B; each ceil(×1.1).
-export const CEILINGS = { initialGzip: 295113, totalGzip: 735898 }
+// 2026-10-27: total re-based to 785,959 B → ceil(×1.1) for the Bklit chart stack: lazy /charts gallery
+// chunks — visx, d3, motion. Initial ceiling unchanged (chart code never enters the first load).
+export const CEILINGS = { initialGzip: 295113, totalGzip: 864555 }
 
 const gz = (file) => gzipSync(readFileSync(file)).length
 

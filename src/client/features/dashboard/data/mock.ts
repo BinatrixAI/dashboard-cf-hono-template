@@ -13,7 +13,7 @@
 import { type TranslationKey } from '@/i18n'
 
 /** One month of the Overview bar chart (single series). */
-export interface OverviewPoint {
+export type OverviewPoint = {
   month: string
   total: number
 }
@@ -34,22 +34,24 @@ export const overviewData: OverviewPoint[] = [
   { month: 'Dec', total: 9400 },
 ]
 
-/** One period of the Analytics area chart (two numeric series). */
-export interface AreaPoint {
-  date: string
+/** One day of the Analytics area chart (two numeric series). `date` is a Date because
+ * the time-series x axis needs one; built with the local-time constructor so the
+ * weekday never shifts by timezone (an ISO string parses as UTC). */
+export type AreaPoint = {
+  date: Date
   desktop: number
   mobile: number
 }
 
-/** 7 sequential points feeding the Analytics area chart (two series). */
+/** 7 sequential points (Mon 19 – Sun 25 Oct 2026) feeding the Analytics area chart. */
 export const areaData: AreaPoint[] = [
-  { date: 'Mon', desktop: 320, mobile: 180 },
-  { date: 'Tue', desktop: 410, mobile: 250 },
-  { date: 'Wed', desktop: 380, mobile: 220 },
-  { date: 'Thu', desktop: 520, mobile: 340 },
-  { date: 'Fri', desktop: 610, mobile: 410 },
-  { date: 'Sat', desktop: 470, mobile: 300 },
-  { date: 'Sun', desktop: 540, mobile: 360 },
+  { date: new Date(2026, 9, 19), desktop: 320, mobile: 180 },
+  { date: new Date(2026, 9, 20), desktop: 410, mobile: 250 },
+  { date: new Date(2026, 9, 21), desktop: 380, mobile: 220 },
+  { date: new Date(2026, 9, 22), desktop: 520, mobile: 340 },
+  { date: new Date(2026, 9, 23), desktop: 610, mobile: 410 },
+  { date: new Date(2026, 9, 24), desktop: 470, mobile: 300 },
+  { date: new Date(2026, 9, 25), desktop: 540, mobile: 360 },
 ]
 
 /** One slice of the Analytics pie/donut chart. */
@@ -67,22 +69,23 @@ export const breakdownData: BreakdownSlice[] = [
   { name: 'Email', value: 1200 },
 ]
 
-/** One period of the Analytics line chart (three numeric series). */
-export interface LinePoint {
-  month: string
+/** One month of the Analytics line chart (three numeric series). `date` is the
+ * first of the month, local time (see AreaPoint). */
+export type LinePoint = {
+  date: Date
   revenue: number
   profit: number
   expenses: number
 }
 
-/** Sequential points feeding the Analytics multi-series line chart. */
+/** Sequential points (Jan – Jun 2026) feeding the Analytics multi-series line chart. */
 export const lineData: LinePoint[] = [
-  { month: 'Jan', revenue: 4200, profit: 2100, expenses: 2100 },
-  { month: 'Feb', revenue: 3100, profit: 1400, expenses: 1700 },
-  { month: 'Mar', revenue: 5300, profit: 2900, expenses: 2400 },
-  { month: 'Apr', revenue: 4800, profit: 2500, expenses: 2300 },
-  { month: 'May', revenue: 6100, profit: 3600, expenses: 2500 },
-  { month: 'Jun', revenue: 5500, profit: 3100, expenses: 2400 },
+  { date: new Date(2026, 0, 1), revenue: 4200, profit: 2100, expenses: 2100 },
+  { date: new Date(2026, 1, 1), revenue: 3100, profit: 1400, expenses: 1700 },
+  { date: new Date(2026, 2, 1), revenue: 5300, profit: 2900, expenses: 2400 },
+  { date: new Date(2026, 3, 1), revenue: 4800, profit: 2500, expenses: 2300 },
+  { date: new Date(2026, 4, 1), revenue: 6100, profit: 3600, expenses: 2500 },
+  { date: new Date(2026, 5, 1), revenue: 5500, profit: 3100, expenses: 2400 },
 ]
 
 /**

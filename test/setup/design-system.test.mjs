@@ -22,7 +22,6 @@ const DIRECTION =
 // D-01: allowed by path prefix, each with its reason. No palette allowlist: none are allowed.
 const HEX_OK = {
   'src/client/assets/custom/': 'theme-preview pictures must show fixed light/dark',
-  'src/client/components/ui/chart.tsx': 'Recharts default-stroke attribute selectors, not colours',
   'src/client/styles/index.css': 'edge-fade mask stop, not a colour',
   'src/client/styles/theme.css': 'written verbatim from the tweakcn preset by setup.mjs --theme',
 }

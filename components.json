@@ -18,5 +18,8 @@
     "hooks": "@/hooks"
   },
   "iconLibrary": "lucide",
-  "rtl": true
+  "rtl": true,
+  "registries": {
+    "@bklit": "https://bklit.com/r/{name}.json"
+  }
 }

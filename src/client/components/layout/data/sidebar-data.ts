@@ -1,5 +1,6 @@
 import {
   LayoutDashboard,
+  ChartPie,
   Package,
   ListTodo,
   LayoutGrid,
@@ -32,6 +33,12 @@ export const sidebarData: SidebarData = {
           url: '/dashboard',
           tab: true,
           icon: LayoutDashboard,
+        },
+        {
+          // Bklit chart gallery; no `tab: true` (the bottom tab bar is capped at 4).
+          title: 'sidebar.nav.charts',
+          url: '/charts',
+          icon: ChartPie,
         },
         {
           // Example CRUD feature wired to the Hono /api/items round-trip (Plan 04).

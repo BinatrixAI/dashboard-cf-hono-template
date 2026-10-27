@@ -27,6 +27,7 @@
     },
     "nav": {
       "overview": "Overview",
+      "charts": "Charts",
       "items": "Items",
       "tasks": "Tasks",
       "apps": "Apps",
@@ -499,5 +500,28 @@
     "more": "More",
     "moreActivity": "New activity",
     "preferences": "Preferences"
+  },
+  "charts": {
+    "title": "Charts",
+    "subtitle": "Every Bklit chart shipped with this template, with sample data.",
+    "items": {
+      "area": "Area chart",
+      "bar": "Bar chart",
+      "line": "Line chart",
+      "composed": "Composed chart",
+      "scatter": "Scatter chart",
+      "liveLine": "Live line chart",
+      "candlestick": "Candlestick chart",
+      "pie": "Pie chart",
+      "radar": "Radar chart",
+      "ring": "Ring chart",
+      "gauge": "Gauge",
+      "heatmap": "Heatmap",
+      "choropleth": "Choropleth map",
+      "funnel": "Funnel chart",
+      "sankey": "Sankey diagram",
+      "sunburst": "Sunburst chart",
+      "sparkline": "Sparklines"
+    }
   }
 }

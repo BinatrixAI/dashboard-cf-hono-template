@@ -11,6 +11,8 @@ export default defineConfig(
     ignores: [
       'dist',
       'src/client/components/ui',
+      // Vendored @bklit registry source, like ui/: kept close to upstream so `add --overwrite` diffs stay readable.
+      'src/client/components/charts',
       'src/client/routeTree.gen.ts',
       // Gitignored, locally-installed agent skills (npx skills add). Their vendored
       // templates are not template source — eslint must skip them so `pnpm lint`

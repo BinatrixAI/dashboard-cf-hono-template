@@ -175,7 +175,7 @@ deep links such as `/dashboard`) and every static asset:
   `REPLACE_WITH_YOUR_CLERK_FAPI_HOST` placeholder stays and setup lists it as outstanding.
   Images allow `img.clerk.com`, fonts are self-hosted from the app's own origin (fontsource
   packages bundled by Vite) so `font-src` is `'self'`, `style-src` allows inline
-  styles (Recharts chart colours and Clerk's components need them), and `worker-src` allows
+  styles (the Bklit charts' motion animations and Clerk's components need them), and `worker-src` allows
   `blob:`. `clerk-telemetry.com` is used only by Clerk development instances.
 - **Frame denial:** `frame-ancestors 'none'` plus `X-Frame-Options: DENY`.
 - **HSTS:** `max-age=31536000` (one year) without `includeSubDomains` or `preload`, so a

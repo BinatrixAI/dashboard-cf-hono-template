@@ -17,13 +17,17 @@ describe('splitNav', () => {
     ])
   })
 
-  it('keeps Apps, Users and the Settings group in overflow, in order', () => {
+  it('keeps Charts, Apps, Users and the Settings group in overflow, in order', () => {
     const { overflow } = splitNav(sidebarData.navGroups)
     expect(overflow.map((g) => g.title)).toEqual([
       'sidebar.groups.general',
       'sidebar.groups.other',
     ])
-    expect(overflow[0].items.map((i) => i.url)).toEqual(['/apps', '/users'])
+    expect(overflow[0].items.map((i) => i.url)).toEqual([
+      '/charts',
+      '/apps',
+      '/users',
+    ])
     expect(overflow[1].items.map((i) => i.title)).toEqual([
       'sidebar.nav.settings',
     ])

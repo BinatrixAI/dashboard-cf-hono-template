@@ -28,6 +28,60 @@
   --danger: oklch(0.603 0.167 30.5);
   --danger-soft: oklch(0.603 0.167 30.5 / 0.12);
   --danger-fg: oklch(0.481 0.141 31.4);
+  /* Bklit chart tokens (@bklit/chart-context + legend cssVars), remapped onto tweakcn keys so a
+     re-skin carries them. Never redefine --chart-1..5 here: tweakcn owns the series colours (D-07).
+     Declared once in :root; they follow .dark because the keys they reference flip there. */
+  --chart-background: var(--card);
+  --chart-foreground: var(--foreground);
+  --chart-foreground-muted: var(--muted-foreground);
+  --chart-label: var(--muted-foreground);
+  --chart-crosshair: var(--muted-foreground);
+  --chart-grid: var(--border);
+  --chart-brush-border: var(--chart-grid);
+  --chart-positive: var(--success);
+  --chart-negative: var(--danger);
+  --chart-line-primary: var(--chart-1);
+  --chart-line-secondary: var(--chart-2);
+  --chart-tooltip-background: var(--popover);
+  --chart-tooltip-foreground: var(--popover-foreground);
+  --chart-tooltip-muted: var(--muted-foreground);
+  --chart-marker-background: var(--muted);
+  --chart-marker-border: var(--border);
+  --chart-marker-foreground: var(--foreground);
+  --chart-marker-badge-background: var(--foreground);
+  --chart-marker-badge-foreground: var(--background);
+  --chart-indicator-color: var(--foreground);
+  --chart-indicator-secondary-color: var(--background);
+  --chart-scale-mix: var(--card);
+  --chart-scale-01: var(--muted);
+  --chart-scale-02: color-mix(
+    in oklab,
+    var(--chart-1) 35%,
+    var(--chart-scale-mix)
+  );
+  --chart-scale-03: color-mix(
+    in oklab,
+    var(--chart-1) 55%,
+    var(--chart-scale-mix)
+  );
+  --chart-scale-04: color-mix(
+    in oklab,
+    var(--chart-1) 78%,
+    var(--chart-scale-mix)
+  );
+  --chart-scale-05: var(--chart-1);
+  --chart-scale-pattern-color: var(--card);
+  --chart-segment-background: color-mix(
+    in oklch,
+    var(--foreground) 6%,
+    transparent
+  );
+  --chart-segment-line: color-mix(in oklch, var(--foreground) 25%, transparent);
+  --legend: var(--card);
+  --legend-foreground: var(--card-foreground);
+  --legend-muted: var(--muted);
+  --legend-muted-foreground: var(--muted-foreground);
+  --legend-track: var(--track);
 }
 
 .dark {
@@ -67,6 +121,16 @@
   --color-danger-soft: var(--danger-soft);
   --color-danger-fg: var(--danger-fg);
   --color-sidebar-label: var(--sidebar-label);
+  --color-chart-line-primary: var(--chart-line-primary);
+  --color-chart-line-secondary: var(--chart-line-secondary);
+  --color-chart-brush-border: var(--chart-brush-border);
+  --color-chart-tooltip-background: var(--chart-tooltip-background);
+  --color-chart-tooltip-foreground: var(--chart-tooltip-foreground);
+  --color-chart-tooltip-muted: var(--chart-tooltip-muted);
+  --color-chart-scale-02: var(--chart-scale-02);
+  --color-chart-scale-03: var(--chart-scale-03);
+  --color-chart-scale-04: var(--chart-scale-04);
+  --color-chart-scale-05: var(--chart-scale-05);
   --shadow-card: var(--cardsh);
   --radius-card: calc(var(--radius) + 8px);
 }

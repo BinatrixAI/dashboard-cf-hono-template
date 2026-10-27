@@ -8,7 +8,7 @@ A brand-neutral, reusable **GitHub Template repository** that becomes the starti
 
 ### Constraints
 
-- **Tech stack**: Cloudflare Workers · Hono · D1 · KV · Vite/React/TanStack Router · shadcn/ui · Tailwind · Clerk · Queues · Cron Triggers · Resend · tweakcn — Final per the handoff; build against them, do not substitute.
+- **Tech stack**: Cloudflare Workers · Hono · D1 · KV · Vite/React/TanStack Router · shadcn/ui · Bklit (charts) · Tailwind · Clerk · Queues · Cron Triggers · Resend · tweakcn — Final per the handoff; build against them, do not substitute.
 - **Repo structure**: Must be a standalone git repo (was initially nested under `~/.git`; reinitialized as its own repo on `main`) so it can be a clean GitHub Template repository.
 - **Templating**: No real account-specific secrets or resource IDs may be committed; all per-project values come from the setup script + example files.
 - **Auth split**: Dashboard uses Clerk (human auth); the integration API module uses M2M/service auth in a closed perimeter — distinct auth models, do not conflate.

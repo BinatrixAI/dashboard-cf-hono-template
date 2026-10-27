@@ -1,30 +1,21 @@
-import { Cell, Pie, PieChart } from 'recharts'
+import { useState } from 'react'
 import {
-  ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from '@/components/ui/chart'
+  Legend,
+  LegendItem,
+  LegendLabel,
+  LegendMarker,
+} from '@/components/charts/legend'
+import { PieCenter } from '@/components/charts/pie-center'
+import { PieChart } from '@/components/charts/pie-chart'
+import { PieSlice } from '@/components/charts/pie-slice'
 import { type BreakdownSlice } from '../data/mock'
 
 /**
- * Donut chart for the Analytics tab. Each of the 5 slices maps to a `--chart-N`
- * theme token, cycling chart-1 → chart-5 in slice order (UI-SPEC Chart Token
- * Mapping), so light/dark flip is automatic — never a literal color (D-07). The
- * config keys match the slice `name` values so `nameKey="name"` resolves the
- * legend/tooltip labels.
+ * Bklit donut chart for the Analytics tab. The 5 slices cycle the `--chart-1` →
+ * `--chart-5` theme tokens in slice order (UI-SPEC Chart Token Mapping), so
+ * light/dark flip is automatic — never a literal color (D-07). Hovering a slice
+ * or a legend row highlights the other. Labels come from the slice `name`.
  */
-const chartConfig = {
-  value: { label: 'Traffic' },
-  Direct: { label: 'Direct' },
-  Referral: { label: 'Referral' },
-  Organic: { label: 'Organic' },
-  Social: { label: 'Social' },
-  Email: { label: 'Email' },
-} satisfies ChartConfig
-
 export function AnalyticsPieChart({
   data,
   label,
@@ -32,33 +23,39 @@ export function AnalyticsPieChart({
   data: BreakdownSlice[]
   label: string
 }) {
-  // Recharts plot internals do not auto-mirror; pin the plot canvas LTR so slice
-  // order and legend/tooltip anchoring stay stable under a dir="rtl" doc (DV-7).
+  const [hovered, setHovered] = useState<number | null>(null)
+  const slices = data.map((s, i) => ({
+    label: s.name,
+    value: s.value,
+    color: `var(--chart-${(i % 5) + 1})`,
+  }))
+  // Chart plot internals do not auto-mirror; pin the plot canvas LTR so slice
+  // order and legend anchoring stay stable under a dir="rtl" document (DV-7).
   return (
     <div dir='ltr' role='img' aria-label={label}>
-      <ChartContainer
-        config={chartConfig}
-        className='mx-auto aspect-square max-h-[250px]'
+      <PieChart
+        data={slices}
+        innerRadius={60}
+        hoveredIndex={hovered}
+        onHoverChange={setHovered}
+        className='mx-auto max-h-[250px] max-w-[250px]'
       >
-        <PieChart accessibilityLayer={false}>
-          <ChartTooltip
-            cursor={false}
-            content={<ChartTooltipContent hideLabel />}
-          />
-          <Pie
-            data={data}
-            dataKey='value'
-            nameKey='name'
-            innerRadius={50}
-            rootTabIndex={-1}
-          >
-            {data.map((slice, i) => (
-              <Cell key={slice.name} fill={`var(--chart-${i + 1})`} />
-            ))}
-          </Pie>
-          <ChartLegend content={<ChartLegendContent nameKey='name' />} />
-        </PieChart>
-      </ChartContainer>
+        {slices.map((s, i) => (
+          <PieSlice key={s.label} index={i} />
+        ))}
+        <PieCenter defaultLabel='Traffic' />
+      </PieChart>
+      <Legend
+        items={slices}
+        hoveredIndex={hovered}
+        onHoverChange={setHovered}
+        className='flex-row flex-wrap justify-center'
+      >
+        <LegendItem className='flex items-center gap-2 text-xs'>
+          <LegendMarker />
+          <LegendLabel />
+        </LegendItem>
+      </Legend>
     </div>
   )
 }

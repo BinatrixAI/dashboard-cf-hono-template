@@ -2,8 +2,10 @@
 
 The dashboard UI is built on **shadcn/ui** (`new-york` style). shadcn is not a
 runtime dependency — components are **vendored** into the repo as source you own
-and edit. This template ships **31** primitives in
+and edit. This template ships **30** primitives in
 `src/client/components/ui/`.
+
+Charts: Bklit (`@bklit` registry, `@/components/charts/*`). See the bklit-ui skills.
 
 ## The vendored model
 

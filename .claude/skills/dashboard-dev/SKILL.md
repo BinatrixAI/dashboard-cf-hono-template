@@ -96,6 +96,18 @@ commands; see the linked doc for depth.
     `src/client/styles/index.css`, create files (e.g. `hooks/use-mobile.ts`) or
     add/downgrade packages (e.g. next-themes for sonner). Revert those, keep the
     tweakcn theme, and keep `@/context/theme-provider`.
+- **Charts: Bklit** (`@bklit` registry, `@/components/charts/*`). See the
+  bklit-ui skills. Import from the module file (e.g.
+  `@/components/charts/bar-chart`); there is no barrel. Wrap every chart in
+  `<div dir='ltr'>` and colour series with `var(--chart-N)`.
+  `pnpm dlx shadcn@latest add @bklit/<item>` overwrites `src/client/lib/utils.ts`
+  (or writes `src/lib/utils.ts` + `src/components/charts/`) and writes cssVars
+  into `src/client/styles/index.css`: restore both with `git checkout`, move new
+  files under `src/client/components/charts/`; the Bklit tokens live in
+  `src/client/styles/tokens.css`. Every chart is demoed at `/charts`.
+  The vendored `bklit-ui` skill has its upstream `allowed-tools` line removed on
+  purpose (it pre-approved any `shadcn@latest` command); strip it again if
+  `npx skills add bklit/bklit-ui` restores it.
 - **Secrets.** Real secret → `wrangler secret put <NAME>` (prod) + `.dev.vars`
   (local). Non-secret config → `vars` in `wrangler.jsonc`. Client-visible →
   `VITE_*` (never a secret). Declare every new secret name in `wrangler.jsonc`

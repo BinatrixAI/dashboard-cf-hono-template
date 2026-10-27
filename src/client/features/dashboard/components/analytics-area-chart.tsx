@@ -1,25 +1,29 @@
-import { Area, AreaChart, CartesianGrid, XAxis } from 'recharts'
+import { Area } from '@/components/charts/area'
+import { AreaChart } from '@/components/charts/area-chart'
+import { Grid } from '@/components/charts/grid'
 import {
-  ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from '@/components/ui/chart'
+  Legend,
+  LegendItem,
+  LegendLabel,
+  LegendMarker,
+} from '@/components/charts/legend'
+import { ChartTooltip } from '@/components/charts/tooltip'
+import { XAxis } from '@/components/charts/x-axis'
 import { type AreaPoint } from '../data/mock'
 
 /**
- * Two-series area chart for the Analytics tab. Each series color maps to a
- * `--chart-N` theme token via ChartStyle (`var(--color-desktop)` /
- * `var(--color-mobile)` resolve to chart-1 / chart-2), so light/dark flip is
- * automatic — never a literal color (D-07). Series → token map is fixed by the
- * UI-SPEC Chart Token Mapping (area s1 → chart-1, s2 → chart-2).
+ * Two-series Bklit area chart for the Analytics tab. Series colours are the
+ * `--chart-N` theme tokens (desktop → chart-1, mobile → chart-2, per the UI-SPEC
+ * Chart Token Mapping), so light/dark flip is automatic — never a literal color
+ * (D-07). The two areas overlay rather than stack. Series labels stay English
+ * (chart internals, docs/i18n.md).
  */
-const chartConfig = {
-  desktop: { label: 'Desktop', color: 'var(--chart-1)' },
-  mobile: { label: 'Mobile', color: 'var(--chart-2)' },
-} satisfies ChartConfig
+const series = [
+  { key: 'desktop', label: 'Desktop', color: 'var(--chart-1)' },
+  { key: 'mobile', label: 'Mobile', color: 'var(--chart-2)' },
+] as const
+
+const weekday = new Intl.DateTimeFormat('en-US', { weekday: 'short' })
 
 export function AnalyticsAreaChart({
   data,
@@ -28,39 +32,47 @@ export function AnalyticsAreaChart({
   data: AreaPoint[]
   label: string
 }) {
-  // Recharts plot internals do not auto-mirror; pin the plot canvas LTR so axis
+  const labels = data.map((d) => weekday.format(d.date))
+  // Chart plot internals do not auto-mirror; pin the plot canvas LTR so axis
   // order, ticks, and numbers stay stable under a dir="rtl" document (DV-7).
   return (
     <div dir='ltr' role='img' aria-label={label}>
-      <ChartContainer config={chartConfig} className='h-[250px] w-full'>
-        <AreaChart data={data} accessibilityLayer={false}>
-          <CartesianGrid vertical={false} />
-          <XAxis
-            dataKey='date'
-            tickLine={false}
-            axisLine={false}
-            tickMargin={8}
-          />
-          <ChartTooltip content={<ChartTooltipContent indicator='dot' />} />
+      <AreaChart data={data} aspectRatio='auto' className='h-[250px]'>
+        <Grid horizontal />
+        {series.map((s) => (
           <Area
-            dataKey='desktop'
-            type='monotone'
-            stroke='var(--color-desktop)'
-            fill='var(--color-desktop)'
+            key={s.key}
+            dataKey={s.key}
+            fill={s.color}
+            stroke={s.color}
             fillOpacity={0.4}
-            stackId='a'
           />
-          <Area
-            dataKey='mobile'
-            type='monotone'
-            stroke='var(--color-mobile)'
-            fill='var(--color-mobile)'
-            fillOpacity={0.4}
-            stackId='a'
-          />
-          <ChartLegend content={<ChartLegendContent />} />
-        </AreaChart>
-      </ChartContainer>
+        ))}
+        <XAxis numTicks={data.length} labels={labels} />
+        <ChartTooltip
+          dateLabels={labels}
+          rows={(p) =>
+            series.map((s) => ({
+              color: s.color,
+              label: s.label,
+              value: p[s.key] as number,
+            }))
+          }
+        />
+      </AreaChart>
+      <Legend
+        items={series.map((s) => ({
+          label: s.label,
+          value: 0,
+          color: s.color,
+        }))}
+        className='flex-row justify-center'
+      >
+        <LegendItem className='flex items-center gap-2 text-xs'>
+          <LegendMarker />
+          <LegendLabel />
+        </LegendItem>
+      </Legend>
     </div>
   )
 }
